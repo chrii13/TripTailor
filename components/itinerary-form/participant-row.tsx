@@ -11,9 +11,16 @@ interface ParticipantRowProps {
   register: UseFormRegister<TripFormValues>;
   onRemove: () => void;
   canRemove: boolean;
+  error?: string;
 }
 
-export function ParticipantRow({ index, register, onRemove, canRemove }: ParticipantRowProps) {
+export function ParticipantRow({
+  index,
+  register,
+  onRemove,
+  canRemove,
+  error,
+}: ParticipantRowProps) {
   return (
     <div className="flex items-end gap-3">
       <div className="flex-1">
@@ -35,6 +42,7 @@ export function ParticipantRow({ index, register, onRemove, canRemove }: Partici
           min={0}
           {...register(`participants.${index}.age` as const, { valueAsNumber: true })}
         />
+        {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
       <Button
         type="button"

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const participantSchema = z.object({
   type: z.enum(["adulto", "bambino"]),
-  age: z.coerce.number().int().min(0, "L'età non può essere negativa"),
+  age: z.number().int().min(0, "L'età non può essere negativa"),
 });
 
 export const tripFormSchema = z.object({

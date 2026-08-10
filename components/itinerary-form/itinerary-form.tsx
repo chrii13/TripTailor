@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, useFieldArray, type Resolver } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
@@ -39,13 +39,7 @@ export function ItineraryForm() {
     setValue,
     formState: { errors },
   } = useForm<TripFormValues>({
-    // zodResolver types the resolver by the schema's input type; since
-    // `participants[].age` uses z.coerce.number(), its input type is
-    // `unknown`, which doesn't structurally match TripFormValues (output
-    // type, age: number). Cast to the output-typed Resolver — safe because
-    // zodResolver only ever calls onSubmit with data that already passed
-    // validation (i.e. the parsed/output shape).
-    resolver: zodResolver(tripFormSchema) as Resolver<TripFormValues>,
+    resolver: zodResolver(tripFormSchema),
     defaultValues,
   });
 
@@ -132,6 +126,11 @@ export function ItineraryForm() {
                 register={register}
                 onRemove={() => remove(index)}
                 canRemove={fields.length > 1}
+                error={
+                  Array.isArray(errors.participants)
+                    ? errors.participants[index]?.age?.message
+                    : undefined
+                }
               />
             ))}
             <Button
