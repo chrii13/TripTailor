@@ -1,0 +1,88 @@
+# Universal CLAUDE.md — Self-Updating Project Memory & Guidelines
+
+> 🤖 **INSTRUCTIONS FOR CLAUDE CODE:**
+> This file is your persistent project memory and behavioral handbook.
+> 1. **Read** this file at the start of every session.
+> 2. **Maintain Section 1 (Project Snapshot):** Whenever new packages are installed, scripts/commands are added to `package.json`, or key architectural decisions are made, UPDATE Section 1 automatically.
+> 3. **Preserve Rules:** NEVER modify or delete Sections 2 through 6 (Behavioral Guardrails) unless explicitly requested by the user.
+
+---
+
+## 📍 1. PROJECT SNAPSHOT (Maintained by Claude)
+*Claude: Update this section automatically as the project evolves.*
+
+- **Project Name:** "App Itinerari" (nome provvisorio, non definitivo — da aggiornare quando scelto) — Web App (MVP) + Mobile App per la creazione automatica di itinerari di viaggio personalizzati (AI, meteo, export calendario).
+- **Tech Stack:** Next.js (App Router, TypeScript), Tailwind CSS, shadcn/ui, react-hook-form + zod. AI: Anthropic Claude API (fase futura). Meteo: OpenWeatherMap (fase futura). Calendario: Google Calendar API / libreria `ics` (fase futura). Mobile: da definire (fase futura).
+- **Primary Commands:**
+  - **Dev:** `npm run dev`
+  - **Build:** `npm run build`
+  - **Test:** `[Unset - nessun test ancora]`
+  - **Lint/Typecheck:** `npm run lint`
+- **Architecture & Conventions:**
+  - **Stato:** Fase 1 in corso — scaffold Next.js + form di input utente. Nessuna logica AI/meteo/calendario/mobile ancora implementata (fasi successive).
+  - **Struttura:**
+    ```
+    app/
+      layout.tsx
+      page.tsx              # renderizza <ItineraryForm />
+      globals.css
+    components/
+      itinerary-form/
+        itinerary-form.tsx       # form + riepilogo, stesso componente/stato
+        participant-row.tsx      # riga dinamica partecipante
+        trip-summary.tsx         # vista riepilogo (post-submit)
+      ui/                         # componenti shadcn generati
+    lib/
+      schema.ts                # zod schema condiviso form/riepilogo
+      utils.ts                 # cn() helper shadcn
+    ```
+  - Nessun backend/API route nella Fase 1: tutto client-side, dati tenuti in stato React (nessuna persistenza).
+  - Il riepilogo post-invio del form appare nella stessa pagina (il form si trasforma in riepilogo), non su una route separata. Bottone "Modifica" riporta al form con i dati precompilati.
+  - Composizione gruppo: righe dinamiche per partecipante (tipo + età), non semplice conteggio.
+  - Date viaggio: date range picker (check-in/check-out).
+  - Budget: slider in € + campo note testuali per lo stile di viaggio.
+  - Stile visivo: l'utente progetta l'aspetto grafico separatamente su claude.ai/design (progetto Design System); l'implementazione qui parte con uno stile Tailwind/shadcn moderno di default, sostituibile in seguito.
+  - Design docs dettagliate per fase in `docs/superpowers/specs/`.
+- **Required Environment Variables:**
+  - `ANTHROPIC_API_KEY` — Claude API (fase futura, generazione itinerario)
+  - `OPENWEATHER_API_KEY` — OpenWeatherMap (fase futura, meteo)
+  - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — Google Calendar API (fase futura, export calendario)
+
+---
+
+## 🔍 2. INSPECT BEFORE EDITING
+- **Read first:** Always read existing code, schemas, and config files before making edits.
+- **Search existing patterns:** Check how similar features or components are structured in the codebase and follow those established patterns.
+
+---
+
+## 🤔 3. THINK BEFORE CODING
+Don't assume. Surface tradeoffs.
+- **State assumptions explicitly:** Ask if uncertain before implementing.
+- **Present alternatives:** If multiple reasonable interpretations exist, present them briefly — don't pick silently.
+- **Push back:** If a simpler approach exists, suggest it before coding.
+
+---
+
+## 🎯 4. SIMPLICITY FIRST
+Minimum code that solves the problem. Nothing speculative.
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No flexibility or configurability that wasn't requested.
+- If you write 150 lines and it could be 40, rewrite it.
+- **Rule:** "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+---
+
+## ✂️ 5. SURGICAL CHANGES
+Touch only what you must. Clean up only your own mess.
+- **No unsolicited refactoring:** Don't "improve" adjacent code, comments, or formatting.
+- **Match existing style:** Follow the current codebase style strictly.
+- **Clean up your orphans:** Remove unused imports/variables created by *your* changes. Do not touch pre-existing dead code.
+- **Config files:** Do NOT modify `package.json`, `tsconfig.json`, or environment files without confirmation.
+
+---
+
+## ✅ 6. GOAL-DRIVEN VERIFICATION & FAIL-FAST
+- **Verifiable goals:** Define how to verify changes (build check, test, or visual output) before marking a task as done.
+- **Loop limit:** If a build, test, or script fails **2 times consecutively** after your changes, **STOP**. Explain what went wrong, show the log, and ask for guidance instead of trying infinite blind fixes.
