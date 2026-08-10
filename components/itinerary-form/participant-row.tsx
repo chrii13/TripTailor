@@ -1,46 +1,103 @@
 "use client";
 
-import type { UseFormRegister } from "react-hook-form";
+import { Controller, useWatch, type Control, type UseFormSetValue } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { TripFormValues } from "@/lib/schema";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AGE_RANGES, type ParticipantType, type TripFormValues } from "@/lib/schema";
 
 interface ParticipantRowProps {
   index: number;
-  register: UseFormRegister<TripFormValues>;
+  control: Control<TripFormValues>;
+  setValue: UseFormSetValue<TripFormValues>;
   onRemove: () => void;
   canRemove: boolean;
   error?: string;
 }
 
+const TYPE_LABELS: Record<ParticipantType, string> = {
+  bambino: "Bambino",
+  ragazzo: "Ragazzo",
+  adulto: "Adulto",
+};
+
 export function ParticipantRow({
   index,
-  register,
+  control,
+  setValue,
   onRemove,
   canRemove,
   error,
 }: ParticipantRowProps) {
+  const type = useWatch({ control, name: `participants.${index}.type` });
+  const range = AGE_RANGES[type];
+  const ages = Array.from({ length: range.max - range.min + 1 }, (_, i) => range.min + i);
+
   return (
     <div className="flex items-end gap-3">
       <div className="flex-1">
         <Label htmlFor={`participants.${index}.type`}>Tipo</Label>
-        <select
-          id={`participants.${index}.type`}
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-          {...register(`participants.${index}.type` as const)}
-        >
-          <option value="adulto">Adulto</option>
-          <option value="bambino">Bambino</option>
-        </select>
+        <Controller
+          control={control}
+          name={`participants.${index}.type`}
+          render={({ field }) => (
+            <Select
+              value={field.value}
+              onValueChange={(value) => {
+                const nextType = value as ParticipantType;
+                field.onChange(nextType);
+                setValue(`participants.${index}.age`, AGE_RANGES[nextType].default, {
+                  shouldValidate: true,
+                });
+              }}
+            >
+              <SelectTrigger id={`participants.${index}.type`} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(TYPE_LABELS) as ParticipantType[]).map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {TYPE_LABELS[t]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
       </div>
-      <div className="w-24">
+      <div className="w-28">
         <Label htmlFor={`participants.${index}.age`}>Età</Label>
-        <Input
-          id={`participants.${index}.age`}
-          type="number"
-          min={0}
-          {...register(`participants.${index}.age` as const, { valueAsNumber: true })}
+        {/*
+          Keyed by `type`: the set of valid ages changes with the type, and
+          Radix Select can race between registering the new option list and
+          picking up a value set programmatically in the same tick (it clears
+          the value to "" if it doesn't yet see a matching item). Remounting
+          fresh on type change sidesteps the race entirely.
+        */}
+        <Controller
+          key={type}
+          control={control}
+          name={`participants.${index}.age`}
+          render={({ field }) => (
+            <Select value={String(field.value)} onValueChange={(value) => field.onChange(Number(value))}>
+              <SelectTrigger id={`participants.${index}.age`} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                {ages.map((age) => (
+                  <SelectItem key={age} value={String(age)}>
+                    {age}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         />
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>

@@ -1,18 +1,24 @@
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { TripFormValues } from "@/lib/schema";
+import type { ParticipantType, TripFormValues } from "@/lib/schema";
 
 interface TripSummaryProps {
   data: TripFormValues;
   onEdit: () => void;
 }
 
+const TYPE_LABELS: Record<ParticipantType, string> = {
+  bambino: "Bambino",
+  ragazzo: "Ragazzo",
+  adulto: "Adulto",
+};
+
 export function TripSummary({ data, onEdit }: TripSummaryProps) {
   return (
     <Card className="mx-auto w-full max-w-2xl">
       <CardHeader>
-        <CardTitle>Riepilogo viaggio</CardTitle>
+        <CardTitle className="font-display text-2xl font-semibold">Riepilogo viaggio</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
@@ -32,7 +38,7 @@ export function TripSummary({ data, onEdit }: TripSummaryProps) {
           <ul className="list-inside list-disc font-medium">
             {data.participants.map((p, i) => (
               <li key={i}>
-                {p.type === "adulto" ? "Adulto" : "Bambino"}, {p.age} anni
+                {TYPE_LABELS[p.type]}, {p.age} anni
               </li>
             ))}
           </ul>

@@ -15,14 +15,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { tripFormSchema, type TripFormValues } from "@/lib/schema";
+import { AGE_RANGES, tripFormSchema, type TripFormValues } from "@/lib/schema";
 import { ParticipantRow } from "./participant-row";
 import { TripSummary } from "./trip-summary";
 
 const defaultValues: TripFormValues = {
   destination: "",
   dateRange: { from: undefined, to: undefined },
-  participants: [{ type: "adulto", age: 30 }],
+  participants: [{ type: "adulto", age: AGE_RANGES.adulto.default }],
   budget: 1000,
   styleNotes: "",
 };
@@ -67,7 +67,9 @@ export function ItineraryForm() {
   return (
     <Card className="mx-auto w-full max-w-2xl">
       <CardHeader>
-        <CardTitle>Pianifica il tuo viaggio</CardTitle>
+        <CardTitle className="font-display text-2xl font-semibold">
+          Pianifica il tuo viaggio
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -123,7 +125,8 @@ export function ItineraryForm() {
               <ParticipantRow
                 key={field.id}
                 index={index}
-                register={register}
+                control={control}
+                setValue={setValue}
                 onRemove={() => remove(index)}
                 canRemove={fields.length > 1}
                 error={
@@ -136,7 +139,7 @@ export function ItineraryForm() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => append({ type: "adulto", age: 30 })}
+              onClick={() => append({ type: "adulto", age: AGE_RANGES.adulto.default })}
             >
               + Aggiungi persona
             </Button>
@@ -146,15 +149,37 @@ export function ItineraryForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="budget">Budget indicativo: {budget}€</Label>
-            <Slider
-              id="budget"
-              min={0}
-              max={10000}
-              step={100}
-              value={[budget]}
-              onValueChange={([value]) => setValue("budget", value)}
-            />
+            <Label htmlFor="budget-amount">Budget indicativo</Label>
+            <div className="flex items-center gap-4">
+              <Slider
+                aria-label="Budget indicativo in euro"
+                min={0}
+                max={10000}
+                step={50}
+                value={[budget]}
+                onValueChange={([value]) => setValue("budget", value, { shouldValidate: true })}
+                className="flex-1"
+              />
+              <div className="relative w-28 shrink-0">
+                <Input
+                  id="budget-amount"
+                  type="number"
+                  min={0}
+                  max={10000}
+                  step={1}
+                  value={budget}
+                  onChange={(e) => {
+                    const next = Number(e.target.value);
+                    const clamped = Number.isNaN(next) ? 0 : Math.min(10000, Math.max(0, next));
+                    setValue("budget", clamped, { shouldValidate: true });
+                  }}
+                  className="pr-7"
+                />
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  €
+                </span>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">

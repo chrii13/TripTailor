@@ -57,11 +57,51 @@ describe("tripFormSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accetta un'età pari a zero", () => {
+  it("accetta un'età pari a zero per un bambino", () => {
     const result = tripFormSchema.safeParse({
       ...baseValid,
-      participants: [{ type: "adulto", age: 0 }],
+      participants: [{ type: "bambino", age: 0 }],
     });
     expect(result.success).toBe(true);
+  });
+
+  it("rifiuta un'età fuori range per il tipo bambino (0-12)", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      participants: [{ type: "bambino", age: 15 }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accetta un ragazzo nel range 13-25", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      participants: [{ type: "ragazzo", age: 18 }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rifiuta un ragazzo fuori range (26 anni, dovrebbe essere adulto)", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      participants: [{ type: "ragazzo", age: 26 }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accetta i confini esatti di ogni fascia (12 bambino, 13 e 25 ragazzo, 26 adulto)", () => {
+    const cases = [
+      { type: "bambino" as const, age: 12 },
+      { type: "ragazzo" as const, age: 13 },
+      { type: "ragazzo" as const, age: 25 },
+      { type: "adulto" as const, age: 26 },
+    ];
+    for (const participant of cases) {
+      const result = tripFormSchema.safeParse({
+        ...baseValid,
+        participants: [participant],
+      });
+      expect(result.success).toBe(true);
+    }
   });
 });
