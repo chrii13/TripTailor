@@ -17,6 +17,7 @@ import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { tripFormSchema, type TripFormValues } from "@/lib/schema";
 import { ParticipantRow } from "./participant-row";
+import { TripSummary } from "./trip-summary";
 
 const defaultValues: TripFormValues = {
   destination: "",
@@ -27,6 +28,7 @@ const defaultValues: TripFormValues = {
 };
 
 export function ItineraryForm() {
+  const [mode, setMode] = useState<"form" | "summary">("form");
   const [submittedData, setSubmittedData] = useState<TripFormValues | null>(null);
 
   const {
@@ -57,7 +59,16 @@ export function ItineraryForm() {
 
   const onSubmit = (data: TripFormValues) => {
     setSubmittedData(data);
+    setMode("summary");
   };
+
+  const handleEdit = () => {
+    setMode("form");
+  };
+
+  if (mode === "summary" && submittedData) {
+    return <TripSummary data={submittedData} onEdit={handleEdit} />;
+  }
 
   return (
     <Card className="mx-auto w-full max-w-2xl">
@@ -160,12 +171,6 @@ export function ItineraryForm() {
             Genera itinerario
           </Button>
         </form>
-
-        {submittedData && (
-          <pre className="mt-6 overflow-auto rounded-md bg-muted p-4 text-xs">
-            {JSON.stringify(submittedData, null, 2)}
-          </pre>
-        )}
       </CardContent>
     </Card>
   );
