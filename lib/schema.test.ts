@@ -48,4 +48,20 @@ describe("tripFormSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accetta una data di fine uguale alla data di inizio", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      dateRange: { from: new Date("2026-09-01"), to: new Date("2026-09-01") },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accetta un'età pari a zero", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      participants: [{ type: "adulto", age: 0 }],
+    });
+    expect(result.success).toBe(true);
+  });
 });
