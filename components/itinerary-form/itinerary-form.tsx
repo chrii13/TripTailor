@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -50,6 +50,11 @@ export function ItineraryForm() {
 
   const dateRange = watch("dateRange");
   const budget = watch("budget");
+  const participants = watch("participants");
+  const travelerSummary = `${participants.length} ${participants.length === 1 ? "viaggiatore" : "viaggiatori"}`;
+  const participantsError = Array.isArray(errors.participants)
+    ? "Completa i dati di ogni viaggiatore"
+    : errors.participants?.message;
 
   const onSubmit = (data: TripFormValues) => {
     setSubmittedData(data);
@@ -126,39 +131,60 @@ export function ItineraryForm() {
             )}
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-base font-semibold">
+          <div className="space-y-2">
+            <Label>
               <Users className="h-4 w-4 text-muted-foreground" />
               Chi viaggia
             </Label>
-            <div className="space-y-4">
-              {fields.map((field, index) => (
-                <ParticipantRow
-                  key={field.id}
-                  index={index}
-                  control={control}
-                  setValue={setValue}
-                  onRemove={() => remove(index)}
-                  canRemove={fields.length > 1}
-                  error={
-                    Array.isArray(errors.participants)
-                      ? errors.participants[index]?.age?.message
-                      : undefined
-                  }
-                />
-              ))}
-            </div>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => append({ type: "adulto", age: undefined })}
-            >
-              <Plus className="h-4 w-4" />
-              Aggiungi viaggiatore
-            </Button>
-            {errors.participants && !Array.isArray(errors.participants) && (
-              <p className="text-sm text-red-600">{errors.participants.message}</p>
-            )}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    participantsError && "border-destructive"
+                  )}
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  {travelerSummary}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[calc(100vw-2rem)] max-w-sm" align="start">
+                <div className="space-y-4">
+                  {fields.map((field, index) => (
+                    <ParticipantRow
+                      key={field.id}
+                      index={index}
+                      control={control}
+                      setValue={setValue}
+                      onRemove={() => remove(index)}
+                      canRemove={fields.length > 1}
+                      error={
+                        Array.isArray(errors.participants)
+                          ? errors.participants[index]?.age?.message
+                          : undefined
+                      }
+                    />
+                  ))}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => append({ type: "adulto", age: undefined })}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Aggiungi viaggiatore
+                  </Button>
+                  <PopoverClose asChild>
+                    <Button type="button" className="w-full">
+                      Fatto
+                    </Button>
+                  </PopoverClose>
+                </div>
+              </PopoverContent>
+            </Popover>
+            {participantsError && <p className="text-sm text-red-600">{participantsError}</p>}
           </div>
 
           <div className="space-y-2">
