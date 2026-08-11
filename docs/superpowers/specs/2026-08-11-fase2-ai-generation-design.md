@@ -15,12 +15,13 @@ Fuori scope per questa fase (rimandato):
 - Export calendario (Fase 4).
 - App mobile (Fase 5).
 - Persistenza dei risultati generati (si perdono al refresh, coerente con l'approccio client-only della Fase 1 — l'unica novità è la chiamata server-side alla generazione).
+- Consigli di ristoranti nelle vicinanze in base a dove si trova il viaggiatore in un dato momento dell'itinerario. *(Nota per il futuro: idea candidata per un'eventuale versione "Pro" a pagamento — idea registrata, non pianificata per questa fase.)*
 
 ## Flusso
 
 - Il submit del form (`ItineraryForm`) non mostra più un riepilogo statico: chiama direttamente la nuova API route per generare l'itinerario.
 - Nuovo stato del componente: `mode: "form" | "loading" | "result" | "error"`.
-  - `"loading"`: mostrato durante la chiamata (può richiedere fino a ~30s). Il bottone di submit si disabilita e mostra uno spinner con testo tipo "Generazione in corso…", il resto del form resta visibile ma non interagibile.
+  - `"loading"`: mostrato durante la chiamata (può richiedere fino a ~30s). Il bottone di submit si disabilita e mostra uno spinner; il testo accanto allo spinner **non è statico** — ruota ogni ~2,5s tra una serie di messaggi simpatici a tema viaggio (es. "Stiamo consultando le mappe…", "Cerchiamo i posti migliori…", "Controlliamo gli orari di apertura…", "Chiediamo consiglio a un local…", "Ottimizziamo il tuo itinerario…", "Prepariamo le valigie (metaforicamente)…"), scelti/ciclati in ordine casuale. Il resto del form resta visibile ma non interagibile.
   - `"result"`: nuovo componente `itinerary-result.tsx` — una fascia compatta in cima con i parametri del viaggio (destinazione, date, viaggiatori, budget) seguita dall'itinerario giorno per giorno, più un bottone "Modifica" che torna al form con i dati intatti (stesso pattern già usato in Fase 1: nessun reset, nessun cambio di route).
   - `"error"`: torna alla vista form (dati intatti) con un banner d'errore in cima, messaggio personalizzato in base al tipo di errore (vedi sotto).
 - **Limite durata viaggio**: se l'intervallo di date supera **14 giorni**, il form mostra un errore di validazione prima di poter inviare (evita chiamate lunghe/costose). *(Nota per il futuro: un'eventuale versione "Pro" a pagamento potrebbe rimuovere questo limite — idea registrata, non pianificata per questa fase.)*
@@ -66,10 +67,19 @@ Il prompt include tutti i dati già raccolti dal form:
 - Note sullo stile di viaggio
 
 Istruzioni per l'AI:
-- Adattare ritmo e tipo di attività alla composizione del gruppo (bambini presenti → ritmi più rilassati, parchi; solo adulti → nightlife, trekking impegnativi ecc.), come da spec originale del progetto.
 - Fornire una stima di costo indicativa per ogni attività.
 - Fornire orari di apertura/chiusura indicativi dove pertinente (musei, monumenti, locali) — non per attività generiche.
 - Nessun riferimento al meteo (fuori scope, Fase 3).
+
+### Adattamento per età e composizione del gruppo
+
+Il prompt passa tipo **ed età precisa** di ciascun viaggiatore (non solo la fascia), così l'AI può calibrare meglio di una semplice regola a 3 categorie. Linee guida da includere nel prompt:
+
+- **Bambini (0-12) presenti**: ritmo rilassato, poche attività per fascia oraria, pause frequenti, orari non troppo mattinieri, pasti a orari regolari. Preferire parchi, zoo/acquari, musei interattivi/scientifici, attività family-friendly. Evitare vita notturna, locali per adulti, trekking impegnativi o attività con lunghe attese in piedi/code.
+- **Ragazzi (13-25) presenti, senza bambini**: ritmo più dinamico, mix di cultura leggera e intrattenimento, attività social/esperienziali (punti panoramici, esperienze fotografiche, sport leggeri/acquatici, escursioni brevi). Evitare di presumere accesso a locali/nightlife per l'intera fascia, dato che include minorenni (13-17) — restare su attività adatte anche a un sedicenne, a meno che il gruppo sia esplicitamente tutto maggiorenne (età ≥18 per tutti i "ragazzi" nel gruppo).
+- **Solo adulti (26+), nessun bambino/ragazzo**: ritmo più libero e denso, spazio a nightlife, trekking impegnativi, esperienze enogastronomiche, cultura senza vincoli di tempo ridotti.
+- **Gruppi misti** (es. adulti + bambini, o adulti + ragazzi): il ritmo si adatta al membro più "vincolante" del gruppo — se ci sono bambini, la giornata resta family-friendly anche se il gruppo include adulti; sera tranquilla piuttosto che nightlife.
+- Tra adulti, usare l'età precisa per sfumare il tono (es. un gruppo di ventenni vs un gruppo di cinquantenni può giustificare attività diverse pur restando entrambi "adulti") — non trattare tutta la fascia 26-100 come omogenea.
 
 ## Gestione errori
 
