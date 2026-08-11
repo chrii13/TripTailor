@@ -6,6 +6,9 @@ export const AGE_RANGES = {
   adulto: { min: 26, max: 100 },
 } as const;
 
+export const MAX_TRIP_DAYS = 14;
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
 export type ParticipantType = keyof typeof AGE_RANGES;
 
 export const participantSchema = z
@@ -38,7 +41,15 @@ export const tripFormSchema = z.object({
     })
     .refine((range) => !range.from || !range.to || range.to >= range.from, {
       message: "La data di fine deve essere successiva o uguale alla data di inizio",
-    }),
+    })
+    .refine(
+      (range) => {
+        if (!range.from || !range.to) return true;
+        const days = Math.round((range.to.getTime() - range.from.getTime()) / MS_PER_DAY) + 1;
+        return days <= MAX_TRIP_DAYS;
+      },
+      { message: `Il viaggio non può superare i ${MAX_TRIP_DAYS} giorni` }
+    ),
   participants: z.array(participantSchema).min(1, "Aggiungi almeno un partecipante"),
   budget: z.number().min(0),
   styleNotes: z.string().optional(),

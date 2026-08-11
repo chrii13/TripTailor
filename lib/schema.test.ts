@@ -112,4 +112,20 @@ describe("tripFormSchema", () => {
       expect(result.success).toBe(true);
     }
   });
+
+  it("rifiuta un viaggio di più di 14 giorni", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      dateRange: { from: new Date("2026-09-01"), to: new Date("2026-09-16") },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accetta un viaggio di esattamente 14 giorni", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      dateRange: { from: new Date("2026-09-01"), to: new Date("2026-09-14") },
+    });
+    expect(result.success).toBe(true);
+  });
 });
