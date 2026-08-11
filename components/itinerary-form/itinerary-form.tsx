@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Plus } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -66,13 +66,13 @@ export function ItineraryForm() {
 
   return (
     <Card className="mx-auto w-full max-w-2xl">
-      <CardHeader>
+      <CardHeader className="px-8 pt-8">
         <CardTitle className="font-display text-2xl font-semibold">
           Pianifica il tuo viaggio
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <CardContent className="px-8 pb-8">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           <div className="space-y-2">
             <Label htmlFor="destination">Destinazione</Label>
             <Input id="destination" placeholder="Es. Roma, Italia" {...register("destination")} />
@@ -120,28 +120,31 @@ export function ItineraryForm() {
           </div>
 
           <div className="space-y-3">
-            <Label>Composizione gruppo</Label>
-            {fields.map((field, index) => (
-              <ParticipantRow
-                key={field.id}
-                index={index}
-                control={control}
-                setValue={setValue}
-                onRemove={() => remove(index)}
-                canRemove={fields.length > 1}
-                error={
-                  Array.isArray(errors.participants)
-                    ? errors.participants[index]?.age?.message
-                    : undefined
-                }
-              />
-            ))}
+            <Label className="text-base font-semibold">Chi viaggia</Label>
+            <div className="space-y-4">
+              {fields.map((field, index) => (
+                <ParticipantRow
+                  key={field.id}
+                  index={index}
+                  control={control}
+                  setValue={setValue}
+                  onRemove={() => remove(index)}
+                  canRemove={fields.length > 1}
+                  error={
+                    Array.isArray(errors.participants)
+                      ? errors.participants[index]?.age?.message
+                      : undefined
+                  }
+                />
+              ))}
+            </div>
             <Button
               type="button"
               variant="secondary"
               onClick={() => append({ type: "adulto", age: undefined })}
             >
-              + Aggiungi persona
+              <Plus className="h-4 w-4" />
+              Aggiungi viaggiatore
             </Button>
             {errors.participants && !Array.isArray(errors.participants) && (
               <p className="text-sm text-red-600">{errors.participants.message}</p>
@@ -183,7 +186,7 @@ export function ItineraryForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="styleNotes">Note sullo stile di viaggio</Label>
+            <Label htmlFor="styleNotes">Stile di viaggio</Label>
             <Input
               id="styleNotes"
               placeholder="Es. lusso, economico, avventura..."
