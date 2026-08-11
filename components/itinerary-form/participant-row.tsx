@@ -52,7 +52,7 @@ export function ParticipantRow({
               onValueChange={(value) => {
                 const nextType = value as ParticipantType;
                 field.onChange(nextType);
-                setValue(`participants.${index}.age`, AGE_RANGES[nextType].default, {
+                setValue(`participants.${index}.age`, undefined, {
                   shouldValidate: true,
                 });
               }}
@@ -75,19 +75,29 @@ export function ParticipantRow({
         <Label htmlFor={`participants.${index}.age`}>Età</Label>
         {/*
           Keyed by `type`: the set of valid ages changes with the type, and
-          Radix Select can race between registering the new option list and
-          picking up a value set programmatically in the same tick (it clears
-          the value to "" if it doesn't yet see a matching item). Remounting
-          fresh on type change sidesteps the race entirely.
+          Radix Select can race between registering a new option list and a
+          value set programmatically in the same tick. Remounting fresh on
+          type change sidesteps that race entirely (cheap insurance — age
+          always resets to "unselected" here, which is its own safe state,
+          but a fresh mount keeps it that way even if that ever changes).
         */}
         <Controller
           key={type}
           control={control}
           name={`participants.${index}.age`}
           render={({ field }) => (
-            <Select value={String(field.value)} onValueChange={(value) => field.onChange(Number(value))}>
+            <Select
+              value={field.value !== undefined ? String(field.value) : ""}
+              onValueChange={(value) =>
+                setValue(
+                  `participants.${index}.age`,
+                  value === "" ? undefined : Number(value),
+                  { shouldValidate: true }
+                )
+              }
+            >
               <SelectTrigger id={`participants.${index}.age`} className="w-full">
-                <SelectValue />
+                <SelectValue placeholder="–" />
               </SelectTrigger>
               <SelectContent className="max-h-64">
                 {ages.map((age) => (

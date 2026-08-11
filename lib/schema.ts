@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 export const AGE_RANGES = {
-  bambino: { min: 0, max: 12, default: 5 },
-  ragazzo: { min: 13, max: 25, default: 18 },
-  adulto: { min: 26, max: 100, default: 30 },
+  bambino: { min: 0, max: 12 },
+  ragazzo: { min: 13, max: 25 },
+  adulto: { min: 26, max: 100 },
 } as const;
 
 export type ParticipantType = keyof typeof AGE_RANGES;
@@ -11,10 +11,15 @@ export type ParticipantType = keyof typeof AGE_RANGES;
 export const participantSchema = z
   .object({
     type: z.enum(["bambino", "ragazzo", "adulto"]),
-    age: z.number().int(),
+    age: z.number().int().optional(),
+  })
+  .refine((participant) => participant.age !== undefined, {
+    message: "Seleziona un'età",
+    path: ["age"],
   })
   .refine(
     (participant) => {
+      if (participant.age === undefined) return true;
       const range = AGE_RANGES[participant.type];
       return participant.age >= range.min && participant.age <= range.max;
     },

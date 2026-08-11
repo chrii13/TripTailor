@@ -15,14 +15,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { AGE_RANGES, tripFormSchema, type TripFormValues } from "@/lib/schema";
+import { tripFormSchema, type TripFormValues } from "@/lib/schema";
 import { ParticipantRow } from "./participant-row";
 import { TripSummary } from "./trip-summary";
 
 const defaultValues: TripFormValues = {
   destination: "",
   dateRange: { from: undefined, to: undefined },
-  participants: [{ type: "adulto", age: AGE_RANGES.adulto.default }],
+  participants: [{ type: "adulto", age: undefined }],
   budget: 1000,
   styleNotes: "",
 };
@@ -139,7 +139,7 @@ export function ItineraryForm() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => append({ type: "adulto", age: AGE_RANGES.adulto.default })}
+              onClick={() => append({ type: "adulto", age: undefined })}
             >
               + Aggiungi persona
             </Button>

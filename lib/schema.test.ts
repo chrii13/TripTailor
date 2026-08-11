@@ -89,6 +89,14 @@ describe("tripFormSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rifiuta un partecipante senza età selezionata", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      participants: [{ type: "adulto", age: undefined }],
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("accetta i confini esatti di ogni fascia (12 bambino, 13 e 25 ragazzo, 26 adulto)", () => {
     const cases = [
       { type: "bambino" as const, age: 12 },

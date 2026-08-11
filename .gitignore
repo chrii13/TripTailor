@@ -43,3 +43,6 @@ next-env.d.ts
 
 # superpowers workflow scratch state (local only, never commit)
 .superpowers/
+
+# Claude Code local tooling state (local only, never commit)
+.claude/scheduled_tasks.lock
