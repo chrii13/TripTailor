@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { CalendarIcon, Plus } from "lucide-react";
+import { CalendarIcon, Euro, MapPin, Plus, Sparkles, Users } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -65,7 +65,8 @@ export function ItineraryForm() {
   }
 
   return (
-    <Card className="mx-auto w-full max-w-2xl">
+    <Card className="relative mx-auto w-full max-w-2xl overflow-hidden shadow-[0_20px_50px_-12px_color-mix(in_oklch,var(--primary)_25%,transparent)]">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
       <CardHeader className="px-8 pt-8">
         <CardTitle className="font-display text-2xl font-semibold">
           Pianifica il tuo viaggio
@@ -74,7 +75,10 @@ export function ItineraryForm() {
       <CardContent className="px-8 pb-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           <div className="space-y-2">
-            <Label htmlFor="destination">Destinazione</Label>
+            <Label htmlFor="destination">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              Destinazione
+            </Label>
             <Input id="destination" placeholder="Es. Roma, Italia" {...register("destination")} />
             {errors.destination && (
               <p className="text-sm text-red-600">{errors.destination.message}</p>
@@ -82,7 +86,10 @@ export function ItineraryForm() {
           </div>
 
           <div className="space-y-2">
-            <Label>Date del viaggio</Label>
+            <Label>
+              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+              Date del viaggio
+            </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -120,7 +127,10 @@ export function ItineraryForm() {
           </div>
 
           <div className="space-y-3">
-            <Label className="text-base font-semibold">Chi viaggia</Label>
+            <Label className="text-base font-semibold">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              Chi viaggia
+            </Label>
             <div className="space-y-4">
               {fields.map((field, index) => (
                 <ParticipantRow
@@ -152,7 +162,10 @@ export function ItineraryForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="budget-amount">Budget indicativo</Label>
+            <Label htmlFor="budget-amount">
+              <Euro className="h-4 w-4 text-muted-foreground" />
+              Budget indicativo
+            </Label>
             <div className="flex items-center gap-4">
               <Slider
                 aria-label="Budget indicativo in euro"
@@ -186,7 +199,10 @@ export function ItineraryForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="styleNotes">Stile di viaggio</Label>
+            <Label htmlFor="styleNotes">
+              <Sparkles className="h-4 w-4 text-muted-foreground" />
+              Stile di viaggio
+            </Label>
             <Input
               id="styleNotes"
               placeholder="Es. lusso, economico, avventura..."

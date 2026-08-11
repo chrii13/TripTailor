@@ -16,11 +16,12 @@ const TYPE_LABELS: Record<ParticipantType, string> = {
 
 export function TripSummary({ data, onEdit }: TripSummaryProps) {
   return (
-    <Card className="mx-auto w-full max-w-2xl">
-      <CardHeader>
+    <Card className="relative mx-auto w-full max-w-2xl overflow-hidden shadow-[0_20px_50px_-12px_color-mix(in_oklch,var(--primary)_25%,transparent)]">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
+      <CardHeader className="px-8 pt-8">
         <CardTitle className="font-display text-2xl font-semibold">Riepilogo viaggio</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-8 pb-8">
         <div>
           <p className="text-sm text-muted-foreground">Destinazione</p>
           <p className="font-medium">{data.destination}</p>
