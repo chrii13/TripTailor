@@ -43,6 +43,8 @@
   - Budget: slider in € + campo note testuali per lo stile di viaggio.
   - Stile visivo: l'utente progetta l'aspetto grafico separatamente su claude.ai/design (progetto Design System); l'implementazione qui parte con uno stile Tailwind/shadcn moderno di default, sostituibile in seguito.
   - Design docs dettagliate per fase in `docs/superpowers/specs/`.
+  - Composizione gruppo: 3 tipi (Bambino 0-12, Ragazzo 13-25, Adulto 26-100), età obbligatoria da selezionare esplicitamente (nessun default) tramite menu a tendina, non input numerico libero.
+  - Decisione (2026-08-11): l'autocompletamento della Destinazione (suggerimenti città mentre l'utente scrive) è rimandato alla Fase 2, da introdurre insieme al backend per la generazione AI — richiede una API route (es. proxy verso OpenStreetMap Nominatim) e quindi rompe la regola "niente backend" della Fase 1, meglio farlo in un colpo solo con l'altro backend.
 - **Required Environment Variables:**
   - `ANTHROPIC_API_KEY` — Claude API (fase futura, generazione itinerario)
   - `OPENWEATHER_API_KEY` — OpenWeatherMap (fase futura, meteo)
