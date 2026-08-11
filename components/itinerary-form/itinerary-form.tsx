@@ -91,15 +91,12 @@ export function ItineraryForm() {
           </div>
 
           <div className="space-y-2">
-            <Label>
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-              Date del viaggio
-            </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   type="button"
                   variant="outline"
+                  aria-label="Date del viaggio"
                   className={cn(
                     "w-full justify-start text-left font-normal",
                     !dateRange?.from && "text-muted-foreground"
@@ -132,15 +129,12 @@ export function ItineraryForm() {
           </div>
 
           <div className="space-y-2">
-            <Label>
-              <Users className="h-4 w-4 text-muted-foreground" />
-              Chi viaggia
-            </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   type="button"
                   variant="outline"
+                  aria-label="Chi viaggia"
                   className={cn(
                     "w-full justify-start text-left font-normal",
                     participantsError && "border-destructive"
