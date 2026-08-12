@@ -15,7 +15,7 @@ Oggi `openingHours` indica solo quando il luogo è aperto in generale (es. "9:00
 
 ### Più attività per fascia
 
-Lo schema già supporta più attività per fascia (mattina/pomeriggio/sera sono array), ma il prompt attuale porta quasi sempre a una sola attività "grande" per fascia. Si aggiorna il prompt per incoraggiare esplicitamente 2-3 attività più brevi per fascia quando ha senso, con `suggestedTime` che si susseguono senza sovrapposizioni all'interno della fascia.
+Lo schema già supporta più attività per fascia (mattina/pomeriggio/sera sono array), ma il prompt attuale porta quasi sempre a una sola attività "grande" per fascia. Si aggiorna il prompt per incoraggiare 2-3 attività più brevi per fascia quando ha senso, con `suggestedTime` che si susseguono senza sovrapposizioni all'interno della fascia — **non è una regola fissa**: se un'attività è di per sé sostanziosa e occupa ragionevolmente l'intera fascia (es. un grande museo, un'escursione fuori porta), resta da sola. Il prompt deve lasciare esplicitamente questa valutazione all'AI caso per caso, non imporre un numero minimo di attività per fascia.
 
 ### Linguaggio inclusivo
 
