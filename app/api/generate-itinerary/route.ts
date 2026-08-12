@@ -26,15 +26,16 @@ export async function POST(request: Request) {
   }
 
   const prompt = buildItineraryPrompt(parsedRequest.data);
-  const client = new Anthropic();
+  const client = new Anthropic({ maxRetries: 1 });
 
   try {
     const response = await client.messages.parse(
       {
         model: "claude-sonnet-5",
-        max_tokens: 8000,
+        max_tokens: 16000,
         messages: [{ role: "user", content: prompt }],
         output_config: {
+          effort: "medium",
           format: zodOutputFormat(itineraryResponseSchema),
         },
       },

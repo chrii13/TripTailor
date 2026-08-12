@@ -52,4 +52,12 @@ describe("generateItineraryRequestSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("rifiuta più di 20 partecipanti", () => {
+    const result = generateItineraryRequestSchema.safeParse({
+      ...baseValidBody,
+      participants: Array.from({ length: 21 }, () => ({ type: "adulto", age: 35 })),
+    });
+    expect(result.success).toBe(false);
+  });
 });

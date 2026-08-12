@@ -52,39 +52,45 @@ export function ItineraryResult({ tripData, itinerary, onEdit }: ItineraryResult
         </div>
 
         <div className="space-y-6">
-          {itinerary.days.map((day, dayIndex) => (
-            <div key={dayIndex} className="space-y-3">
-              <h3 className="font-display text-lg font-semibold">
-                Giorno {dayIndex + 1} — {format(new Date(day.date), "dd/MM/yyyy")}
-              </h3>
-              {SLOTS.map(
-                ({ key, label }) =>
-                  day[key].length > 0 && (
-                    <div key={key} className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">{label}</p>
-                      <ul className="space-y-2">
-                        {day[key].map((activity, activityIndex) => (
-                          <li key={activityIndex} className="rounded-md border p-3">
-                            <div className="flex items-baseline justify-between gap-2">
-                              <span className="font-medium">{activity.title}</span>
-                              <span className="shrink-0 text-sm text-muted-foreground">
-                                {activity.estimatedCost}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-sm text-muted-foreground">{activity.description}</p>
-                            {activity.openingHours && (
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                Orari: {activity.openingHours}
-                              </p>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )
-              )}
-            </div>
-          ))}
+          {itinerary.days.map((day, dayIndex) => {
+            const parsedDate = new Date(day.date);
+            const formattedDate = Number.isNaN(parsedDate.getTime())
+              ? day.date
+              : format(parsedDate, "dd/MM/yyyy");
+            return (
+              <div key={dayIndex} className="space-y-3">
+                <h3 className="font-display text-lg font-semibold">
+                  Giorno {dayIndex + 1} — {formattedDate}
+                </h3>
+                {SLOTS.map(
+                  ({ key, label }) =>
+                    day[key].length > 0 && (
+                      <div key={key} className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+                        <ul className="space-y-2">
+                          {day[key].map((activity, activityIndex) => (
+                            <li key={activityIndex} className="rounded-md border p-3">
+                              <div className="flex items-baseline justify-between gap-2">
+                                <span className="font-medium">{activity.title}</span>
+                                <span className="shrink-0 text-sm text-muted-foreground">
+                                  {activity.estimatedCost}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-sm text-muted-foreground">{activity.description}</p>
+                              {activity.openingHours && (
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  Orari: {activity.openingHours}
+                                </p>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <Button type="button" variant="outline" onClick={onEdit} className="w-full">

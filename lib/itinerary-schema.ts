@@ -8,7 +8,7 @@ export const activitySchema = z.object({
 });
 
 export const itineraryDaySchema = z.object({
-  date: z.string(),
+  date: z.iso.date(),
   mattina: z.array(activitySchema),
   pomeriggio: z.array(activitySchema),
   sera: z.array(activitySchema),

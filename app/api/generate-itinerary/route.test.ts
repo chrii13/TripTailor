@@ -53,7 +53,11 @@ describe("POST /api/generate-itinerary", () => {
       const body = await response.json();
       expect(body.error).toBe("config");
     } finally {
-      process.env.ANTHROPIC_API_KEY = originalKey;
+      if (originalKey === undefined) {
+        delete process.env.ANTHROPIC_API_KEY;
+      } else {
+        process.env.ANTHROPIC_API_KEY = originalKey;
+      }
     }
   });
 });

@@ -68,4 +68,17 @@ describe("itineraryResponseSchema", () => {
     const result = itineraryResponseSchema.safeParse({ days: "non un array" });
     expect(result.success).toBe(false);
   });
+
+  it("rifiuta una data non in formato ISO (es. 'giorno mese anno' in italiano)", () => {
+    const invalid = {
+      days: [
+        {
+          ...validResponse.days[0],
+          date: "12 settembre 2026",
+        },
+      ],
+    };
+    const result = itineraryResponseSchema.safeParse(invalid);
+    expect(result.success).toBe(false);
+  });
 });
