@@ -29,6 +29,7 @@ export async function POST(request: Request) {
   const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
   let responseText: string | undefined;
+  let finishReason: string | undefined;
   try {
     const response = await client.models.generateContent({
       model: "gemini-2.5-flash",
@@ -36,15 +37,16 @@ export async function POST(request: Request) {
       config: {
         responseMimeType: "application/json",
         responseJsonSchema: z.toJSONSchema(itineraryResponseSchema),
-        maxOutputTokens: 8192,
+        maxOutputTokens: 24000,
         thinkingConfig: { thinkingBudget: 1024 },
         httpOptions: {
           timeout: 30_000,
-          retryOptions: { attempts: 2 },
+          retryOptions: { attempts: 2, httpStatusCodes: [408, 500, 502, 503, 504] },
         },
       },
     });
     responseText = response.text;
+    finishReason = response.candidates?.[0]?.finishReason;
   } catch (error) {
     const code = classifyGenerationError(error);
     console.error(`Generazione itinerario fallita (${code}):`, error);
@@ -61,7 +63,11 @@ export async function POST(request: Request) {
   try {
     parsedItinerary = JSON.parse(responseText);
   } catch (error) {
-    console.error("Generazione itinerario: JSON non valido nella risposta di Gemini", error, responseText);
+    console.error(
+      `Generazione itinerario: JSON non valido nella risposta di Gemini (finishReason: ${finishReason})`,
+      error,
+      responseText,
+    );
     return NextResponse.json({ error: "invalid_response" }, { status: 502 });
   }
 

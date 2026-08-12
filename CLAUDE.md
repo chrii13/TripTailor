@@ -12,7 +12,7 @@
 *Claude: Update this section automatically as the project evolves.*
 
 - **Project Name:** "App Itinerari" (nome provvisorio, non definitivo — da aggiornare quando scelto) — Web App (MVP) + Mobile App per la creazione automatica di itinerari di viaggio personalizzati (AI, meteo, export calendario).
-- **Tech Stack:** Next.js (App Router, TypeScript), Tailwind CSS, shadcn/ui, react-hook-form + zod. AI: Anthropic Claude API (fase futura). Meteo: OpenWeatherMap (fase futura). Calendario: Google Calendar API / libreria `ics` (fase futura). Mobile: da definire (fase futura).
+- **Tech Stack:** Next.js (App Router, TypeScript), Tailwind CSS, shadcn/ui, react-hook-form + zod. AI: Google Gemini (`@google/genai`, modello `gemini-2.5-flash`). Meteo: OpenWeatherMap (fase futura). Calendario: Google Calendar API / libreria `ics` (fase futura). Mobile: da definire (fase futura).
 - **Primary Commands:**
   - **Dev:** `npm run dev`
   - **Build:** `npm run build`
@@ -48,7 +48,7 @@
   - Pattern "Date del viaggio" e "Chi viaggia": bottone compatto con icona + testo auto-esplicativo che apre un Popover (stile Booking.com), senza etichetta separata sopra (evita la ridondanza label+testo). "Chi viaggia" apre un Popover con le righe tipo+età per persona (età individuale mantenuta, non un contatore aggregato come Booking) e un bottone "Fatto" per chiudere.
   - Feedback utente (2026-08-11): il design visivo attuale (crema/smeraldo, Fraunces, icone per campo, linea a gradiente, ombra) "non convince ancora del tutto" — da rivedere in un secondo momento, nessuna direzione specifica data per ora.
 - **Required Environment Variables:**
-  - `ANTHROPIC_API_KEY` — Claude API (fase futura, generazione itinerario)
+  - `GEMINI_API_KEY` — Google Gemini API (generazione itinerario)
   - `OPENWEATHER_API_KEY` — OpenWeatherMap (fase futura, meteo)
   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — Google Calendar API (fase futura, export calendario)
 
