@@ -15,4 +15,18 @@ describe("POST /api/generate-itinerary", () => {
     const body = await response.json();
     expect(body.error).toBe("invalid_response");
   });
+
+  it("rifiuta un corpo JSON malformato con 400 senza lanciare un'eccezione non gestita", async () => {
+    const request = new Request("http://localhost/api/generate-itinerary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "not valid json{",
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_response");
+  });
 });

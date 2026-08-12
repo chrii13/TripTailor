@@ -7,7 +7,13 @@ import { buildItineraryPrompt } from "@/lib/itinerary-prompt";
 import { classifyAnthropicError } from "@/lib/generate-itinerary-errors";
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "invalid_response" }, { status: 400 });
+  }
+
   const parsedRequest = generateItineraryRequestSchema.safeParse(body);
 
   if (!parsedRequest.success) {
