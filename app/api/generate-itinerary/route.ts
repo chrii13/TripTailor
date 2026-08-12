@@ -40,7 +40,7 @@ export async function POST(request: Request) {
         maxOutputTokens: 50000,
         thinkingConfig: { thinkingBudget: 1024 },
         httpOptions: {
-          timeout: 30_000,
+          timeout: 180_000,
           retryOptions: { attempts: 2, httpStatusCodes: [408, 500, 502, 503, 504] },
         },
       },

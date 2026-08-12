@@ -27,6 +27,7 @@ const SLOTS = [
 ] as const;
 
 export function ItineraryResult({ tripData, itinerary, onEdit }: ItineraryResultProps) {
+  const [open, setOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 
   return (
@@ -82,8 +83,11 @@ export function ItineraryResult({ tripData, itinerary, onEdit }: ItineraryResult
                               <button
                                 key={activityIndex}
                                 type="button"
-                                onClick={() => setSelectedActivity(activity)}
-                                className="w-full rounded-lg p-2 text-left transition hover:-translate-y-0.5 hover:bg-accent"
+                                onClick={() => {
+                                  setSelectedActivity(activity);
+                                  setOpen(true);
+                                }}
+                                className="w-full cursor-pointer rounded-lg p-2 text-left transition hover:-translate-y-0.5 hover:bg-accent"
                               >
                                 <p className="text-sm font-medium">{activity.title}</p>
                                 <p className="text-sm text-muted-foreground">{activity.description}</p>
@@ -108,7 +112,7 @@ export function ItineraryResult({ tripData, itinerary, onEdit }: ItineraryResult
         </Button>
       </CardContent>
 
-      <Dialog open={selectedActivity !== null} onOpenChange={(open) => !open && setSelectedActivity(null)}>
+      <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           {selectedActivity && (
             <>
