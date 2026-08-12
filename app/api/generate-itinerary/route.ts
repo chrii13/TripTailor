@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       config: {
         responseMimeType: "application/json",
         responseJsonSchema: z.toJSONSchema(itineraryResponseSchema),
-        maxOutputTokens: 24000,
+        maxOutputTokens: 50000,
         thinkingConfig: { thinkingBudget: 1024 },
         httpOptions: {
           timeout: 30_000,

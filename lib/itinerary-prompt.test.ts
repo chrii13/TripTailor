@@ -19,7 +19,7 @@ describe("buildItineraryPrompt", () => {
     expect(buildItineraryPrompt(baseRequest)).toContain("5 giorni");
   });
 
-  it("include tipo ed età esatta di ogni partecipante", () => {
+  it("include tipo (in forma inclusiva) ed età esatta di ogni partecipante", () => {
     const request: GenerateItineraryRequest = {
       ...baseRequest,
       participants: [
@@ -28,8 +28,8 @@ describe("buildItineraryPrompt", () => {
       ],
     };
     const prompt = buildItineraryPrompt(request);
-    expect(prompt).toContain("Bambino, 7 anni");
-    expect(prompt).toContain("Adulto, 40 anni");
+    expect(prompt).toContain("Bambino/a, 7 anni");
+    expect(prompt).toContain("Adulto/a, 40 anni");
   });
 
   it("include il budget indicativo", () => {
@@ -51,5 +51,20 @@ describe("buildItineraryPrompt", () => {
 
   it("non fa riferimento al meteo", () => {
     expect(buildItineraryPrompt(baseRequest).toLowerCase()).not.toContain("meteo");
+  });
+
+  it("istruisce a fornire un orario consigliato per ogni attività", () => {
+    expect(buildItineraryPrompt(baseRequest)).toContain("suggestedTime");
+  });
+
+  it("istruisce a fornire i campi di approfondimento about/gettingThere/tips", () => {
+    const prompt = buildItineraryPrompt(baseRequest);
+    expect(prompt).toContain("about");
+    expect(prompt).toContain("gettingThere");
+    expect(prompt).toContain("tips");
+  });
+
+  it("non impone un numero fisso di attività per fascia", () => {
+    expect(buildItineraryPrompt(baseRequest)).toContain("Non imporre un numero fisso");
   });
 });
