@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { GoogleGenAI } from "@google/genai";
+import { z } from "zod";
 import { generateItineraryRequestSchema } from "@/lib/generate-itinerary-request";
 import { itineraryResponseSchema } from "@/lib/itinerary-schema";
 import { buildItineraryPrompt } from "@/lib/itinerary-prompt";
-import { classifyAnthropicError } from "@/lib/generate-itinerary-errors";
+import { classifyGenerationError } from "@/lib/generate-itinerary-errors";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -20,38 +20,57 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_response" }, { status: 400 });
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error("Generazione itinerario: ANTHROPIC_API_KEY non configurata");
+  if (!process.env.GEMINI_API_KEY) {
+    console.error("Generazione itinerario: GEMINI_API_KEY non configurata");
     return NextResponse.json({ error: "config" }, { status: 502 });
   }
 
   const prompt = buildItineraryPrompt(parsedRequest.data);
-  const client = new Anthropic({ maxRetries: 1 });
+  const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+  let responseText: string | undefined;
   try {
-    const response = await client.messages.parse(
-      {
-        model: "claude-sonnet-5",
-        max_tokens: 16000,
-        messages: [{ role: "user", content: prompt }],
-        output_config: {
-          effort: "medium",
-          format: zodOutputFormat(itineraryResponseSchema),
+    const response = await client.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseJsonSchema: z.toJSONSchema(itineraryResponseSchema),
+        maxOutputTokens: 8192,
+        thinkingConfig: { thinkingBudget: 1024 },
+        httpOptions: {
+          timeout: 30_000,
+          retryOptions: { attempts: 2 },
         },
       },
-      { timeout: 30_000 }
-    );
-
-    if (!response.parsed_output) {
-      console.error("Generazione itinerario: risposta non conforme allo schema atteso", response);
-      return NextResponse.json({ error: "invalid_response" }, { status: 502 });
-    }
-
-    return NextResponse.json({ itinerary: response.parsed_output });
+    });
+    responseText = response.text;
   } catch (error) {
-    const code = classifyAnthropicError(error);
+    const code = classifyGenerationError(error);
     console.error(`Generazione itinerario fallita (${code}):`, error);
     const status = code === "rate_limit" ? 429 : 502;
     return NextResponse.json({ error: code }, { status });
   }
+
+  if (!responseText) {
+    console.error("Generazione itinerario: risposta vuota da Gemini");
+    return NextResponse.json({ error: "invalid_response" }, { status: 502 });
+  }
+
+  let parsedItinerary: unknown;
+  try {
+    parsedItinerary = JSON.parse(responseText);
+  } catch (error) {
+    console.error("Generazione itinerario: JSON non valido nella risposta di Gemini", error, responseText);
+    return NextResponse.json({ error: "invalid_response" }, { status: 502 });
+  }
+
+  const parsedResult = itineraryResponseSchema.safeParse(parsedItinerary);
+
+  if (!parsedResult.success) {
+    console.error("Generazione itinerario: risposta non conforme allo schema atteso", parsedResult.error);
+    return NextResponse.json({ error: "invalid_response" }, { status: 502 });
+  }
+
+  return NextResponse.json({ itinerary: parsedResult.data });
 }

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { POST } from "./route";
 
 describe("POST /api/generate-itinerary", () => {
-  it("rifiuta un corpo non valido con 400 prima di chiamare Claude", async () => {
+  it("rifiuta un corpo non valido con 400 prima di chiamare Gemini", async () => {
     const request = new Request("http://localhost/api/generate-itinerary", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -30,9 +30,9 @@ describe("POST /api/generate-itinerary", () => {
     expect(body.error).toBe("invalid_response");
   });
 
-  it("restituisce l'errore 'config' quando ANTHROPIC_API_KEY non è configurata", async () => {
-    const originalKey = process.env.ANTHROPIC_API_KEY;
-    process.env.ANTHROPIC_API_KEY = "";
+  it("restituisce l'errore 'config' quando GEMINI_API_KEY non è configurata", async () => {
+    const originalKey = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = "";
 
     try {
       const request = new Request("http://localhost/api/generate-itinerary", {
@@ -54,9 +54,9 @@ describe("POST /api/generate-itinerary", () => {
       expect(body.error).toBe("config");
     } finally {
       if (originalKey === undefined) {
-        delete process.env.ANTHROPIC_API_KEY;
+        delete process.env.GEMINI_API_KEY;
       } else {
-        process.env.ANTHROPIC_API_KEY = originalKey;
+        process.env.GEMINI_API_KEY = originalKey;
       }
     }
   });
