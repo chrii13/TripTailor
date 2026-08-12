@@ -107,6 +107,8 @@ export function ItineraryForm() {
   }, [mode]);
 
   const onSubmit = async (data: TripFormValues) => {
+    if (mode === "loading") return;
+
     setApiError(null);
     setMode("loading");
 
