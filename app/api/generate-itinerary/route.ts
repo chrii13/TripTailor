@@ -20,6 +20,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_response" }, { status: 400 });
   }
 
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error("Generazione itinerario: ANTHROPIC_API_KEY non configurata");
+    return NextResponse.json({ error: "config" }, { status: 502 });
+  }
+
   const prompt = buildItineraryPrompt(parsedRequest.data);
   const client = new Anthropic();
 
