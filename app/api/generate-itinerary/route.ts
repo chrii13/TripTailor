@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   let finishReason: string | undefined;
   try {
     const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-flash-latest",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
