@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AGE_RANGES, type ParticipantType, type TripFormValues } from "@/lib/schema";
+import { AGE_RANGES, PARTICIPANT_TYPE_LABELS, type ParticipantType, type TripFormValues } from "@/lib/schema";
 
 interface ParticipantRowProps {
   index: number;
@@ -21,12 +21,6 @@ interface ParticipantRowProps {
   canRemove: boolean;
   error?: string;
 }
-
-const TYPE_LABELS: Record<ParticipantType, string> = {
-  bambino: "Bambino",
-  ragazzo: "Ragazzo",
-  adulto: "Adulto",
-};
 
 export function ParticipantRow({
   index,
@@ -62,9 +56,9 @@ export function ParticipantRow({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(Object.keys(TYPE_LABELS) as ParticipantType[]).map((t) => (
+                {(Object.keys(PARTICIPANT_TYPE_LABELS) as ParticipantType[]).map((t) => (
                   <SelectItem key={t} value={t}>
-                    {TYPE_LABELS[t]}
+                    {PARTICIPANT_TYPE_LABELS[t]}
                   </SelectItem>
                 ))}
               </SelectContent>
