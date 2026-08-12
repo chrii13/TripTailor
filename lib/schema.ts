@@ -11,6 +11,12 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 export type ParticipantType = keyof typeof AGE_RANGES;
 
+export const PARTICIPANT_TYPE_LABELS: Record<ParticipantType, string> = {
+  bambino: "Bambino/a",
+  ragazzo: "Ragazzo/a",
+  adulto: "Adulto/a",
+};
+
 export const participantSchema = z
   .object({
     type: z.enum(["bambino", "ragazzo", "adulto"]),

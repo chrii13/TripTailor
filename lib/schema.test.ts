@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tripFormSchema } from "./schema";
+import { tripFormSchema, PARTICIPANT_TYPE_LABELS } from "./schema";
 
 const baseValid = {
   destination: "Roma",
@@ -127,5 +127,13 @@ describe("tripFormSchema", () => {
       dateRange: { from: new Date("2026-09-01"), to: new Date("2026-09-14") },
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("PARTICIPANT_TYPE_LABELS", () => {
+  it("usa la forma inclusiva per tutti e tre i tipi", () => {
+    expect(PARTICIPANT_TYPE_LABELS.bambino).toBe("Bambino/a");
+    expect(PARTICIPANT_TYPE_LABELS.ragazzo).toBe("Ragazzo/a");
+    expect(PARTICIPANT_TYPE_LABELS.adulto).toBe("Adulto/a");
   });
 });
