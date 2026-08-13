@@ -50,6 +50,8 @@ const ERROR_MESSAGES: Record<ErrorCode, string> = {
   invalid_response: "Non siamo riusciti a generare l'itinerario. Riprova.",
 };
 
+const MAX_PARTICIPANTS = 20;
+
 function isErrorCode(value: unknown): value is ErrorCode {
   return (
     value === "network" ||
@@ -245,7 +247,9 @@ export function ItineraryForm() {
                         index={index}
                         control={control}
                         setValue={setValue}
-                        onRemove={() => remove(index)}
+                        onRemove={() => {
+                          if (fields.length > 1) remove(index);
+                        }}
                         canRemove={fields.length > 1}
                         error={
                           Array.isArray(errors.participants)
@@ -258,6 +262,7 @@ export function ItineraryForm() {
                       type="button"
                       variant="secondary"
                       onClick={() => append({ type: "adulto", age: undefined })}
+                      disabled={fields.length >= MAX_PARTICIPANTS}
                       className="w-full"
                     >
                       <Plus className="h-4 w-4" />

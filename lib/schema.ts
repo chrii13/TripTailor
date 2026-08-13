@@ -56,7 +56,7 @@ export const tripFormSchema = z.object({
       },
       { message: `Il viaggio non può superare i ${MAX_TRIP_DAYS} giorni` }
     ),
-  participants: z.array(participantSchema).min(1, "Aggiungi almeno un partecipante"),
+  participants: z.array(participantSchema).min(1, "Aggiungi almeno un partecipante").max(20, "Massimo 20 partecipanti"),
   budget: z.number().min(0),
   styleNotes: z.string().optional(),
   arrivalTime: z.string().optional(),

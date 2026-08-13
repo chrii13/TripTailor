@@ -41,6 +41,14 @@ describe("tripFormSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rifiuta più di 20 partecipanti", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      participants: Array.from({ length: 21 }, () => ({ type: "adulto" as const, age: 35 })),
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rifiuta un'età negativa", () => {
     const result = tripFormSchema.safeParse({
       ...baseValid,
