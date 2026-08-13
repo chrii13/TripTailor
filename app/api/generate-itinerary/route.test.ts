@@ -30,9 +30,11 @@ describe("POST /api/generate-itinerary", () => {
     expect(body.error).toBe("invalid_response");
   });
 
-  it("restituisce l'errore 'config' quando GEMINI_API_KEY non è configurata", async () => {
+  it("restituisce l'errore 'config' quando nessuna chiave Gemini è configurata", async () => {
     const originalKey = process.env.GEMINI_API_KEY;
+    const originalBackupKey = process.env.GEMINI_API_KEY_BACKUP;
     process.env.GEMINI_API_KEY = "";
+    process.env.GEMINI_API_KEY_BACKUP = "";
 
     try {
       const request = new Request("http://localhost/api/generate-itinerary", {
@@ -57,6 +59,11 @@ describe("POST /api/generate-itinerary", () => {
         delete process.env.GEMINI_API_KEY;
       } else {
         process.env.GEMINI_API_KEY = originalKey;
+      }
+      if (originalBackupKey === undefined) {
+        delete process.env.GEMINI_API_KEY_BACKUP;
+      } else {
+        process.env.GEMINI_API_KEY_BACKUP = originalBackupKey;
       }
     }
   });

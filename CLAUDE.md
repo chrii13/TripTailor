@@ -16,7 +16,7 @@
 - **Primary Commands:**
   - **Dev:** `npm run dev`
   - **Build:** `npm run build`
-  - **Test:** `npm test` (vitest, 71 tests across 9 test files)
+  - **Test:** `npm test` (vitest, 75 tests across 10 test files)
   - **Lint/Typecheck:** `npm run lint`
 - **Architecture & Conventions:**
   - **Stato:** Fase 1 in corso — scaffold Next.js + form di input utente. Nessuna logica AI/meteo/calendario/mobile ancora implementata (fasi successive).
@@ -49,6 +49,7 @@
   - Feedback utente (2026-08-11): il design visivo attuale (crema/smeraldo, Fraunces, icone per campo, linea a gradiente, ombra) "non convince ancora del tutto" — da rivedere in un secondo momento, nessuna direzione specifica data per ora.
 - **Required Environment Variables:**
   - `GEMINI_API_KEY` — Google Gemini API (generazione itinerario)
+  - `GEMINI_API_KEY_BACKUP` — chiave Gemini di riserva opzionale, usata automaticamente solo quando la chiave primaria va in rate limit (429)
   - `LOCATIONIQ_API_KEY` — LocationIQ (autocompletamento destinazione)
   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — Google Calendar API (fase futura, export calendario)
 

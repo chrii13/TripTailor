@@ -7,6 +7,7 @@ import { buildItineraryPrompt } from "@/lib/itinerary-prompt";
 import { classifyGenerationError } from "@/lib/generate-itinerary-errors";
 import { geocodeDestination } from "@/lib/geocode-destination";
 import { getClimateAverages } from "@/lib/climate-forecast";
+import { getGeminiApiKeys } from "@/lib/gemini-api-keys";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -22,8 +23,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_response" }, { status: 400 });
   }
 
-  if (!process.env.GEMINI_API_KEY) {
-    console.error("Generazione itinerario: GEMINI_API_KEY non configurata");
+  const apiKeys = getGeminiApiKeys();
+  if (apiKeys.length === 0) {
+    console.error("Generazione itinerario: nessuna chiave Gemini configurata (GEMINI_API_KEY)");
     return NextResponse.json({ error: "config" }, { status: 502 });
   }
 
@@ -38,32 +40,45 @@ export async function POST(request: Request) {
     : null;
 
   const prompt = buildItineraryPrompt(parsedRequest.data, climate);
-  const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
   let responseText: string | undefined;
   let finishReason: string | undefined;
-  try {
-    const response = await client.models.generateContent({
-      model: "gemini-flash-latest",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseJsonSchema: z.toJSONSchema(itineraryResponseSchema),
-        maxOutputTokens: 50000,
-        thinkingConfig: { thinkingBudget: 1024 },
-        httpOptions: {
-          timeout: 180_000,
-          retryOptions: { attempts: 2, httpStatusCodes: [408, 500, 502, 503, 504] },
+
+  for (let i = 0; i < apiKeys.length; i++) {
+    const client = new GoogleGenAI({ apiKey: apiKeys[i] });
+    try {
+      const response = await client.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseJsonSchema: z.toJSONSchema(itineraryResponseSchema),
+          maxOutputTokens: 50000,
+          thinkingConfig: { thinkingBudget: 1024 },
+          httpOptions: {
+            timeout: 180_000,
+            retryOptions: { attempts: 2, httpStatusCodes: [408, 500, 502, 503, 504] },
+          },
         },
-      },
-    });
-    responseText = response.text;
-    finishReason = response.candidates?.[0]?.finishReason;
-  } catch (error) {
-    const code = classifyGenerationError(error);
-    console.error(`Generazione itinerario fallita (${code}):`, error);
-    const status = code === "rate_limit" ? 429 : 502;
-    return NextResponse.json({ error: code }, { status });
+      });
+      responseText = response.text;
+      finishReason = response.candidates?.[0]?.finishReason;
+      break;
+    } catch (error) {
+      const code = classifyGenerationError(error);
+      const hasNextKey = i < apiKeys.length - 1;
+
+      if (code === "rate_limit" && hasNextKey) {
+        console.error(
+          `Generazione itinerario: chiave Gemini #${i + 1} in rate limit, tentativo con la chiave successiva`
+        );
+        continue;
+      }
+
+      console.error(`Generazione itinerario fallita (${code}):`, error);
+      const status = code === "rate_limit" ? 429 : 502;
+      return NextResponse.json({ error: code }, { status });
+    }
   }
 
   if (!responseText) {
