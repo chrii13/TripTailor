@@ -88,4 +88,36 @@ describe("buildItineraryPrompt", () => {
     expect(prompt).toContain("60%");
     expect(prompt).toContain("calibrare le attività");
   });
+
+  it("include l'istruzione di orario di arrivo quando presente", () => {
+    const request: GenerateItineraryRequest = { ...baseRequest, arrivalTime: "15:30" };
+    const prompt = buildItineraryPrompt(request, null);
+    expect(prompt).toContain("15:30");
+    expect(prompt).toContain("non pianificare attività prima di quell'orario");
+  });
+
+  it("include l'istruzione di orario di partenza quando presente", () => {
+    const request: GenerateItineraryRequest = { ...baseRequest, departureTime: "09:00" };
+    const prompt = buildItineraryPrompt(request, null);
+    expect(prompt).toContain("09:00");
+    expect(prompt).toContain("concludi le attività con un margine ragionevole");
+  });
+
+  it("non include alcuna istruzione di arrivo/partenza quando i campi sono assenti", () => {
+    const prompt = buildItineraryPrompt(baseRequest, null);
+    expect(prompt).not.toContain("arriva a destinazione");
+    expect(prompt).not.toContain("riparte");
+  });
+
+  it("include entrambe le istruzioni quando il viaggio dura un solo giorno", () => {
+    const request: GenerateItineraryRequest = {
+      ...baseRequest,
+      dateRange: { from: new Date("2026-09-01"), to: new Date("2026-09-01") },
+      arrivalTime: "10:00",
+      departureTime: "20:00",
+    };
+    const prompt = buildItineraryPrompt(request, null);
+    expect(prompt).toContain("10:00");
+    expect(prompt).toContain("20:00");
+  });
 });

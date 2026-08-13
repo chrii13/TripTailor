@@ -7,11 +7,25 @@ export function buildItineraryPrompt(
   request: GenerateItineraryRequest,
   climate: DailyClimateAverage[] | null
 ): string {
-  const { destination, dateRange, participants, budget, styleNotes } = request;
+  const { destination, dateRange, participants, budget, styleNotes, arrivalTime, departureTime } = request;
   const dayCount = differenceInCalendarDays(dateRange.to, dateRange.from) + 1;
   const participantsList = participants
     .map((p) => `- ${PARTICIPANT_TYPE_LABELS[p.type]}, ${p.age} anni`)
     .join("\n");
+
+  const arrivalDepartureLines: string[] = [];
+  if (arrivalTime) {
+    arrivalDepartureLines.push(
+      `Il viaggiatore arriva a destinazione il primo giorno (${format(dateRange.from, "dd/MM/yyyy")}) alle ${arrivalTime}: non pianificare attività prima di quell'orario, lasciando un margine ragionevole per il trasferimento e il check-in in alloggio.`
+    );
+  }
+  if (departureTime) {
+    arrivalDepartureLines.push(
+      `Il viaggiatore riparte l'ultimo giorno (${format(dateRange.to, "dd/MM/yyyy")}) alle ${departureTime}: concludi le attività con un margine ragionevole prima di quell'orario, per il rientro verso aeroporto/stazione.`
+    );
+  }
+  const arrivalDepartureSection =
+    arrivalDepartureLines.length > 0 ? `\n${arrivalDepartureLines.join("\n")}\n` : "";
 
   const climateSection =
     climate && climate.length > 0
@@ -31,6 +45,7 @@ Budget indicativo totale: ${budget}€
 Viaggiatori:
 ${participantsList}
 ${styleNotes ? `Note sullo stile di viaggio: ${styleNotes}` : ""}
+${arrivalDepartureSection}
 ${climateSection}
 Genera un piano giorno per giorno, con una data (formato YYYY-MM-DD) per ogni giorno del viaggio, diviso in tre fasce orarie (mattina, pomeriggio, sera). Per ogni fascia, elenca una o più attività. Adatta il numero di attività alla situazione: se un'attività è sostanziosa e occupa ragionevolmente l'intera fascia (es. un grande museo, un'escursione fuori porta), lasciala da sola; altrimenti proponi 2-3 attività più brevi con orari che si susseguono senza sovrapporsi. Non imporre un numero fisso di attività per fascia: valuta caso per caso, ed evita di ripetere lo stesso schema identico ogni giorno (es. sempre una sola attività a mattina e sera e due nel pomeriggio) — varia in base a cosa offre davvero la destinazione quel giorno. Se in una fascia hai più momenti distinti da proporre (es. cena e poi una passeggiata/bar/spettacolo serale), elencali come attività separate nell'elenco, ciascuna con il proprio orario, invece di descriverli insieme in un'unica voce.
 
