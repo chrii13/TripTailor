@@ -136,6 +136,10 @@ describe("tripFormSchema", () => {
       departureTime: "09:00",
     });
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.arrivalTime).toBe("15:30");
+      expect(result.data.departureTime).toBe("09:00");
+    }
   });
 
   it("accetta un viaggio senza orario di arrivo/partenza (campi opzionali)", () => {

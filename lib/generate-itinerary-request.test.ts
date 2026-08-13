@@ -73,4 +73,12 @@ describe("generateItineraryRequestSchema", () => {
       expect(result.data.departureTime).toBe("09:00");
     }
   });
+
+  it("rifiuta un orario di arrivo troppo lungo", () => {
+    const result = generateItineraryRequestSchema.safeParse({
+      ...baseValidBody,
+      arrivalTime: "123456",
+    });
+    expect(result.success).toBe(false);
+  });
 });
