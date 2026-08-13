@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 const MIN_QUERY_LENGTH = 3;
+const FETCH_LIMIT = 20;
+const DISPLAY_LIMIT = 6;
 
 interface LocationIqResult {
   place_id: string;
@@ -29,8 +31,8 @@ export async function GET(request: Request) {
   const url = new URL("https://api.locationiq.com/v1/autocomplete");
   url.searchParams.set("key", apiKey);
   url.searchParams.set("q", query);
-  url.searchParams.set("limit", "6");
-  url.searchParams.set("tag", "place:city,place:town,place:village");
+  url.searchParams.set("limit", String(FETCH_LIMIT));
+  url.searchParams.set("tag", "place:city,place:town,place:village,place:island,place:archipelago");
   url.searchParams.set("accept-language", "it");
 
   try {
@@ -45,13 +47,17 @@ export async function GET(request: Request) {
     }
 
     const data: LocationIqResult[] = await response.json();
-    const results = data.map((item) => ({
-      id: item.place_id,
-      label:
-        item.display_place && item.address?.country
-          ? `${item.display_place}, ${item.address.country}`
-          : item.display_name,
-    }));
+    const normalizedQuery = query.toLocaleLowerCase("it");
+    const results = data
+      .filter((item) => (item.display_place ?? "").toLocaleLowerCase("it").startsWith(normalizedQuery))
+      .slice(0, DISPLAY_LIMIT)
+      .map((item) => ({
+        id: item.place_id,
+        label:
+          item.display_place && item.address?.country
+            ? `${item.display_place}, ${item.address.country}`
+            : item.display_name,
+      }));
 
     return NextResponse.json({ results });
   } catch (error) {
