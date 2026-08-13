@@ -28,7 +28,7 @@ Per ogni attività fornisci:
 - openingHours: orari di apertura/chiusura del luogo, solo dove pertinente (musei, monumenti, locali — non per attività generiche come una passeggiata). Ometti il campo quando non applicabile.
 - details: un oggetto con tre campi pensati per un viaggiatore che non conosce affatto la zona:
   - about: cosa è il posto o l'attività.
-  - gettingThere: come raggiungerlo, tenendo conto di dove si trova il viaggiatore nell'itinerario in quel momento.
+  - gettingThere: come raggiungerlo. Per la primissima attività di ogni giornata non è possibile sapere da dove parte il viaggiatore (potrebbe essere l'alloggio, un'altra zona, ecc.): indica quindi la posizione esatta del luogo (zona/quartiere, indirizzo indicativo) e come raggiungerlo in generale (es. fermata metro/bus più vicina, punto di riferimento), non partendo da un punto preciso presunto. Per le attività successive nella stessa giornata, indica invece come arrivarci dall'attività precedente nell'itinerario.
   - tips: consigli pratici utili (es. quando evitare la fila, cosa portare, aspetti da sapere in anticipo).
 
 Adatta ritmo e tipo di attività alla composizione del gruppo:

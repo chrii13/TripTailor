@@ -67,4 +67,10 @@ describe("buildItineraryPrompt", () => {
   it("non impone un numero fisso di attività per fascia", () => {
     expect(buildItineraryPrompt(baseRequest)).toContain("Non imporre un numero fisso");
   });
+
+  it("istruisce a dare la posizione esatta per la prima attività del giorno, senza presumere un punto di partenza", () => {
+    const prompt = buildItineraryPrompt(baseRequest);
+    expect(prompt).toContain("primissima attività di ogni giornata");
+    expect(prompt).toContain("non è possibile sapere da dove parte il viaggiatore");
+  });
 });
