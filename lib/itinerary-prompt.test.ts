@@ -113,11 +113,13 @@ describe("buildItineraryPrompt", () => {
     const request: GenerateItineraryRequest = {
       ...baseRequest,
       dateRange: { from: new Date("2026-09-01"), to: new Date("2026-09-01") },
-      arrivalTime: "10:00",
+      arrivalTime: "11:45",
       departureTime: "20:00",
     };
     const prompt = buildItineraryPrompt(request, null);
-    expect(prompt).toContain("10:00");
+    expect(prompt).toContain("arriva a destinazione il primo giorno");
+    expect(prompt).toContain("11:45");
+    expect(prompt).toContain("riparte l'ultimo giorno");
     expect(prompt).toContain("20:00");
   });
 });
