@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
+import { CalendarIcon, Euro, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -36,26 +37,30 @@ export function ItineraryResult({ tripData, itinerary, weather, onEdit }: Itiner
     <Card className="relative mx-auto w-full max-w-2xl overflow-hidden shadow-[0_20px_50px_-12px_color-mix(in_oklch,var(--primary)_25%,transparent)]">
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
       <CardHeader className="px-8 pt-10 pb-8">
-        <CardTitle className="font-display text-3xl font-semibold text-primary">
+        <CardTitle className="font-display text-4xl font-semibold text-primary">
           Si parte per {tripData.destination}!
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 px-8 pb-8">
-        <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-md border bg-muted/50 px-4 py-3 text-sm">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {tripData.dateRange.from && tripData.dateRange.to && (
-            <span>
-              <span className="text-muted-foreground">Date: </span>
-              {format(tripData.dateRange.from, "dd/MM/yyyy")} - {format(tripData.dateRange.to, "dd/MM/yyyy")}
-            </span>
+            <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+              <CalendarIcon className="h-4 w-4 shrink-0 text-primary" />
+              <span>
+                {format(tripData.dateRange.from, "dd/MM/yyyy")} - {format(tripData.dateRange.to, "dd/MM/yyyy")}
+              </span>
+            </div>
           )}
-          <span>
-            <span className="text-muted-foreground">Viaggiatori: </span>
-            {tripData.participants.map((p) => `${PARTICIPANT_TYPE_LABELS[p.type]} (${p.age})`).join(", ")}
-          </span>
-          <span>
-            <span className="text-muted-foreground">Budget: </span>
-            {tripData.budget}€
-          </span>
+          <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+            <Users className="h-4 w-4 shrink-0 text-primary" />
+            <span>
+              {tripData.participants.map((p) => `${PARTICIPANT_TYPE_LABELS[p.type]} (${p.age})`).join(", ")}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+            <Euro className="h-4 w-4 shrink-0 text-primary" />
+            <span>{tripData.budget}€ indicativo</span>
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -73,9 +78,9 @@ export function ItineraryResult({ tripData, itinerary, weather, onEdit }: Itiner
                 </div>
                 <div className="bg-card px-4 pb-1">
                   {dayWeather && (
-                    <p className="py-2 text-xs text-muted-foreground">
-                      Clima tipico: ~{dayWeather.tempMaxAvg}°C/{dayWeather.tempMinAvg}°C · pioggia in
-                      circa {dayWeather.precipitationChance}% degli anni passati
+                    <p className="mt-3 mb-1 inline-block rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                      Meteo tipico (media ultimi 5 anni): {dayWeather.tempMaxAvg}°C / {dayWeather.tempMinAvg}°C,
+                      pioggia probabile nel {dayWeather.precipitationChance}% degli anni passati
                     </p>
                   )}
                   {SLOTS.map(
