@@ -59,6 +59,8 @@ export const tripFormSchema = z.object({
   participants: z.array(participantSchema).min(1, "Aggiungi almeno un partecipante"),
   budget: z.number().min(0),
   styleNotes: z.string().optional(),
+  arrivalTime: z.string().optional(),
+  departureTime: z.string().optional(),
 });
 
 export type TripFormValues = z.infer<typeof tripFormSchema>;

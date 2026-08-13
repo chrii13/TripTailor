@@ -60,4 +60,17 @@ describe("generateItineraryRequestSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accetta un corpo con orario di arrivo e partenza e li passa invariati", () => {
+    const result = generateItineraryRequestSchema.safeParse({
+      ...baseValidBody,
+      arrivalTime: "15:30",
+      departureTime: "09:00",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.arrivalTime).toBe("15:30");
+      expect(result.data.departureTime).toBe("09:00");
+    }
+  });
 });

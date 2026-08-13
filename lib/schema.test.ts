@@ -128,6 +128,24 @@ describe("tripFormSchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("accetta un viaggio con orario di arrivo e partenza", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      arrivalTime: "15:30",
+      departureTime: "09:00",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accetta un viaggio senza orario di arrivo/partenza (campi opzionali)", () => {
+    const result = tripFormSchema.safeParse(baseValid);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.arrivalTime).toBeUndefined();
+      expect(result.data.departureTime).toBeUndefined();
+    }
+  });
 });
 
 describe("PARTICIPANT_TYPE_LABELS", () => {
