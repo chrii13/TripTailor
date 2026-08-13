@@ -33,14 +33,27 @@ async function fetchHistoricalYear(
   url.searchParams.set("timezone", "auto");
 
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    const response = await fetch(url, { signal: AbortSignal.timeout(2500) });
 
     if (!response.ok) {
+      console.error(`Clima storico: Open-Meteo ha risposto ${response.status}`);
       return null;
     }
 
-    return await response.json();
-  } catch {
+    const data = await response.json();
+
+    if (
+      !data?.daily?.time ||
+      !data.daily.temperature_2m_max ||
+      !data.daily.temperature_2m_min ||
+      !data.daily.precipitation_sum
+    ) {
+      return null;
+    }
+
+    return data as OpenMeteoArchiveResponse;
+  } catch (error) {
+    console.error("Clima storico: chiamata a Open-Meteo fallita", error);
     return null;
   }
 }

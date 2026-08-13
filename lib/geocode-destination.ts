@@ -1,6 +1,13 @@
 interface LocationIqSearchResult {
   lat: string;
   lon: string;
+  address?: {
+    city?: string;
+    town?: string;
+    village?: string;
+    island?: string;
+    archipelago?: string;
+  };
 }
 
 export interface Coordinates {
@@ -20,17 +27,33 @@ export async function geocodeDestination(destination: string): Promise<Coordinat
   url.searchParams.set("q", destination);
   url.searchParams.set("format", "json");
   url.searchParams.set("limit", "1");
+  url.searchParams.set("tag", "place:city,place:town,place:village,place:island,place:archipelago");
+  url.searchParams.set("addressdetails", "1");
 
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    const response = await fetch(url, { signal: AbortSignal.timeout(2500) });
 
     if (!response.ok) {
+      console.error(`Geolocalizzazione destinazione: LocationIQ ha risposto ${response.status}`);
       return null;
     }
 
     const data: LocationIqSearchResult[] = await response.json();
 
     if (data.length === 0) {
+      return null;
+    }
+
+    const address = data[0].address;
+    const isSpecificPlace = !!(
+      address?.city ||
+      address?.town ||
+      address?.village ||
+      address?.island ||
+      address?.archipelago
+    );
+
+    if (!isSpecificPlace) {
       return null;
     }
 
@@ -42,7 +65,8 @@ export async function geocodeDestination(destination: string): Promise<Coordinat
     }
 
     return { lat, lon };
-  } catch {
+  } catch (error) {
+    console.error("Geolocalizzazione destinazione: chiamata a LocationIQ fallita", error);
     return null;
   }
 }
