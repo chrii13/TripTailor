@@ -1,13 +1,27 @@
 import { differenceInCalendarDays, format } from "date-fns";
 import type { GenerateItineraryRequest } from "./generate-itinerary-request";
 import { PARTICIPANT_TYPE_LABELS } from "./schema";
+import type { DailyClimateAverage } from "./climate-forecast";
 
-export function buildItineraryPrompt(request: GenerateItineraryRequest): string {
+export function buildItineraryPrompt(
+  request: GenerateItineraryRequest,
+  climate: DailyClimateAverage[] | null
+): string {
   const { destination, dateRange, participants, budget, styleNotes } = request;
   const dayCount = differenceInCalendarDays(dateRange.to, dateRange.from) + 1;
   const participantsList = participants
     .map((p) => `- ${PARTICIPANT_TYPE_LABELS[p.type]}, ${p.age} anni`)
     .join("\n");
+
+  const climateSection =
+    climate && climate.length > 0
+      ? `\nClima tipico atteso (media degli ultimi 5 anni per queste date — non è una previsione esatta, ma un'indicazione di massima):\n${climate
+          .map(
+            (day) =>
+              `- ${day.date}: ~${day.tempMaxAvg}°C/${day.tempMinAvg}°C, pioggia in circa ${day.precipitationChance}% degli anni passati`
+          )
+          .join("\n")}\nUsa questi dati per calibrare le attività di ogni giorno: nei giorni con probabilità di pioggia più alta, preferisci attività al coperto o facilmente spostabili; tieni conto delle temperature per il ritmo della giornata. Non è necessario menzionare esplicitamente il meteo nelle descrizioni delle attività — usalo solo per orientare le scelte.\n`
+      : "";
 
   return `Genera un itinerario di viaggio dettagliato per il seguente viaggio.
 
@@ -17,7 +31,7 @@ Budget indicativo totale: ${budget}€
 Viaggiatori:
 ${participantsList}
 ${styleNotes ? `Note sullo stile di viaggio: ${styleNotes}` : ""}
-
+${climateSection}
 Genera un piano giorno per giorno, con una data (formato YYYY-MM-DD) per ogni giorno del viaggio, diviso in tre fasce orarie (mattina, pomeriggio, sera). Per ogni fascia, elenca una o più attività. Adatta il numero di attività alla situazione: se un'attività è sostanziosa e occupa ragionevolmente l'intera fascia (es. un grande museo, un'escursione fuori porta), lasciala da sola; altrimenti proponi 2-3 attività più brevi con orari che si susseguono senza sovrapporsi. Non imporre un numero fisso di attività per fascia: valuta caso per caso.
 
 Per ogni attività fornisci:
@@ -37,5 +51,5 @@ Adatta ritmo e tipo di attività alla composizione del gruppo:
 - Se sono presenti solo adulti/e (26+ anni), nessun bambino/a o ragazzo/a: ritmo più libero e denso, spazio a vita notturna, trekking impegnativi, esperienze enogastronomiche, cultura senza vincoli di tempo ridotti. Usa l'età precisa per calibrare il tono: un gruppo di ventenni e uno di cinquantenni sono entrambi "adulti" ma possono giustificare attività diverse.
 - In gruppi misti, il ritmo si adatta al membro più vincolante: se ci sono bambini/e, la giornata resta family-friendly anche con adulti/e nel gruppo, con una sera tranquilla piuttosto che vita notturna.
 
-Non fare alcun riferimento alle condizioni climatiche. Rispetta il budget indicativo indicato nella somma delle stime di costo.`;
+Rispetta il budget indicativo indicato nella somma delle stime di costo.`;
 }

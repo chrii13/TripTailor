@@ -5,6 +5,8 @@ import { generateItineraryRequestSchema } from "@/lib/generate-itinerary-request
 import { itineraryResponseSchema } from "@/lib/itinerary-schema";
 import { buildItineraryPrompt } from "@/lib/itinerary-prompt";
 import { classifyGenerationError } from "@/lib/generate-itinerary-errors";
+import { geocodeDestination } from "@/lib/geocode-destination";
+import { getClimateAverages } from "@/lib/climate-forecast";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -25,7 +27,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "config" }, { status: 502 });
   }
 
-  const prompt = buildItineraryPrompt(parsedRequest.data);
+  const coordinates = await geocodeDestination(parsedRequest.data.destination);
+  const climate = coordinates
+    ? await getClimateAverages(
+        coordinates.lat,
+        coordinates.lon,
+        parsedRequest.data.dateRange.from,
+        parsedRequest.data.dateRange.to
+      )
+    : null;
+
+  const prompt = buildItineraryPrompt(parsedRequest.data, climate);
   const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
   let responseText: string | undefined;
@@ -78,5 +90,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_response" }, { status: 502 });
   }
 
-  return NextResponse.json({ itinerary: parsedResult.data });
+  return NextResponse.json({ itinerary: parsedResult.data, weather: climate });
 }
