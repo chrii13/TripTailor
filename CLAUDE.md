@@ -12,7 +12,7 @@
 *Claude: Update this section automatically as the project evolves.*
 
 - **Project Name:** "App Itinerari" (nome provvisorio, non definitivo — da aggiornare quando scelto) — Web App (MVP) + Mobile App per la creazione automatica di itinerari di viaggio personalizzati (AI, meteo, export calendario).
-- **Tech Stack:** Next.js (App Router, TypeScript), Tailwind CSS, shadcn/ui, react-hook-form + zod. AI: Google Gemini (`@google/genai`, modello `gemini-flash-latest` — alias Google al Flash più recente, oggi `gemini-3.6-flash`; `gemini-2.5-flash` è stato ritirato per le chiavi API di nuova creazione). Meteo: OpenWeatherMap (fase futura). Calendario: Google Calendar API / libreria `ics` (fase futura). Mobile: da definire (fase futura).
+- **Tech Stack:** Next.js (App Router, TypeScript), Tailwind CSS, shadcn/ui, react-hook-form + zod. AI: Google Gemini (`@google/genai`, modello `gemini-flash-latest` — alias Google al Flash più recente, oggi `gemini-3.6-flash`; `gemini-2.5-flash` è stato ritirato per le chiavi API di nuova creazione). Autocompletamento destinazione: LocationIQ (`LOCATIONIQ_API_KEY`). Meteo: OpenWeatherMap (fase futura). Calendario: Google Calendar API / libreria `ics` (fase futura). Mobile: da definire (fase futura).
 - **Primary Commands:**
   - **Dev:** `npm run dev`
   - **Build:** `npm run build`
@@ -49,6 +49,7 @@
   - Feedback utente (2026-08-11): il design visivo attuale (crema/smeraldo, Fraunces, icone per campo, linea a gradiente, ombra) "non convince ancora del tutto" — da rivedere in un secondo momento, nessuna direzione specifica data per ora.
 - **Required Environment Variables:**
   - `GEMINI_API_KEY` — Google Gemini API (generazione itinerario)
+  - `LOCATIONIQ_API_KEY` — LocationIQ (autocompletamento destinazione)
   - `OPENWEATHER_API_KEY` — OpenWeatherMap (fase futura, meteo)
   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — Google Calendar API (fase futura, export calendario)
 
