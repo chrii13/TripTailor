@@ -5,6 +5,10 @@ const MIN_QUERY_LENGTH = 3;
 interface LocationIqResult {
   place_id: string;
   display_name: string;
+  display_place?: string;
+  address?: {
+    country?: string;
+  };
 }
 
 export async function GET(request: Request) {
@@ -26,6 +30,8 @@ export async function GET(request: Request) {
   url.searchParams.set("key", apiKey);
   url.searchParams.set("q", query);
   url.searchParams.set("limit", "6");
+  url.searchParams.set("tag", "place:city,place:town,place:village");
+  url.searchParams.set("accept-language", "it");
 
   try {
     const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
@@ -39,7 +45,13 @@ export async function GET(request: Request) {
     }
 
     const data: LocationIqResult[] = await response.json();
-    const results = data.map((item) => ({ id: item.place_id, label: item.display_name }));
+    const results = data.map((item) => ({
+      id: item.place_id,
+      label:
+        item.display_place && item.address?.country
+          ? `${item.display_place}, ${item.address.country}`
+          : item.display_name,
+    }));
 
     return NextResponse.json({ results });
   } catch (error) {
