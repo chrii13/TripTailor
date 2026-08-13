@@ -47,9 +47,7 @@ export function ParticipantRow({
               onValueChange={(value) => {
                 const nextType = value as ParticipantType;
                 field.onChange(nextType);
-                setValue(`participants.${index}.age`, undefined, {
-                  shouldValidate: true,
-                });
+                setValue(`participants.${index}.age`, undefined);
               }}
             >
               <SelectTrigger id={`participants.${index}.type`} className="w-full">

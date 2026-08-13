@@ -68,6 +68,7 @@ export function ItineraryForm() {
   const [weather, setWeather] = useState<DailyClimateAverage[] | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [participantsPopoverOpen, setParticipantsPopoverOpen] = useState(false);
 
   const {
     register,
@@ -75,6 +76,7 @@ export function ItineraryForm() {
     control,
     watch,
     setValue,
+    trigger,
     formState: { errors },
   } = useForm<TripFormValues>({
     resolver: zodResolver(tripFormSchema),
@@ -224,7 +226,15 @@ export function ItineraryForm() {
             </div>
 
             <div className="space-y-2">
-              <Popover>
+              <Popover
+                open={participantsPopoverOpen}
+                onOpenChange={(open) => {
+                  setParticipantsPopoverOpen(open);
+                  if (!open) {
+                    trigger("participants");
+                  }
+                }}
+              >
                 <PopoverTrigger asChild>
                   <Button
                     type="button"
