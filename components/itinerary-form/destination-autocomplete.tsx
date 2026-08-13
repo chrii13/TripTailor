@@ -26,6 +26,7 @@ export function DestinationAutocomplete({ control, error }: DestinationAutocompl
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -37,19 +38,24 @@ export function DestinationAutocomplete({ control, error }: DestinationAutocompl
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (query.trim().length < MIN_QUERY_LENGTH) {
+      requestIdRef.current += 1;
       setSuggestions([]);
       setIsOpen(false);
       return;
     }
 
+    const requestId = ++requestIdRef.current;
+
     debounceRef.current = setTimeout(async () => {
       try {
         const response = await fetch(`/api/geocode-autocomplete?q=${encodeURIComponent(query)}`);
         const body = response.ok ? await response.json() : { results: [] };
+        if (requestIdRef.current !== requestId) return;
         const results: Suggestion[] = body.results ?? [];
         setSuggestions(results);
         setIsOpen(results.length > 0);
       } catch {
+        if (requestIdRef.current !== requestId) return;
         setSuggestions([]);
         setIsOpen(false);
       }
@@ -71,6 +77,7 @@ export function DestinationAutocomplete({ control, error }: DestinationAutocompl
               id="destination"
               placeholder="Es. Roma, Italia"
               autoComplete="off"
+              ref={field.ref}
               value={field.value}
               onChange={(e) => {
                 field.onChange(e);
@@ -88,7 +95,7 @@ export function DestinationAutocomplete({ control, error }: DestinationAutocompl
                   setHighlightedIndex((prev) => (prev + 1) % suggestions.length);
                 } else if (e.key === "ArrowUp") {
                   e.preventDefault();
-                  setHighlightedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
+                  setHighlightedIndex((prev) => (prev <= 0 ? suggestions.length - 1 : prev - 1));
                 } else if (e.key === "Enter" && highlightedIndex >= 0) {
                   e.preventDefault();
                   field.onChange(suggestions[highlightedIndex].label);
