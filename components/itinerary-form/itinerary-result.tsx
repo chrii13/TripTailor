@@ -59,7 +59,7 @@ export function ItineraryResult({ tripData, itinerary, weather, onEdit }: Itiner
           </div>
           <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
             <Euro className="h-4 w-4 shrink-0 text-primary" />
-            <span>{tripData.budget}€ indicativo</span>
+            <span>Budget {tripData.budget}€</span>
           </div>
         </div>
 
@@ -78,10 +78,12 @@ export function ItineraryResult({ tripData, itinerary, weather, onEdit }: Itiner
                 </div>
                 <div className="bg-card px-4 pb-1">
                   {dayWeather && (
-                    <p className="mt-3 mb-1 inline-block rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-                      Meteo tipico (media ultimi 5 anni): {dayWeather.tempMaxAvg}°C / {dayWeather.tempMinAvg}°C,
-                      pioggia probabile nel {dayWeather.precipitationChance}% degli anni passati
-                    </p>
+                    <div className="mt-3 mb-1 flex justify-center">
+                      <p className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                        Meteo tipico (media ultimi 5 anni): {dayWeather.tempMaxAvg}°C / {dayWeather.tempMinAvg}°C,
+                        Probabilità precipitazioni {dayWeather.precipitationChance}%
+                      </p>
+                    </div>
                   )}
                   {SLOTS.map(
                     ({ key, label }) =>
