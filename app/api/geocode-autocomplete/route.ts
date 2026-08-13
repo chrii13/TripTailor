@@ -26,12 +26,14 @@ export async function GET(request: Request) {
   url.searchParams.set("key", apiKey);
   url.searchParams.set("q", query);
   url.searchParams.set("limit", "6");
-  url.searchParams.set("format", "json");
 
   try {
     const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
 
     if (!response.ok) {
+      if (response.status === 404) {
+        return NextResponse.json({ results: [] });
+      }
       console.error(`Autocompletamento destinazione: LocationIQ ha risposto ${response.status}`);
       return NextResponse.json({ results: [] }, { status: 502 });
     }

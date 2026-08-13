@@ -18,7 +18,7 @@ interface Suggestion {
   label: string;
 }
 
-const DEBOUNCE_MS = 300;
+const DEBOUNCE_MS = 500;
 const MIN_QUERY_LENGTH = 3;
 
 export function DestinationAutocomplete({ control, error }: DestinationAutocompleteProps) {
@@ -33,6 +33,15 @@ export function DestinationAutocomplete({ control, error }: DestinationAutocompl
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, []);
+
+  const cancelPending = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = null;
+    requestIdRef.current += 1;
+    setSuggestions([]);
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+  };
 
   const fetchSuggestions = (query: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -77,6 +86,11 @@ export function DestinationAutocomplete({ control, error }: DestinationAutocompl
               id="destination"
               placeholder="Es. Roma, Italia"
               autoComplete="off"
+              role="combobox"
+              aria-expanded={isOpen}
+              aria-controls="destination-suggestions"
+              aria-autocomplete="list"
+              aria-activedescendant={highlightedIndex >= 0 ? `destination-option-${highlightedIndex}` : undefined}
               ref={field.ref}
               value={field.value}
               onChange={(e) => {
@@ -86,7 +100,7 @@ export function DestinationAutocomplete({ control, error }: DestinationAutocompl
               }}
               onBlur={() => {
                 field.onBlur();
-                setIsOpen(false);
+                cancelPending();
               }}
               onKeyDown={(e) => {
                 if (!isOpen || suggestions.length === 0) return;
@@ -99,27 +113,29 @@ export function DestinationAutocomplete({ control, error }: DestinationAutocompl
                 } else if (e.key === "Enter" && highlightedIndex >= 0) {
                   e.preventDefault();
                   field.onChange(suggestions[highlightedIndex].label);
-                  setIsOpen(false);
-                  setSuggestions([]);
+                  cancelPending();
                 } else if (e.key === "Escape") {
-                  setIsOpen(false);
+                  cancelPending();
                 }
               }}
             />
             {isOpen && suggestions.length > 0 && (
-              <ul className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+              <ul id="destination-suggestions" role="listbox" className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                 {suggestions.map((suggestion, index) => (
                   <li key={suggestion.id}>
                     <button
                       type="button"
+                      role="option"
+                      aria-selected={index === highlightedIndex}
+                      id={`destination-option-${index}`}
+                      tabIndex={-1}
                       onMouseDown={(e) => {
                         e.preventDefault();
                         field.onChange(suggestion.label);
-                        setIsOpen(false);
-                        setSuggestions([]);
+                        cancelPending();
                       }}
                       className={cn(
-                        "w-full cursor-pointer rounded-sm px-2 py-1.5 text-left text-sm",
+                        "w-full cursor-pointer truncate rounded-sm px-2 py-1.5 text-left text-sm",
                         index === highlightedIndex ? "bg-accent" : "hover:bg-accent"
                       )}
                     >
