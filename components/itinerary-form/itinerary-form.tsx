@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { CalendarIcon, Euro, Loader2, MapPin, Plus, Sparkles, Users } from "lucide-react";
+import { CalendarIcon, Euro, Loader2, Plus, Sparkles, Users } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import type { ErrorCode } from "@/lib/generate-itinerary-errors";
 import type { ItineraryResponse } from "@/lib/itinerary-schema";
 import { ParticipantRow } from "./participant-row";
 import { ItineraryResult } from "./itinerary-result";
+import { DestinationAutocomplete } from "./destination-autocomplete";
 
 const defaultValues: TripFormValues = {
   destination: "",
@@ -154,16 +155,7 @@ export function ItineraryForm() {
       <CardContent className="px-8 pb-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           <div className={cn("space-y-8", mode === "loading" && "pointer-events-none opacity-60")}>
-            <div className="space-y-2">
-              <Label htmlFor="destination">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                Destinazione
-              </Label>
-              <Input id="destination" placeholder="Es. Roma, Italia" {...register("destination")} />
-              {errors.destination && (
-                <p className="text-sm text-red-600">{errors.destination.message}</p>
-              )}
-            </div>
+            <DestinationAutocomplete control={control} error={errors.destination?.message} />
 
             <div className="space-y-2">
               <Popover>
