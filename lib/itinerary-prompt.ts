@@ -32,7 +32,7 @@ Viaggiatori:
 ${participantsList}
 ${styleNotes ? `Note sullo stile di viaggio: ${styleNotes}` : ""}
 ${climateSection}
-Genera un piano giorno per giorno, con una data (formato YYYY-MM-DD) per ogni giorno del viaggio, diviso in tre fasce orarie (mattina, pomeriggio, sera). Per ogni fascia, elenca una o più attività. Adatta il numero di attività alla situazione: se un'attività è sostanziosa e occupa ragionevolmente l'intera fascia (es. un grande museo, un'escursione fuori porta), lasciala da sola; altrimenti proponi 2-3 attività più brevi con orari che si susseguono senza sovrapporsi. Non imporre un numero fisso di attività per fascia: valuta caso per caso.
+Genera un piano giorno per giorno, con una data (formato YYYY-MM-DD) per ogni giorno del viaggio, diviso in tre fasce orarie (mattina, pomeriggio, sera). Per ogni fascia, elenca una o più attività. Adatta il numero di attività alla situazione: se un'attività è sostanziosa e occupa ragionevolmente l'intera fascia (es. un grande museo, un'escursione fuori porta), lasciala da sola; altrimenti proponi 2-3 attività più brevi con orari che si susseguono senza sovrapporsi. Non imporre un numero fisso di attività per fascia: valuta caso per caso, ed evita di ripetere lo stesso schema identico ogni giorno (es. sempre una sola attività a mattina e sera e due nel pomeriggio) — varia in base a cosa offre davvero la destinazione quel giorno. Se in una fascia hai più momenti distinti da proporre (es. cena e poi una passeggiata/bar/spettacolo serale), elencali come attività separate nell'elenco, ciascuna con il proprio orario, invece di descriverli insieme in un'unica voce.
 
 Per ogni attività fornisci:
 - title: titolo breve.
