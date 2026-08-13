@@ -29,6 +29,8 @@ const defaultValues: TripFormValues = {
   participants: [{ type: "adulto", age: undefined }],
   budget: 1000,
   styleNotes: "",
+  arrivalTime: "",
+  departureTime: "",
 };
 
 const LOADING_MESSAGES = [
@@ -198,6 +200,20 @@ export function ItineraryForm() {
                     }}
                     numberOfMonths={2}
                   />
+                  <div className="grid grid-cols-2 gap-3 border-t p-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="arrival-time" className="text-xs text-muted-foreground">
+                        Arrivo (opzionale)
+                      </Label>
+                      <Input id="arrival-time" type="time" {...register("arrivalTime")} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="departure-time" className="text-xs text-muted-foreground">
+                        Partenza (opzionale)
+                      </Label>
+                      <Input id="departure-time" type="time" {...register("departureTime")} />
+                    </div>
+                  </div>
                 </PopoverContent>
               </Popover>
               {errors.dateRange && (
