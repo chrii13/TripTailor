@@ -33,9 +33,8 @@ export function ItineraryResult({ tripData, itinerary, onEdit }: ItineraryResult
   return (
     <Card className="relative mx-auto w-full max-w-2xl overflow-hidden shadow-[0_20px_50px_-12px_color-mix(in_oklch,var(--primary)_25%,transparent)]">
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
-      <CardHeader className="relative overflow-hidden px-8 pt-10 pb-8">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent via-background to-background" />
-        <CardTitle className="relative font-display text-3xl font-semibold text-primary italic">
+      <CardHeader className="px-8 pt-10 pb-8">
+        <CardTitle className="font-display text-3xl font-semibold text-primary">
           Si parte per {tripData.destination}!
         </CardTitle>
       </CardHeader>
