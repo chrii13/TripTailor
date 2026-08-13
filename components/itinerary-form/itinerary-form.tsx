@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { tripFormSchema, type TripFormValues } from "@/lib/schema";
 import type { ErrorCode } from "@/lib/generate-itinerary-errors";
 import type { ItineraryResponse } from "@/lib/itinerary-schema";
+import type { DailyClimateAverage } from "@/lib/climate-forecast";
 import { ParticipantRow } from "./participant-row";
 import { ItineraryResult } from "./itinerary-result";
 import { DestinationAutocomplete } from "./destination-autocomplete";
@@ -60,6 +61,7 @@ export function ItineraryForm() {
   const [mode, setMode] = useState<"form" | "loading" | "result">("form");
   const [submittedData, setSubmittedData] = useState<TripFormValues | null>(null);
   const [itinerary, setItinerary] = useState<ItineraryResponse | null>(null);
+  const [weather, setWeather] = useState<DailyClimateAverage[] | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
 
@@ -128,6 +130,7 @@ export function ItineraryForm() {
 
       setSubmittedData(data);
       setItinerary(body.itinerary);
+      setWeather(body.weather ?? null);
       setMode("result");
     } catch (error) {
       const code = error instanceof Error && isErrorCode(error.message) ? error.message : "invalid_response";
@@ -141,7 +144,14 @@ export function ItineraryForm() {
   };
 
   if (mode === "result" && submittedData && itinerary) {
-    return <ItineraryResult tripData={submittedData} itinerary={itinerary} onEdit={handleEdit} />;
+    return (
+      <ItineraryResult
+        tripData={submittedData}
+        itinerary={itinerary}
+        weather={weather}
+        onEdit={handleEdit}
+      />
+    );
   }
 
   return (

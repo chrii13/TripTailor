@@ -13,10 +13,12 @@ import {
 } from "@/components/ui/dialog";
 import { PARTICIPANT_TYPE_LABELS, type TripFormValues } from "@/lib/schema";
 import type { Activity, ItineraryResponse } from "@/lib/itinerary-schema";
+import type { DailyClimateAverage } from "@/lib/climate-forecast";
 
 interface ItineraryResultProps {
   tripData: TripFormValues;
   itinerary: ItineraryResponse;
+  weather: DailyClimateAverage[] | null;
   onEdit: () => void;
 }
 
@@ -26,7 +28,7 @@ const SLOTS = [
   { key: "sera", label: "Sera" },
 ] as const;
 
-export function ItineraryResult({ tripData, itinerary, onEdit }: ItineraryResultProps) {
+export function ItineraryResult({ tripData, itinerary, weather, onEdit }: ItineraryResultProps) {
   const [open, setOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 
@@ -62,6 +64,7 @@ export function ItineraryResult({ tripData, itinerary, onEdit }: ItineraryResult
             const formattedDate = Number.isNaN(parsedDate.getTime())
               ? day.date
               : format(parsedDate, "dd/MM/yyyy");
+            const dayWeather = weather?.find((entry) => entry.date === day.date);
             return (
               <div key={dayIndex} className="overflow-hidden rounded-2xl border">
                 <div className="flex items-center justify-between gap-3 bg-primary px-4 py-4 text-primary-foreground">
@@ -69,6 +72,12 @@ export function ItineraryResult({ tripData, itinerary, onEdit }: ItineraryResult
                   <p className="text-base opacity-85">{formattedDate}</p>
                 </div>
                 <div className="bg-card px-4 pb-1">
+                  {dayWeather && (
+                    <p className="py-2 text-xs text-muted-foreground">
+                      Clima tipico: ~{dayWeather.tempMaxAvg}°C/{dayWeather.tempMinAvg}°C · pioggia in
+                      circa {dayWeather.precipitationChance}% degli anni passati
+                    </p>
+                  )}
                   {SLOTS.map(
                     ({ key, label }) =>
                       day[key].length > 0 && (
