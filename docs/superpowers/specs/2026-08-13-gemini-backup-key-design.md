@@ -25,7 +25,7 @@ Il passaggio alla chiave di backup avviene **solo** quando l'errore della chiave
 ## Cosa NON cambia
 
 - Nessuna modifica allo schema di richiesta o di risposta dell'endpoint.
-- Nessuna modifica al comportamento quando la chiave primaria manca del tutto (resta `config`; la chiave di backup non sostituisce una chiave primaria assente, la integra solo quando la primaria è configurata ma in rate limit).
+- L'errore `config` scatta solo quando **nessuna** delle due chiavi è configurata (stesso comportamento di oggi quando manca l'unica chiave). Se la primaria è assente/vuota ma la chiave di backup è configurata, l'app genera comunque usando la backup — non tratta la primaria come strettamente indispensabile, per evitare un fallimento evitabile quando esiste già una chiave funzionante.
 - Nessuna astrazione multi-provider: resta solo Gemini, con due chiavi possibili.
 
 ## Testing
