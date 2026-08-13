@@ -35,7 +35,7 @@ export function ItineraryResult({ tripData, itinerary, onEdit }: ItineraryResult
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
       <CardHeader className="px-8 pt-8">
         <CardTitle className="font-display text-2xl font-semibold">
-          Il tuo viaggio a {tripData.destination}
+          Si parte per {tripData.destination}!
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 px-8 pb-8">
