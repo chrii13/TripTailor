@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Euro, Users } from "lucide-react";
+import { CalendarDays, CalendarIcon, Euro, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,6 +15,7 @@ import {
 import { PARTICIPANT_TYPE_LABELS, type TripFormValues } from "@/lib/schema";
 import type { Activity, ItineraryResponse } from "@/lib/itinerary-schema";
 import type { DailyClimateAverage } from "@/lib/climate-forecast";
+import { buildItineraryIcs } from "@/lib/itinerary-to-ics";
 
 interface ItineraryResultProps {
   tripData: TripFormValues;
@@ -32,6 +33,22 @@ const SLOTS = [
 export function ItineraryResult({ tripData, itinerary, weather, onEdit }: ItineraryResultProps) {
   const [open, setOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+
+  const handleExportCalendar = () => {
+    const icsContent = buildItineraryIcs(tripData, itinerary);
+    const sanitizedDestination = tripData.destination
+      .replace(/[^a-zA-Z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `itinerario-${sanitizedDestination}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <Card className="relative mx-auto w-full max-w-2xl overflow-hidden shadow-[0_20px_50px_-12px_color-mix(in_oklch,var(--primary)_25%,transparent)]">
@@ -121,9 +138,15 @@ export function ItineraryResult({ tripData, itinerary, weather, onEdit }: Itiner
           })}
         </div>
 
-        <Button type="button" variant="outline" onClick={onEdit} className="w-full">
-          Modifica
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button type="button" variant="outline" onClick={onEdit} className="w-full">
+            Modifica
+          </Button>
+          <Button type="button" variant="outline" onClick={handleExportCalendar} className="w-full">
+            <CalendarDays className="h-4 w-4" />
+            Esporta calendario
+          </Button>
+        </div>
       </CardContent>
 
       <Dialog open={open} onOpenChange={setOpen}>
