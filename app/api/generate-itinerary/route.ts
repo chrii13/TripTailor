@@ -10,6 +10,12 @@ import { getClimateAverages } from "@/lib/climate-forecast";
 import { getGeminiApiKeys } from "@/lib/gemini-api-keys";
 
 export async function POST(request: Request) {
+  const contentType = request.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) {
+    console.error(`Generazione itinerario: Content-Type non valido (${contentType ?? "assente"})`);
+    return NextResponse.json({ error: "invalid_response" }, { status: 400 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -20,7 +26,16 @@ export async function POST(request: Request) {
   const parsedRequest = generateItineraryRequestSchema.safeParse(body);
 
   if (!parsedRequest.success) {
-    return NextResponse.json({ error: "invalid_response" }, { status: 400 });
+    return NextResponse.json(
+      {
+        error: "invalid_response",
+        details: parsedRequest.error.issues.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
+        })),
+      },
+      { status: 400 }
+    );
   }
 
   const apiKeys = getGeminiApiKeys();

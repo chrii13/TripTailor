@@ -67,4 +67,67 @@ describe("POST /api/generate-itinerary", () => {
       }
     }
   });
+
+  it("rifiuta una richiesta con Content-Type: text/plain anche se il corpo è un JSON valido", async () => {
+    const request = new Request("http://localhost/api/generate-itinerary", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({
+        destination: "Roma",
+        dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-05T00:00:00.000Z" },
+        participants: [{ type: "adulto", age: 35 }],
+        budget: 1000,
+        styleNotes: "",
+      }),
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_response");
+  });
+
+  it("rifiuta una richiesta senza header Content-Type anche se il corpo è un JSON valido", async () => {
+    const request = new Request("http://localhost/api/generate-itinerary", {
+      method: "POST",
+      body: JSON.stringify({
+        destination: "Roma",
+        dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-05T00:00:00.000Z" },
+        participants: [{ type: "adulto", age: 35 }],
+        budget: 1000,
+        styleNotes: "",
+      }),
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_response");
+  });
+
+  it("restituisce dettagli di validazione quando un campo obbligatorio è mancante", async () => {
+    const request = new Request("http://localhost/api/generate-itinerary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-05T00:00:00.000Z" },
+        participants: [{ type: "adulto", age: 35 }],
+        budget: 1000,
+        styleNotes: "",
+      }),
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_response");
+    expect(body.details).toBeDefined();
+    expect(Array.isArray(body.details)).toBe(true);
+    expect(body.details.length).toBeGreaterThan(0);
+    const destinationIssue = body.details.find((issue: { path: string }) => issue.path === "destination");
+    expect(destinationIssue).toBeDefined();
+  });
 });
