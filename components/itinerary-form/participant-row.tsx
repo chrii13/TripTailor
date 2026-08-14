@@ -105,7 +105,19 @@ export function ParticipantRow({
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
       <div className="space-y-1.5">
-        <Label className="invisible">Rimuovi</Label>
+        {/*
+          Not a <Label>: this is a pure visual spacer to align the remove
+          button with the labeled fields in the other two columns. The
+          button already carries its own accessible name via aria-label
+          below; a bare unassociated <label> here would trip the browser's
+          "no label associated with a form field" a11y check on every row.
+        */}
+        <span
+          aria-hidden="true"
+          className="invisible flex items-center gap-2 text-sm leading-none font-medium select-none"
+        >
+          Rimuovi
+        </span>
         <Button
           type="button"
           variant="outline"
