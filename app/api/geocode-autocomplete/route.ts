@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 const MIN_QUERY_LENGTH = 3;
+const MAX_QUERY_LENGTH = 100;
 const FETCH_LIMIT = 20;
 const DISPLAY_LIMIT = 6;
 
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = (searchParams.get("q") ?? "").trim();
 
-  if (query.length < MIN_QUERY_LENGTH) {
+  if (query.length < MIN_QUERY_LENGTH || query.length > MAX_QUERY_LENGTH) {
     return NextResponse.json({ results: [] });
   }
 

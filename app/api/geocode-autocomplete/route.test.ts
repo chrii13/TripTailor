@@ -19,4 +19,14 @@ describe("GET /api/geocode-autocomplete", () => {
     const body = await response.json();
     expect(body.results).toEqual([]);
   });
+
+  it("restituisce un array vuoto senza chiamare LocationIQ quando la query è troppo lunga", async () => {
+    const longQuery = "a".repeat(101);
+    const request = new Request(`http://localhost/api/geocode-autocomplete?q=${longQuery}`);
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.results).toEqual([]);
+  });
 });
