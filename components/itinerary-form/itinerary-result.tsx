@@ -139,10 +139,10 @@ export function ItineraryResult({ tripData, itinerary, weather, onEdit }: Itiner
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button type="button" variant="outline" onClick={onEdit} className="w-full">
+          <Button type="button" variant="outline" onClick={onEdit} className="flex-1">
             Modifica
           </Button>
-          <Button type="button" variant="outline" onClick={handleExportCalendar} className="w-full">
+          <Button type="button" variant="outline" onClick={handleExportCalendar} className="flex-1">
             <CalendarDays className="h-4 w-4" />
             Esporta calendario
           </Button>
