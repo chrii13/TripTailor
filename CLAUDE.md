@@ -11,7 +11,7 @@
 ## 📍 1. PROJECT SNAPSHOT (Maintained by Claude)
 *Claude: Update this section automatically as the project evolves.*
 
-- **Project Name:** "App Itinerari" (nome provvisorio, non definitivo — da aggiornare quando scelto) — Web App (MVP) + Mobile App per la creazione automatica di itinerari di viaggio personalizzati (AI, meteo, export calendario).
+- **Project Name:** "TripTailor" — Web App (MVP) + Mobile App per la creazione automatica di itinerari di viaggio personalizzati (AI, meteo, export calendario).
 - **Tech Stack:** Next.js (App Router, TypeScript), Tailwind CSS, shadcn/ui, react-hook-form + zod. AI: Google Gemini (`@google/genai`, modello `gemini-flash-latest` — alias Google al Flash più recente, oggi `gemini-3.6-flash`; `gemini-2.5-flash` è stato ritirato per le chiavi API di nuova creazione). Autocompletamento destinazione: LocationIQ (`LOCATIONIQ_API_KEY`). Meteo: Open-Meteo (`archive-api.open-meteo.com`, nessuna chiave — media climatica storica sugli ultimi 5 anni, non una previsione). Calendario: Google Calendar API / libreria `ics` (fase futura). Mobile: da definire (fase futura).
 - **Primary Commands:**
   - **Dev:** `npm run dev`

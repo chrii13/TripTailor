@@ -20,7 +20,7 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Pianifica il tuo viaggio",
+  title: "TripTailor — Pianifica il tuo viaggio",
   description: "Crea itinerari di viaggio personalizzati in pochi passi.",
 };
 
