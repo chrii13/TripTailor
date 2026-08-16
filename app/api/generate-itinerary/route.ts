@@ -56,43 +56,57 @@ export async function POST(request: Request) {
 
   const prompt = buildItineraryPrompt(parsedRequest.data, climate);
 
+  const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash"];
+
   let responseText: string | undefined;
   let finishReason: string | undefined;
 
-  for (let i = 0; i < apiKeys.length; i++) {
-    const client = new GoogleGenAI({ apiKey: apiKeys[i] });
-    try {
-      const response = await client.models.generateContent({
-        model: "gemini-flash-latest",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseJsonSchema: z.toJSONSchema(itineraryResponseSchema),
-          maxOutputTokens: 50000,
-          thinkingConfig: { thinkingBudget: 1024 },
-          httpOptions: {
-            timeout: 180_000,
-            retryOptions: { attempts: 2, httpStatusCodes: [408, 500, 502, 503, 504] },
+  modelLoop:
+  for (let m = 0; m < GEMINI_MODELS.length; m++) {
+    const model = GEMINI_MODELS[m];
+    for (let i = 0; i < apiKeys.length; i++) {
+      const client = new GoogleGenAI({ apiKey: apiKeys[i] });
+      try {
+        const response = await client.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            responseJsonSchema: z.toJSONSchema(itineraryResponseSchema),
+            maxOutputTokens: 50000,
+            thinkingConfig: { thinkingBudget: 1024 },
+            httpOptions: {
+              timeout: 180_000,
+              retryOptions: { attempts: 2, httpStatusCodes: [408, 500, 502, 503, 504] },
+            },
           },
-        },
-      });
-      responseText = response.text;
-      finishReason = response.candidates?.[0]?.finishReason;
-      break;
-    } catch (error) {
-      const code = classifyGenerationError(error);
-      const hasNextKey = i < apiKeys.length - 1;
+        });
+        responseText = response.text;
+        finishReason = response.candidates?.[0]?.finishReason;
+        break modelLoop;
+      } catch (error) {
+        const code = classifyGenerationError(error);
+        const hasNextKey = i < apiKeys.length - 1;
+        const hasNextModel = m < GEMINI_MODELS.length - 1;
 
-      if (code === "rate_limit" && hasNextKey) {
-        console.error(
-          `Generazione itinerario: chiave Gemini #${i + 1} in rate limit, tentativo con la chiave successiva`
-        );
-        continue;
+        if (code === "rate_limit" && hasNextKey) {
+          console.error(
+            `Generazione itinerario: chiave Gemini #${i + 1} in rate limit (modello ${model}), tentativo con la chiave successiva`
+          );
+          continue;
+        }
+
+        if ((code === "rate_limit" || code === "network") && hasNextModel) {
+          console.error(
+            `Generazione itinerario: modello ${model} non disponibile (${code}), tentativo con il modello successivo`
+          );
+          continue modelLoop;
+        }
+
+        console.error(`Generazione itinerario fallita (${code}):`, error);
+        const status = code === "rate_limit" ? 429 : 502;
+        return NextResponse.json({ error: code }, { status });
       }
-
-      console.error(`Generazione itinerario fallita (${code}):`, error);
-      const status = code === "rate_limit" ? 429 : 502;
-      return NextResponse.json({ error: code }, { status });
     }
   }
 
