@@ -16,6 +16,8 @@ Verificato che le quote di Gemini sono tracciate per **coppia (progetto, modello
 
 `gemini-2.5-flash`, dopo il modello primario `gemini-flash-latest` (oggi alias di `gemini-3.6-flash`). Scelto verificando dal vivo, con la chiave reale del progetto, l'elenco dei modelli effettivamente disponibili (`ai.models.list()`) — non a memoria. `gemini-2.5-flash` è un modello più maturo e stabile, quindi con probabilità più alta di avere capacità disponibile quando `gemini-3.6-flash` è sovraccarico.
 
+Nota: `CLAUDE.md` registra che `gemini-2.5-flash` è stato ritirato per le chiavi create di recente — se la chiave di backup è tra queste, il fallback su questo modello potrebbe non essere disponibile per quella chiave specifica; il codice gestisce comunque questo caso restituendo al client il primo errore significativo incontrato, non un errore fuorviante.
+
 ## Come si combina con il fallback sulle chiavi
 
 Il meccanismo esistente (`lib/gemini-api-keys.ts`, `getGeminiApiKeys()`) resta invariato: elenco ordinato di chiavi (primaria, poi backup se configurata). Si aggiunge un livello annidato sopra:

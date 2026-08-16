@@ -60,6 +60,7 @@ export async function POST(request: Request) {
 
   let responseText: string | undefined;
   let finishReason: string | undefined;
+  let firstCode: ReturnType<typeof classifyGenerationError> | undefined;
 
   modelLoop:
   for (let m = 0; m < GEMINI_MODELS.length; m++) {
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
         break modelLoop;
       } catch (error) {
         const code = classifyGenerationError(error);
+        firstCode ??= code;
         const hasNextKey = i < apiKeys.length - 1;
         const hasNextModel = m < GEMINI_MODELS.length - 1;
 
@@ -103,9 +105,10 @@ export async function POST(request: Request) {
           continue modelLoop;
         }
 
-        console.error(`Generazione itinerario fallita (${code}):`, error);
-        const status = code === "rate_limit" ? 429 : 502;
-        return NextResponse.json({ error: code }, { status });
+        const finalCode = firstCode ?? code;
+        console.error(`Generazione itinerario fallita (${finalCode}):`, error);
+        const status = finalCode === "rate_limit" ? 429 : 502;
+        return NextResponse.json({ error: finalCode }, { status });
       }
     }
   }
