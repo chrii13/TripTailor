@@ -14,9 +14,7 @@ Verificato che le quote di Gemini sono tracciate per **coppia (progetto, modello
 
 ## Modello di fallback
 
-`gemini-2.5-flash`, dopo il modello primario `gemini-flash-latest` (oggi alias di `gemini-3.6-flash`). Scelto verificando dal vivo, con la chiave reale del progetto, l'elenco dei modelli effettivamente disponibili (`ai.models.list()`) — non a memoria. `gemini-2.5-flash` è un modello più maturo e stabile, quindi con probabilità più alta di avere capacità disponibile quando `gemini-3.6-flash` è sovraccarico.
-
-Nota: `CLAUDE.md` registra che `gemini-2.5-flash` è stato ritirato per le chiavi create di recente — se la chiave di backup è tra queste, il fallback su questo modello potrebbe non essere disponibile per quella chiave specifica; il codice gestisce comunque questo caso restituendo al client il primo errore significativo incontrato, non un errore fuorviante.
+`gemini-flash-lite-latest`, dopo il modello primario `gemini-flash-latest`. **Nota correttiva**: la scelta iniziale (`gemini-2.5-flash`) era stata verificata solo controllando che comparisse nell'elenco `ai.models.list()` — insufficiente, perché l'elenco mostra i modelli esistenti nel catalogo, non quelli a cui questo specifico progetto/chiave ha davvero accesso. Una chiamata reale a `generateContent` su `gemini-2.5-flash` con la chiave del progetto ha restituito un 404 "no longer available to new users" — il fallback non solo non funzionava mai, ma allungava inutilmente i tempi di attesa prima del fallimento finale (da ~88s a oltre 2 minuti). Corretto scegliendo `gemini-flash-lite-latest`, verificato con una vera chiamata `generateContent` (non solo l'elenco) prima di essere adottato, e preferito a un'alternativa altrettanto funzionante ma a versione fissata (`gemini-3.1-flash-lite`) perché, come alias "latest", non rischia lo stesso destino di ritiro futuro.
 
 ## Come si combina con il fallback sulle chiavi
 

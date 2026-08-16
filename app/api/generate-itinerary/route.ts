@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
   const prompt = buildItineraryPrompt(parsedRequest.data, climate);
 
-  const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash"];
+  const GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"];
 
   let responseText: string | undefined;
   let finishReason: string | undefined;
