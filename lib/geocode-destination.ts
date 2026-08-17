@@ -12,8 +12,8 @@ interface LocationIqSearchResult {
 }
 
 export interface Coordinates {
-  lat: number;
-  lon: number;
+  lat: number | null;
+  lon: number | null;
   countryCode: string | null;
 }
 
@@ -47,7 +47,12 @@ export async function geocodeDestination(destination: string): Promise<Coordinat
     }
 
     const address = data[0].address;
-    const isSpecificPlace = !!(
+    const countryCode = address?.country_code ? address.country_code.toUpperCase() : null;
+
+    // Il fuso di precisione protegge solo la qualità delle coordinate per il meteo:
+    // luoghi non abbastanza specifici (es. Tokyo, Shanghai, tag'd come divisioni
+    // amministrative) restituiscono comunque un country_code utilizzabile.
+    const hasPreciseCoordinates = !!(
       address?.city ||
       address?.town ||
       address?.village ||
@@ -55,18 +60,16 @@ export async function geocodeDestination(destination: string): Promise<Coordinat
       address?.archipelago
     );
 
-    if (!isSpecificPlace) {
-      return null;
+    if (!hasPreciseCoordinates) {
+      return { lat: null, lon: null, countryCode };
     }
 
     const lat = Number.parseFloat(data[0].lat);
     const lon = Number.parseFloat(data[0].lon);
 
     if (Number.isNaN(lat) || Number.isNaN(lon)) {
-      return null;
+      return { lat: null, lon: null, countryCode };
     }
-
-    const countryCode = address?.country_code ? address.country_code.toUpperCase() : null;
 
     return { lat, lon, countryCode };
   } catch (error) {

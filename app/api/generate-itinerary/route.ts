@@ -46,14 +46,15 @@ export async function POST(request: Request) {
   }
 
   const coordinates = await geocodeDestination(parsedRequest.data.destination);
-  const climate = coordinates
-    ? await getClimateAverages(
-        coordinates.lat,
-        coordinates.lon,
-        parsedRequest.data.dateRange.from,
-        parsedRequest.data.dateRange.to
-      )
-    : null;
+  const climate =
+    coordinates?.lat != null && coordinates?.lon != null
+      ? await getClimateAverages(
+          coordinates.lat,
+          coordinates.lon,
+          parsedRequest.data.dateRange.from,
+          parsedRequest.data.dateRange.to
+        )
+      : null;
 
   const countryInfo = coordinates?.countryCode ? getCountryInfo(coordinates.countryCode) : null;
 
