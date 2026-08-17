@@ -61,79 +61,75 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 px-8 pb-8">
-        <div className="space-y-2">
+        <div className="space-y-3 rounded-2xl border-2 border-primary/45 bg-primary/[0.035] p-4 sm:p-5">
           <p className="text-xs font-semibold tracking-wide text-primary uppercase">Il tuo viaggio</p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
             {tripData.dateRange.from && tripData.dateRange.to && (
-              <div className="flex items-center gap-2.5 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+              <div className="flex items-center gap-3 rounded-lg bg-card/70 px-3.5 py-3 text-sm">
                 <CalendarIcon className="h-4 w-4 shrink-0 text-primary" />
-                <div className="flex flex-col leading-tight">
-                  <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                    Check-in · Check-out
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Arrivo · Partenza
                   </span>
-                  <span className="font-medium">
+                  <span className="font-medium text-foreground">
                     {format(tripData.dateRange.from, "dd/MM/yyyy")} - {format(tripData.dateRange.to, "dd/MM/yyyy")}
                   </span>
                 </div>
               </div>
             )}
-            <div className="flex items-center gap-2.5 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+            <div className="flex items-center gap-3 rounded-lg bg-card/70 px-3.5 py-3 text-sm">
               <Users className="h-4 w-4 shrink-0 text-primary" />
-              <div className="flex flex-col leading-tight">
-                <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                   Viaggiatori
                 </span>
-                <span className="font-medium">
+                <span className="font-medium text-foreground">
                   {tripData.participants.map((p) => `${PARTICIPANT_TYPE_LABELS[p.type]} (${p.age})`).join(", ")}
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2.5 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+            <div className="flex items-center gap-3 rounded-lg bg-card/70 px-3.5 py-3 text-sm">
               <Euro className="h-4 w-4 shrink-0 text-primary" />
-              <div className="flex flex-col leading-tight">
-                <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                  Budget
-                </span>
-                <span className="font-medium">{tripData.budget}€</span>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Budget</span>
+                <span className="font-medium text-foreground">{tripData.budget}€</span>
               </div>
             </div>
           </div>
         </div>
 
         {countryInfo && (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold tracking-wide text-primary uppercase">Nel paese di destinazione</p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <div className="flex items-center gap-2.5 rounded-lg border border-accent bg-accent/50 px-3 py-2.5 text-sm">
+          <div className="space-y-3 rounded-2xl border-2 border-primary/45 bg-accent/25 p-4 sm:p-5">
+            <p className="text-xs font-semibold tracking-wide text-primary uppercase">Paese di destinazione</p>
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+              <div className="flex items-center gap-3 rounded-lg bg-card/70 px-3.5 py-3 text-sm">
                 <Banknote className="h-4 w-4 shrink-0 text-accent-foreground" />
-                <div className="flex flex-col leading-tight">
-                  <span className="text-[11px] font-medium tracking-wide text-accent-foreground/70 uppercase">
-                    Valuta
-                  </span>
-                  <span className="font-medium">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Valuta</span>
+                  <span className="font-medium text-foreground">
                     {countryInfo.currency.name} ({countryInfo.currency.symbol})
                   </span>
                 </div>
               </div>
               {countryInfo.languages.length > 0 && (
-                <div className="flex items-center gap-2.5 rounded-lg border border-accent bg-accent/50 px-3 py-2.5 text-sm">
+                <div className="flex items-center gap-3 rounded-lg bg-card/70 px-3.5 py-3 text-sm">
                   <Languages className="h-4 w-4 shrink-0 text-accent-foreground" />
-                  <div className="flex flex-col leading-tight">
-                    <span className="text-[11px] font-medium tracking-wide text-accent-foreground/70 uppercase">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                       {countryInfo.languages.length > 1 ? "Lingue" : "Lingua"}
                     </span>
-                    <span className="font-medium">{countryInfo.languages.join(", ")}</span>
+                    <span className="font-medium text-foreground">{countryInfo.languages.join(", ")}</span>
                   </div>
                 </div>
               )}
               {countryInfo.timezones.length > 0 && (
-                <div className="flex items-center gap-2.5 rounded-lg border border-accent bg-accent/50 px-3 py-2.5 text-sm">
+                <div className="flex items-center gap-3 rounded-lg bg-card/70 px-3.5 py-3 text-sm">
                   <Clock className="h-4 w-4 shrink-0 text-accent-foreground" />
-                  <div className="flex flex-col leading-tight">
-                    <span className="text-[11px] font-medium tracking-wide text-accent-foreground/70 uppercase">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                       {countryInfo.timezones.length > 1 ? "Fusi orari" : "Fuso orario"}
                     </span>
-                    <span className="font-medium">{countryInfo.timezones.join(", ")}</span>
+                    <span className="font-medium text-foreground">{countryInfo.timezones.join(", ")}</span>
                   </div>
                 </div>
               )}
