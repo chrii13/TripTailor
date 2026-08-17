@@ -8,6 +8,7 @@ import { classifyGenerationError } from "@/lib/generate-itinerary-errors";
 import { geocodeDestination } from "@/lib/geocode-destination";
 import { getClimateAverages } from "@/lib/climate-forecast";
 import { getGeminiApiKeys } from "@/lib/gemini-api-keys";
+import { getCountryInfo } from "@/lib/country-info";
 
 export async function POST(request: Request) {
   const contentType = request.headers.get("content-type");
@@ -53,6 +54,8 @@ export async function POST(request: Request) {
         parsedRequest.data.dateRange.to
       )
     : null;
+
+  const countryInfo = coordinates?.countryCode ? getCountryInfo(coordinates.countryCode) : null;
 
   const prompt = buildItineraryPrompt(parsedRequest.data, climate);
 
@@ -137,5 +140,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_response" }, { status: 502 });
   }
 
-  return NextResponse.json({ itinerary: parsedResult.data, weather: climate });
+  return NextResponse.json({ itinerary: parsedResult.data, weather: climate, countryInfo });
 }

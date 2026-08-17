@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { CalendarDays, CalendarIcon, Euro, Users } from "lucide-react";
+import { Banknote, CalendarDays, CalendarIcon, Clock, Euro, Languages, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,12 +15,14 @@ import {
 import { PARTICIPANT_TYPE_LABELS, type TripFormValues } from "@/lib/schema";
 import type { Activity, ItineraryResponse } from "@/lib/itinerary-schema";
 import type { DailyClimateAverage } from "@/lib/climate-forecast";
+import type { CountryInfo } from "@/lib/country-info";
 import { buildItineraryIcs } from "@/lib/itinerary-to-ics";
 
 interface ItineraryResultProps {
   tripData: TripFormValues;
   itinerary: ItineraryResponse;
   weather: DailyClimateAverage[] | null;
+  countryInfo: CountryInfo | null;
   onEdit: () => void;
 }
 
@@ -30,7 +32,7 @@ const SLOTS = [
   { key: "sera", label: "Sera" },
 ] as const;
 
-export function ItineraryResult({ tripData, itinerary, weather, onEdit }: ItineraryResultProps) {
+export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onEdit }: ItineraryResultProps) {
   const [open, setOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 
@@ -79,6 +81,25 @@ export function ItineraryResult({ tripData, itinerary, weather, onEdit }: Itiner
             <span>Budget {tripData.budget}€</span>
           </div>
         </div>
+
+        {countryInfo && (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+              <Banknote className="h-4 w-4 shrink-0 text-primary" />
+              <span>
+                {countryInfo.currency.name} ({countryInfo.currency.symbol})
+              </span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+              <Languages className="h-4 w-4 shrink-0 text-primary" />
+              <span>{countryInfo.languages.join(", ")}</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+              <Clock className="h-4 w-4 shrink-0 text-primary" />
+              <span>{countryInfo.timezones.join(", ")}</span>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-6">
           {itinerary.days.map((day, dayIndex) => {
