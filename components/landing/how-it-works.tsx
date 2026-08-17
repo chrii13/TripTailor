@@ -43,7 +43,13 @@ export function HowItWorks() {
       className="scroll-mt-20 bg-secondary px-4 py-16 sm:px-8 sm:py-24"
     >
       <div className="mx-auto max-w-5xl">
-        <div className="mb-10">
+        <motion.div
+          className="mb-10"
+          initial={reduceMotion ? undefined : { opacity: 0, y: 12 }}
+          whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.6 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
           <h2 className="font-display text-3xl font-black tracking-[-0.02em] text-primary uppercase sm:text-5xl">
             Come funziona
           </h2>
@@ -51,7 +57,7 @@ export function HowItWorks() {
             Dal racconto del tuo viaggio all&apos;itinerario pronto, in
             quattro passi.
           </p>
-        </div>
+        </motion.div>
         <ol className="relative max-w-2xl border-l border-border pl-8">
           {STEPS.map((step, i) => (
             <motion.li

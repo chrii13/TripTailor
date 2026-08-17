@@ -46,14 +46,20 @@ export function PopularDestinations() {
   return (
     <section id="mete" className="scroll-mt-20 px-4 py-16 sm:px-8 sm:py-24">
       <div className="mx-auto max-w-5xl">
-        <div className="mb-10">
+        <motion.div
+          className="mb-10"
+          initial={reduceMotion ? undefined : { opacity: 0, y: 12 }}
+          whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.6 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
           <h2 className="font-display text-3xl font-black tracking-[-0.02em] text-primary uppercase sm:text-5xl">
             Le mete più gettonate
           </h2>
           <p className="mt-3 text-muted-foreground">
             Da dove partono di solito i nostri viaggiatori.
           </p>
-        </div>
+        </motion.div>
         <motion.div
           className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4"
           variants={reduceMotion ? undefined : container}
@@ -67,10 +73,8 @@ export function PopularDestinations() {
               <motion.div
                 key={destination.name}
                 variants={reduceMotion ? undefined : item}
-                whileHover={reduceMotion ? undefined : { y: -4, scale: 1.02 }}
-                transition={{ duration: 0.2 }}
               >
-                <Card className="h-full gap-3 border-border py-5 shadow-none">
+                <Card className="h-full gap-3 border-border py-5 shadow-none transition-colors hover:border-primary hover:bg-accent">
                   <CardContent className="flex flex-col items-center gap-2 px-4 text-center">
                     <Icon className="size-6 text-primary" />
                     <div>

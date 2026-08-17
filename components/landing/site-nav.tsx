@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { ScrollProgress } from "./scroll-progress";
 
 const NAV_LINKS = [
   { href: "#mete", label: "Mete" },
@@ -11,6 +12,7 @@ const NAV_LINKS = [
 export function SiteNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background text-primary">
+      <ScrollProgress />
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-8">
         <a
           href="#"

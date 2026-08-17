@@ -1,3 +1,6 @@
+"use client";
+
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { CloudSun, Sun, Users } from "lucide-react";
 
 const DAYS = [
@@ -22,7 +25,19 @@ const DAYS = [
 
 const WEATHER_ICONS = { sun: Sun, cloud: CloudSun };
 
+const list: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.13, delayChildren: 0.75 } },
+};
+
+const stop: Variants = {
+  hidden: { opacity: 0, x: -8 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.4, ease: "easeOut" } },
+};
+
 export function ItineraryPreview() {
+  const reduceMotion = useReducedMotion();
+
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border bg-secondary px-5 py-4">
@@ -39,12 +54,20 @@ export function ItineraryPreview() {
         </span>
       </div>
 
-      <div className="divide-y divide-border">
+      <motion.div
+        className="divide-y divide-border"
+        variants={reduceMotion ? undefined : list}
+        initial={reduceMotion ? undefined : "hidden"}
+        animate={reduceMotion ? undefined : "visible"}
+      >
         {DAYS.map((day) => {
           const WeatherIcon = WEATHER_ICONS[day.weather.icon];
           return (
             <div key={day.label} className="px-5 py-4">
-              <div className="mb-3 flex items-center justify-between">
+              <motion.div
+                className="mb-3 flex items-center justify-between"
+                variants={reduceMotion ? undefined : stop}
+              >
                 <span className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
                   {day.label}
                 </span>
@@ -52,29 +75,33 @@ export function ItineraryPreview() {
                   <WeatherIcon className="size-4" />
                   {day.weather.temp}
                 </span>
-              </div>
+              </motion.div>
               <ol className="space-y-3">
-                {day.stops.map((stop) => (
-                  <li key={stop.time} className="flex gap-3">
+                {day.stops.map((s) => (
+                  <motion.li
+                    key={s.time}
+                    className="flex gap-3"
+                    variants={reduceMotion ? undefined : stop}
+                  >
                     <span className="w-11 shrink-0 pt-0.5 text-xs font-medium tabular-nums text-muted-foreground">
-                      {stop.time}
+                      {s.time}
                     </span>
                     <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-voltage" />
                     <span>
                       <span className="block text-sm font-medium text-primary">
-                        {stop.title}
+                        {s.title}
                       </span>
                       <span className="block text-xs text-muted-foreground">
-                        {stop.note}
+                        {s.note}
                       </span>
                     </span>
-                  </li>
+                  </motion.li>
                 ))}
               </ol>
             </div>
           );
         })}
-      </div>
+      </motion.div>
 
       <p className="border-t border-border px-5 py-3 text-xs text-muted-foreground">
         Esempio generato da TripTailor — il tuo sarà diverso.
