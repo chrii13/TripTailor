@@ -3,16 +3,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
-import {
-  Banknote,
-  CalendarDays,
-  CalendarIcon,
-  Clock,
-  Euro,
-  Languages,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { Banknote, CalendarDays, Clock, Languages, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -52,20 +43,43 @@ const dayCard: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" } },
 };
 
-function InfoPanel({ label, children }: { label: string; children: React.ReactNode }) {
+function TripPanel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border">
-      <p className="border-b border-border bg-secondary px-4 py-2.5 text-xs font-semibold tracking-[0.12em] text-primary uppercase">
-        {label}
+    <div className="rounded-xl bg-primary px-6 py-6 text-primary-foreground sm:px-7 sm:py-7">
+      <span className="block h-[3px] w-8 bg-voltage" />
+      <p className="mt-4 text-[11px] font-semibold tracking-[0.18em] text-primary-foreground/60 uppercase">
+        Il tuo viaggio
       </p>
-      <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-        {children}
-      </div>
+      <dl className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-3">{children}</dl>
     </div>
   );
 }
 
-function InfoItem({
+function TripStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-[11px] font-medium tracking-[0.14em] text-primary-foreground/60 uppercase">
+        {label}
+      </dt>
+      <dd className="mt-2 font-display text-lg leading-tight font-black tracking-[-0.01em] tabular-nums">
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function CountryPanel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-border px-6 py-6 sm:px-7 sm:py-7">
+      <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+        Paese di destinazione
+      </p>
+      <dl className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">{children}</dl>
+    </div>
+  );
+}
+
+function CountryStat({
   icon: Icon,
   label,
   value,
@@ -75,14 +89,12 @@ function InfoItem({
   value: string;
 }) {
   return (
-    <div className="flex items-start gap-3 px-4 py-3.5 text-sm">
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">
-          {label}
-        </span>
-        <span className="font-medium text-primary">{value}</span>
-      </div>
+    <div>
+      <dt className="flex items-center gap-2 text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
+        <Icon className="size-3.5 shrink-0" />
+        {label}
+      </dt>
+      <dd className="mt-2 text-sm font-medium text-primary">{value}</dd>
     </div>
   );
 }
@@ -116,46 +128,44 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 px-8 pb-8">
-        <InfoPanel label="Il tuo viaggio">
+        <TripPanel>
           {tripData.dateRange.from && tripData.dateRange.to && (
-            <InfoItem
-              icon={CalendarIcon}
+            <TripStat
               label="Date"
-              value={`${format(tripData.dateRange.from, "dd/MM/yyyy")} – ${format(tripData.dateRange.to, "dd/MM/yyyy")}`}
+              value={`${format(tripData.dateRange.from, "dd/MM")}–${format(tripData.dateRange.to, "dd/MM/yyyy")}`}
             />
           )}
-          <InfoItem
-            icon={Users}
-            label="Viaggiatori"
+          <TripStat
+            label={tripData.participants.length > 1 ? "Viaggiatori" : "Viaggiatore"}
             value={tripData.participants
               .map((p) => `${PARTICIPANT_TYPE_LABELS[p.type]} (${p.age})`)
               .join(", ")}
           />
-          <InfoItem icon={Euro} label="Budget" value={`${tripData.budget}€`} />
-        </InfoPanel>
+          <TripStat label="Budget" value={`${tripData.budget}€`} />
+        </TripPanel>
 
         {countryInfo && (
-          <InfoPanel label="Paese di destinazione">
-            <InfoItem
+          <CountryPanel>
+            <CountryStat
               icon={Banknote}
               label="Valuta"
               value={`${countryInfo.currency.name} (${countryInfo.currency.symbol})`}
             />
             {countryInfo.languages.length > 0 && (
-              <InfoItem
+              <CountryStat
                 icon={Languages}
                 label={countryInfo.languages.length > 1 ? "Lingue" : "Lingua"}
                 value={countryInfo.languages.join(", ")}
               />
             )}
             {countryInfo.timezones.length > 0 && (
-              <InfoItem
+              <CountryStat
                 icon={Clock}
                 label={countryInfo.timezones.length > 1 ? "Fusi orari" : "Fuso orario"}
                 value={countryInfo.timezones.join(", ")}
               />
             )}
-          </InfoPanel>
+          </CountryPanel>
         )}
 
         <motion.div
@@ -230,13 +240,14 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
             <CalendarDays className="h-4 w-4" />
             Esporta calendario
           </Button>
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={onEdit}
-            className="text-sm font-medium text-primary underline underline-offset-4"
+            className="border-primary text-primary shadow-none hover:bg-accent hover:text-primary"
           >
             Modifica il viaggio
-          </button>
+          </Button>
         </div>
       </CardContent>
 
@@ -245,24 +256,61 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
           {selectedActivity && (
             <>
               <DialogHeader>
-                <DialogTitle className="font-display">{selectedActivity.title}</DialogTitle>
-                <DialogDescription>
-                  {selectedActivity.suggestedTime} · {selectedActivity.estimatedCost}
-                  {selectedActivity.openingHours ? ` · ${selectedActivity.openingHours}` : ""}
+                <DialogTitle className="font-display text-2xl font-black tracking-[-0.02em] text-balance text-primary uppercase">
+                  {selectedActivity.title}
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Dettagli dell&apos;attività
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-3 text-sm">
+
+              <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border">
+                <div className="bg-card px-4 py-3">
+                  <dt className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                    Orario
+                  </dt>
+                  <dd className="mt-1 font-display text-lg font-black tabular-nums text-primary">
+                    {selectedActivity.suggestedTime}
+                  </dd>
+                </div>
+                <div className="bg-card px-4 py-3">
+                  <dt className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                    Costo
+                  </dt>
+                  <dd className="mt-1 font-display text-lg font-black text-primary">
+                    {selectedActivity.estimatedCost}
+                  </dd>
+                </div>
+                {selectedActivity.openingHours && (
+                  <div className="col-span-2 bg-card px-4 py-3">
+                    <dt className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                      Apertura
+                    </dt>
+                    <dd className="mt-1 text-sm font-medium text-primary">
+                      {selectedActivity.openingHours}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+
+              <div className="space-y-4 text-sm">
                 <div>
-                  <p className="font-semibold text-foreground">Cosa è</p>
-                  <p className="text-muted-foreground">{selectedActivity.details.about}</p>
+                  <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                    Cosa è
+                  </p>
+                  <p className="mt-1.5">{selectedActivity.details.about}</p>
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">Come arrivarci</p>
-                  <p className="text-muted-foreground">{selectedActivity.details.gettingThere}</p>
+                  <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                    Come arrivarci
+                  </p>
+                  <p className="mt-1.5">{selectedActivity.details.gettingThere}</p>
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">Consigli</p>
-                  <p className="text-muted-foreground">{selectedActivity.details.tips}</p>
+                  <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                    Consigli
+                  </p>
+                  <p className="mt-1.5">{selectedActivity.details.tips}</p>
                 </div>
               </div>
             </>

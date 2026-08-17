@@ -50,8 +50,8 @@ ${climateSection}
 Genera un piano giorno per giorno, con una data (formato YYYY-MM-DD) per ogni giorno del viaggio, diviso in tre fasce orarie (mattina, pomeriggio, sera). Per ogni fascia, elenca una o più attività. Adatta il numero di attività alla situazione: se un'attività è sostanziosa e occupa ragionevolmente l'intera fascia (es. un grande museo, un'escursione fuori porta), lasciala da sola; altrimenti proponi 2-3 attività più brevi con orari che si susseguono senza sovrapporsi. Non imporre un numero fisso di attività per fascia: valuta caso per caso, ed evita di ripetere lo stesso schema identico ogni giorno (es. sempre una sola attività a mattina e sera e due nel pomeriggio) — varia in base a cosa offre davvero la destinazione quel giorno. Se in una fascia hai più momenti distinti da proporre (es. cena e poi una passeggiata/bar/spettacolo serale), elencali come attività separate nell'elenco, ciascuna con il proprio orario, invece di descriverli insieme in un'unica voce.
 
 Per ogni attività fornisci:
-- title: titolo breve.
-- description: breve descrizione.
+- title: nome del luogo o dell'attività, massimo 40 caratteri. Deve stare su una riga sola: solo il nome, senza congiunzioni che uniscono due momenti diversi (es. "Monastero dei Jerónimos", non "Cena panoramica nel Bairro Alto e brindisi al Miradouro"). Se hai due momenti distinti da proporre, sono due attività separate, non un titolo lungo.
+- description: breve descrizione, una frase.
 - estimatedCost: stima indicativa del costo (es. "~15€" o "Gratuito").
 - suggestedTime: fascia oraria consigliata per quella specifica attività, nel formato "HH:MM–HH:MM" (es. "10:00–12:30") — deve rientrare nella fascia della giornata (mattina/pomeriggio/sera) e non sovrapporsi con le altre attività della stessa fascia.
 - openingHours: orari di apertura/chiusura del luogo, solo dove pertinente (musei, monumenti, locali — non per attività generiche come una passeggiata). Ometti il campo quando non applicabile.
