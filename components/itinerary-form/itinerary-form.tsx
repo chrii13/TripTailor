@@ -165,12 +165,14 @@ export function ItineraryForm() {
   }
 
   return (
-    <Card className="relative mx-auto w-full max-w-2xl overflow-hidden border-border shadow-none">
-      <div className="absolute inset-x-0 top-0 h-1 bg-voltage" />
+    <Card className="mx-auto w-full max-w-2xl overflow-hidden border-border shadow-none">
       <CardHeader className="px-8 pt-8">
-        <CardTitle className="font-display text-2xl font-semibold">
+        <CardTitle className="font-display text-3xl font-black tracking-[-0.02em] text-primary uppercase sm:text-4xl">
           Pianifica il tuo viaggio
         </CardTitle>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Cinque campi, poi ci pensa l&apos;AI.
+        </p>
       </CardHeader>
       <CardContent className="px-8 pb-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
@@ -225,7 +227,7 @@ export function ItineraryForm() {
                 </PopoverContent>
               </Popover>
               {errors.dateRange && (
-                <p className="text-sm text-red-600">{errors.dateRange.message}</p>
+                <p className="text-sm text-destructive">{errors.dateRange.message}</p>
               )}
             </div>
 
@@ -290,7 +292,7 @@ export function ItineraryForm() {
                   </div>
                 </PopoverContent>
               </Popover>
-              {participantsError && <p className="text-sm text-red-600">{participantsError}</p>}
+              {participantsError && <p className="text-sm text-destructive">{participantsError}</p>}
             </div>
 
             <div className="space-y-2">

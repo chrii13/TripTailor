@@ -53,11 +53,10 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
   };
 
   return (
-    <Card className="relative mx-auto w-full max-w-2xl overflow-hidden border-border shadow-none">
-      <div className="absolute inset-x-0 top-0 h-1 bg-voltage" />
+    <Card className="mx-auto w-full max-w-2xl overflow-hidden border-border shadow-none">
       <CardHeader className="px-8 pt-10 pb-8">
-        <CardTitle className="font-display text-4xl font-semibold text-primary">
-          Si parte per {tripData.destination}!
+        <CardTitle className="font-display text-3xl leading-[0.95] font-black tracking-[-0.03em] text-balance text-primary uppercase sm:text-5xl">
+          Si parte per {tripData.destination}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 px-8 pb-8">

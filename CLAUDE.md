@@ -32,8 +32,9 @@
     components/
       landing/
         site-nav.tsx              # barra verde sticky in alto: logo + link a #mete/#chi-siamo/#come-funziona
-        hero.tsx                 # hero con CTA "Crea il tuo itinerario" + route-line animata
-        route-line.tsx           # elemento firma SVG (linea disegnata + marker)
+        hero.tsx                 # hero: titolo display + CTA, con anteprima itinerario accanto
+        itinerary-preview.tsx    # elemento firma: card itinerario che si compila in sequenza
+        scroll-progress.tsx      # striscia di avanzamento scroll dentro la nav sticky
         popular-destinations.tsx # card mete gettonate (solo testo/icone, no foto)
         site-identity.tsx        # sezione identità/missione del sito
         how-it-works.tsx         # sezione "Come funziona" (timeline 01-04)
