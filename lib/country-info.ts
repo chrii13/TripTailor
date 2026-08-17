@@ -33,7 +33,9 @@ export function getCountryInfo(countryCode: string): CountryInfo | null {
 
   const languageCodes = Object.keys(country.languages ?? {});
   const languageNames = new Intl.DisplayNames(["it"], { type: "language", fallback: "none" });
-  const languages = languageCodes.map((langCode) => languageNames.of(langCode) ?? langCode);
+  const languages = languageCodes.map(
+    (langCode) => languageNames.of(langCode) ?? country.languages![langCode]
+  );
 
   const timezoneInfo = getCountry(code);
   const timezones = Array.from(new Set((timezoneInfo?.timezones ?? []).map(formatUtcOffset)));
