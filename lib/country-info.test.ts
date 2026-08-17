@@ -30,6 +30,12 @@ describe("getCountryInfo", () => {
     expect(getCountryInfo("ZZ")).toBeNull();
   });
 
+  it("restituisce nome del paese in italiano e codice ISO normalizzato", () => {
+    const result = getCountryInfo("pt");
+    expect(result?.name).toBe("Portogallo");
+    expect(result?.code).toBe("PT");
+  });
+
   it("restituisce nomi delle lingue in italiano, non in inglese", () => {
     const result = getCountryInfo("FR");
     expect(result?.languages).toContain("francese");
