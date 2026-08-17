@@ -60,12 +60,12 @@ const dayCard: Variants = {
 
 function TripPanel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl bg-primary px-6 py-6 text-primary-foreground sm:px-7 sm:py-7">
-      <span className="block h-[3px] w-8 bg-voltage" />
-      <p className="mt-4 text-[11px] font-semibold tracking-[0.18em] text-primary-foreground/60 uppercase">
+    <div className="rounded-xl bg-primary px-5 py-4 text-primary-foreground sm:px-6 sm:py-5">
+      <span className="block h-[3px] w-7 bg-voltage" />
+      <p className="mt-3 text-[10px] font-semibold tracking-[0.18em] text-primary-foreground/60 uppercase">
         Il tuo viaggio
       </p>
-      <dl className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-3">{children}</dl>
+      <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">{children}</dl>
     </div>
   );
 }
@@ -73,10 +73,10 @@ function TripPanel({ children }: { children: React.ReactNode }) {
 function TripStat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[11px] font-medium tracking-[0.14em] text-primary-foreground/60 uppercase">
+      <dt className="text-[10px] font-medium tracking-[0.14em] text-primary-foreground/60 uppercase">
         {label}
       </dt>
-      <dd className="mt-2 font-display text-lg leading-tight font-black tracking-[-0.01em] tabular-nums">
+      <dd className="mt-1.5 font-display text-base leading-tight font-black tracking-[-0.01em] tabular-nums">
         {value}
       </dd>
     </div>
@@ -94,18 +94,18 @@ function CountryPanel({
 }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border">
-      <div className="flex items-center gap-4 border-b border-border bg-secondary px-6 py-5 sm:px-7">
+      <div className="flex items-center gap-3 border-b border-border bg-secondary px-5 py-3.5 sm:px-6">
         <span
           aria-hidden
-          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary font-display text-sm font-black tracking-[0.02em] text-primary-foreground"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary font-display text-xs font-black tracking-[0.02em] text-primary-foreground"
         >
           {code}
         </span>
         <div>
-          <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+          <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             Paese di destinazione
           </p>
-          <p className="mt-1 font-display text-xl leading-tight font-black tracking-[-0.02em] text-primary uppercase">
+          <p className="font-display text-base leading-tight font-black tracking-[-0.02em] text-primary uppercase">
             {name}
           </p>
         </div>
@@ -127,12 +127,12 @@ function CountryStat({
   value: string;
 }) {
   return (
-    <div className="px-6 py-5 sm:px-7">
-      <dt className="flex items-center gap-2 text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
-        <Icon className="size-3.5 shrink-0" />
+    <div className="px-5 py-3.5 sm:px-6">
+      <dt className="flex items-center gap-1.5 text-[10px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
+        <Icon className="size-3 shrink-0" />
         {label}
       </dt>
-      <dd className="mt-2 text-sm font-medium text-primary">{value}</dd>
+      <dd className="mt-1 text-sm font-medium text-primary">{value}</dd>
     </div>
   );
 }
