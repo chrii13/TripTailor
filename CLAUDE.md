@@ -54,12 +54,12 @@
   - Composizione gruppo: righe dinamiche per partecipante (tipo + età), non semplice conteggio.
   - Date viaggio: date range picker (check-in/check-out).
   - Budget: slider in € + campo note testuali per lo stile di viaggio.
-  - Stile visivo: l'utente progetta l'aspetto grafico separatamente su claude.ai/design (progetto Design System); l'implementazione qui parte con uno stile Tailwind/shadcn moderno di default, sostituibile in seguito.
+  - Stile visivo (rifatto 2026-08-17, branch `redesign/wise-idiom`): sistema "gravità + voltaggio" ispirato al design system Wise. Token in `app/globals.css` — Canvas `#ffffff`, Nebbia `#ecefe9` (superfici), Bosco `#10331f` (`--primary`: testo forte, sezioni invertite), Inchiostro `#3d423c` (`--foreground`), Sole `#f0b429` (`--voltage`: **solo** CTA e stati attivi, un elemento per schermata), wash `#e4f1dc` (`--accent`). Regole: niente gradienti né ombre (bordi 1px), pill `rounded-full` per bottoni/badge, `10px` per card e input, display Fraunces 900 maiuscolo con `tracking-[-0.03em]`, sezioni alternate chiaro/scuro per il ritmo. Analisi comparativa e razionale in `docs/design/wise-breakdown.html`.
   - Design docs dettagliate per fase in `docs/superpowers/specs/`.
   - Composizione gruppo: 3 tipi (Bambino/a 0-12, Ragazzo/a 13-25, Adulto/a 26-100), età obbligatoria da selezionare esplicitamente (nessun default) tramite menu a tendina, non input numerico libero.
   - Decisione (2026-08-11): l'autocompletamento della Destinazione (suggerimenti città mentre l'utente scrive) è rimandato alla Fase 2, da introdurre insieme al backend per la generazione AI — richiede una API route (es. proxy verso OpenStreetMap Nominatim) e quindi rompe la regola "niente backend" della Fase 1, meglio farlo in un colpo solo con l'altro backend.
   - Pattern "Date del viaggio" e "Chi viaggia": bottone compatto con icona + testo auto-esplicativo che apre un Popover (stile Booking.com), senza etichetta separata sopra (evita la ridondanza label+testo). "Chi viaggia" apre un Popover con le righe tipo+età per persona (età individuale mantenuta, non un contatore aggregato come Booking) e un bottone "Fatto" per chiudere.
-  - Feedback utente (2026-08-11): il design visivo attuale (crema/smeraldo, Fraunces, icone per campo, linea a gradiente, ombra) "non convince ancora del tutto" — da rivedere in un secondo momento, nessuna direzione specifica data per ora.
+  - Feedback utente (2026-08-11): il design crema/smeraldo "non convince ancora del tutto". Risolto il 2026-08-17 con il redesign sopra: la landing è passata a Canvas bianco + Bosco + Sole. La pagina `/crea` eredita i nuovi token ma non è stata ancora ridisegnata (mantiene gradiente e ombra sulla card del form).
 - **Required Environment Variables:**
   - `GEMINI_API_KEY` — Google Gemini API (generazione itinerario)
   - `GEMINI_API_KEY_BACKUP` — chiave Gemini di riserva opzionale, usata automaticamente solo quando la chiave primaria va in rate limit (429)

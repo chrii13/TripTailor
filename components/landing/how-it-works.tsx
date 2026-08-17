@@ -40,19 +40,19 @@ export function HowItWorks() {
   return (
     <section
       id="come-funziona"
-      className="scroll-mt-20 bg-secondary/40 px-4 py-16 sm:px-8 sm:py-24"
+      className="scroll-mt-20 bg-secondary px-4 py-16 sm:px-8 sm:py-24"
     >
-      <div className="mx-auto max-w-2xl">
-        <div className="mb-10 text-center">
-          <h2 className="font-display text-3xl font-semibold sm:text-4xl">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-10">
+          <h2 className="font-display text-3xl font-black tracking-[-0.02em] text-primary uppercase sm:text-5xl">
             Come funziona
           </h2>
-          <p className="mt-2 text-muted-foreground">
+          <p className="mt-3 text-muted-foreground">
             Dal racconto del tuo viaggio all&apos;itinerario pronto, in
             quattro passi.
           </p>
         </div>
-        <ol className="relative border-l-2 border-dashed border-border pl-8">
+        <ol className="relative max-w-2xl border-l border-border pl-8">
           {STEPS.map((step, i) => (
             <motion.li
               key={step.n}
@@ -63,11 +63,11 @@ export function HowItWorks() {
               variants={reduceMotion ? undefined : item}
               transition={{ delay: i * 0.1 }}
             >
-              <span className="absolute -left-[37px] top-1 size-2.5 rounded-full bg-primary" />
-              <span className="font-display text-sm font-semibold text-primary">
+              <span className="absolute -left-[37px] top-1.5 size-3 rounded-full border-2 border-secondary bg-voltage" />
+              <span className="font-display text-sm font-black text-primary">
                 {step.n}
               </span>
-              <h3 className="mt-1 font-medium">{step.title}</h3>
+              <h3 className="mt-1 font-semibold text-primary">{step.title}</h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 {step.description}
               </p>

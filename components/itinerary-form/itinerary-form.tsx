@@ -165,8 +165,8 @@ export function ItineraryForm() {
   }
 
   return (
-    <Card className="relative mx-auto w-full max-w-2xl overflow-hidden shadow-[0_20px_50px_-12px_color-mix(in_oklch,var(--primary)_25%,transparent)]">
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
+    <Card className="relative mx-auto w-full max-w-2xl overflow-hidden border-border shadow-none">
+      <div className="absolute inset-x-0 top-0 h-1 bg-voltage" />
       <CardHeader className="px-8 pt-8">
         <CardTitle className="font-display text-2xl font-semibold">
           Pianifica il tuo viaggio
@@ -185,7 +185,7 @@ export function ItineraryForm() {
                     variant="outline"
                     aria-label="Date del viaggio"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
+                      "w-full justify-start rounded-md text-left font-normal",
                       !dateRange?.from && "text-muted-foreground"
                     )}
                   >
@@ -245,7 +245,7 @@ export function ItineraryForm() {
                     variant="outline"
                     aria-label="Chi viaggia"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
+                      "w-full justify-start rounded-md text-left font-normal",
                       participantsError && "border-destructive"
                     )}
                   >
