@@ -61,15 +61,15 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 px-8 pb-8">
-        <div className="space-y-3 rounded-2xl border-2 border-primary/45 bg-primary/[0.035] p-4 sm:p-5">
+        <div className="space-y-4 rounded-2xl border-2 border-primary/45 bg-primary/[0.035] p-5 sm:p-6">
           <p className="text-xs font-semibold tracking-wide text-primary uppercase">Il tuo viaggio</p>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {tripData.dateRange.from && tripData.dateRange.to && (
-              <div className="flex items-center gap-3 rounded-lg bg-card/70 px-3.5 py-3 text-sm">
-                <CalendarIcon className="h-4 w-4 shrink-0 text-primary" />
-                <div className="flex flex-col gap-0.5">
+              <div className="flex items-start gap-3.5 rounded-lg bg-card/70 px-4 py-3.5 text-sm">
+                <CalendarIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <div className="flex flex-col gap-1">
                   <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                    Arrivo · Partenza
+                    Date
                   </span>
                   <span className="font-medium text-foreground">
                     {format(tripData.dateRange.from, "dd/MM/yyyy")} - {format(tripData.dateRange.to, "dd/MM/yyyy")}
@@ -77,9 +77,9 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                 </div>
               </div>
             )}
-            <div className="flex items-center gap-3 rounded-lg bg-card/70 px-3.5 py-3 text-sm">
-              <Users className="h-4 w-4 shrink-0 text-primary" />
-              <div className="flex flex-col gap-0.5">
+            <div className="flex items-start gap-3.5 rounded-lg bg-card/70 px-4 py-3.5 text-sm">
+              <Users className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <div className="flex flex-col gap-1">
                 <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                   Viaggiatori
                 </span>
@@ -88,9 +88,9 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-lg bg-card/70 px-3.5 py-3 text-sm">
-              <Euro className="h-4 w-4 shrink-0 text-primary" />
-              <div className="flex flex-col gap-0.5">
+            <div className="flex items-start gap-3.5 rounded-lg bg-card/70 px-4 py-3.5 text-sm">
+              <Euro className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <div className="flex flex-col gap-1">
                 <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Budget</span>
                 <span className="font-medium text-foreground">{tripData.budget}€</span>
               </div>
@@ -99,12 +99,12 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
         </div>
 
         {countryInfo && (
-          <div className="space-y-3 rounded-2xl border-2 border-primary/45 bg-accent/25 p-4 sm:p-5">
+          <div className="space-y-4 rounded-2xl border-2 border-primary/45 bg-accent/25 p-5 sm:p-6">
             <p className="text-xs font-semibold tracking-wide text-primary uppercase">Paese di destinazione</p>
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-              <div className="flex items-center gap-3 rounded-lg bg-card/70 px-3.5 py-3 text-sm">
-                <Banknote className="h-4 w-4 shrink-0 text-accent-foreground" />
-                <div className="flex flex-col gap-0.5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="flex items-start gap-3.5 rounded-lg bg-card/70 px-4 py-3.5 text-sm">
+                <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-accent-foreground" />
+                <div className="flex flex-col gap-1">
                   <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Valuta</span>
                   <span className="font-medium text-foreground">
                     {countryInfo.currency.name} ({countryInfo.currency.symbol})
@@ -112,9 +112,9 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                 </div>
               </div>
               {countryInfo.languages.length > 0 && (
-                <div className="flex items-center gap-3 rounded-lg bg-card/70 px-3.5 py-3 text-sm">
-                  <Languages className="h-4 w-4 shrink-0 text-accent-foreground" />
-                  <div className="flex flex-col gap-0.5">
+                <div className="flex items-start gap-3.5 rounded-lg bg-card/70 px-4 py-3.5 text-sm">
+                  <Languages className="mt-0.5 h-4 w-4 shrink-0 text-accent-foreground" />
+                  <div className="flex flex-col gap-1">
                     <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                       {countryInfo.languages.length > 1 ? "Lingue" : "Lingua"}
                     </span>
@@ -123,9 +123,9 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                 </div>
               )}
               {countryInfo.timezones.length > 0 && (
-                <div className="flex items-center gap-3 rounded-lg bg-card/70 px-3.5 py-3 text-sm">
-                  <Clock className="h-4 w-4 shrink-0 text-accent-foreground" />
-                  <div className="flex flex-col gap-0.5">
+                <div className="flex items-start gap-3.5 rounded-lg bg-card/70 px-4 py-3.5 text-sm">
+                  <Clock className="mt-0.5 h-4 w-4 shrink-0 text-accent-foreground" />
+                  <div className="flex flex-col gap-1">
                     <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                       {countryInfo.timezones.length > 1 ? "Fusi orari" : "Fuso orario"}
                     </span>
