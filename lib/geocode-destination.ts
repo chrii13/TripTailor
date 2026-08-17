@@ -7,12 +7,14 @@ interface LocationIqSearchResult {
     village?: string;
     island?: string;
     archipelago?: string;
+    country_code?: string;
   };
 }
 
 export interface Coordinates {
   lat: number;
   lon: number;
+  countryCode: string | null;
 }
 
 export async function geocodeDestination(destination: string): Promise<Coordinates | null> {
@@ -64,7 +66,9 @@ export async function geocodeDestination(destination: string): Promise<Coordinat
       return null;
     }
 
-    return { lat, lon };
+    const countryCode = address?.country_code ? address.country_code.toUpperCase() : null;
+
+    return { lat, lon, countryCode };
   } catch (error) {
     console.error("Geolocalizzazione destinazione: chiamata a LocationIQ fallita", error);
     return null;
