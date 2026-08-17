@@ -13,21 +13,31 @@
 
 - **Project Name:** "TripTailor" — Web App (MVP) + Mobile App per la creazione automatica di itinerari di viaggio personalizzati (AI, meteo, export calendario).
 - **Produzione:** https://trip-tailor-ten.vercel.app/ (Vercel, deploy automatico da `master` su GitHub — repository https://github.com/chrii13/TripTailor).
-- **Tech Stack:** Next.js (App Router, TypeScript), Tailwind CSS, shadcn/ui, react-hook-form + zod. AI: Google Gemini (`@google/genai`, modello `gemini-flash-latest` — alias Google al Flash più recente, oggi `gemini-3.6-flash`; `gemini-2.5-flash` è stato ritirato per le chiavi API di nuova creazione). Autocompletamento destinazione: LocationIQ (`LOCATIONIQ_API_KEY`). Meteo: Open-Meteo (`archive-api.open-meteo.com`, nessuna chiave — media climatica storica sugli ultimi 5 anni, non una previsione). Calendario: Google Calendar API / libreria `ics` (fase futura). Mobile: da definire (fase futura).
+- **Tech Stack:** Next.js (App Router, TypeScript), Tailwind CSS, shadcn/ui, react-hook-form + zod, framer-motion (animazioni landing page). AI: Google Gemini (`@google/genai`, modello `gemini-flash-latest` — alias Google al Flash più recente, oggi `gemini-3.6-flash`; `gemini-2.5-flash` è stato ritirato per le chiavi API di nuova creazione). Autocompletamento destinazione: LocationIQ (`LOCATIONIQ_API_KEY`). Meteo: Open-Meteo (`archive-api.open-meteo.com`, nessuna chiave — media climatica storica sugli ultimi 5 anni, non una previsione). Calendario: Google Calendar API / libreria `ics` (fase futura). Mobile: da definire (fase futura).
 - **Primary Commands:**
   - **Dev:** `npm run dev`
   - **Build:** `npm run build`
-  - **Test:** `npm test` (vitest, 75 tests across 10 test files)
+  - **Test:** `npm test` (vitest, 89 tests across 12 test files)
   - **Lint/Typecheck:** `npm run lint`
 - **Architecture & Conventions:**
-  - **Stato:** Fase 1 in corso — scaffold Next.js + form di input utente. Nessuna logica AI/meteo/calendario/mobile ancora implementata (fasi successive).
+  - **Stato:** Fase 1 in corso — scaffold Next.js + landing page informativa + form di input utente su route dedicata. Nessuna logica AI/meteo/calendario/mobile ancora implementata (fasi successive).
   - **Struttura:**
     ```
     app/
       layout.tsx
-      page.tsx              # renderizza <ItineraryForm />
+      page.tsx              # landing page informativa (hero, mete, come funziona, CTA)
+      crea/
+        page.tsx             # renderizza <ItineraryForm />
       globals.css
     components/
+      landing/
+        site-nav.tsx              # barra verde sticky in alto: logo + link a #mete/#chi-siamo/#come-funziona
+        hero.tsx                 # hero con CTA "Crea il tuo itinerario" + route-line animata
+        route-line.tsx           # elemento firma SVG (linea disegnata + marker)
+        popular-destinations.tsx # card mete gettonate (solo testo/icone, no foto)
+        site-identity.tsx        # sezione identità/missione del sito
+        how-it-works.tsx         # sezione "Come funziona" (timeline 01-04)
+        final-cta.tsx            # CTA finale
       itinerary-form/
         itinerary-form.tsx       # form + riepilogo, stesso componente/stato
         participant-row.tsx      # riga dinamica partecipante
@@ -36,8 +46,10 @@
     lib/
       schema.ts                # zod schema condiviso form/riepilogo
       utils.ts                 # cn() helper shadcn
+      popular-destinations.ts  # lista statica mete gettonate (nessun fetch/API)
     ```
-  - Nessun backend/API route nella Fase 1: tutto client-side, dati tenuti in stato React (nessuna persistenza).
+  - Landing page (`/`) separata dal form (`/crea`), aggiunta 2026-08-17: hero con bottone centrale "Crea il tuo itinerario", sezione mete più gettonate (solo testo/icone, niente foto — coerente con "niente backend extra" di Fase 1), sezione identità del sito, sezione "Come funziona" (numerata perché descrive una sequenza reale del processo). Palette e font invariati rispetto al resto dell'app. Animazioni con framer-motion (fade/stagger in hero, reveal on-scroll nelle sezioni), `useReducedMotion` rispettato ovunque.
+  - Nessun backend/API route nella Fase 1 oltre a quelle già esistenti (generate-itinerary, geocode-autocomplete): tutto client-side, dati tenuti in stato React (nessuna persistenza).
   - Il riepilogo post-invio del form appare nella stessa pagina (il form si trasforma in riepilogo), non su una route separata. Bottone "Modifica" riporta al form con i dati precompilati.
   - Composizione gruppo: righe dinamiche per partecipante (tipo + età), non semplice conteggio.
   - Date viaggio: date range picker (check-in/check-out).
