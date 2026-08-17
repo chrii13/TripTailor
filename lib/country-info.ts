@@ -29,10 +29,10 @@ export function getCountryInfo(countryCode: string): CountryInfo | null {
     return null;
   }
   const [currencyCode, currencyData] = currencyEntries[0];
-  const currencyNames = new Intl.DisplayNames(["it"], { type: "currency" });
+  const currencyNames = new Intl.DisplayNames(["it"], { type: "currency", fallback: "none" });
 
   const languageCodes = Object.keys(country.languages ?? {});
-  const languageNames = new Intl.DisplayNames(["it"], { type: "language" });
+  const languageNames = new Intl.DisplayNames(["it"], { type: "language", fallback: "none" });
   const languages = languageCodes.map((langCode) => languageNames.of(langCode) ?? langCode);
 
   const timezoneInfo = getCountry(code);

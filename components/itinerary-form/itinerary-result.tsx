@@ -90,14 +90,18 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                 {countryInfo.currency.name} ({countryInfo.currency.symbol})
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
-              <Languages className="h-4 w-4 shrink-0 text-primary" />
-              <span>{countryInfo.languages.join(", ")}</span>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
-              <Clock className="h-4 w-4 shrink-0 text-primary" />
-              <span>{countryInfo.timezones.join(", ")}</span>
-            </div>
+            {countryInfo.languages.length > 0 && (
+              <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+                <Languages className="h-4 w-4 shrink-0 text-primary" />
+                <span>{countryInfo.languages.join(", ")}</span>
+              </div>
+            )}
+            {countryInfo.timezones.length > 0 && (
+              <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+                <Clock className="h-4 w-4 shrink-0 text-primary" />
+                <span>{countryInfo.timezones.join(", ")}</span>
+              </div>
+            )}
           </div>
         )}
 
