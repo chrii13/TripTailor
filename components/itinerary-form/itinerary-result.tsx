@@ -2,7 +2,17 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { Banknote, CalendarDays, CalendarIcon, Clock, Euro, Languages, Users } from "lucide-react";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
+import {
+  Banknote,
+  CalendarDays,
+  CalendarIcon,
+  Clock,
+  Euro,
+  Languages,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -32,9 +42,55 @@ const SLOTS = [
   { key: "sera", label: "Sera" },
 ] as const;
 
+const dayList: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.12, delayChildren: 0.15 } },
+};
+
+const dayCard: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" } },
+};
+
+function InfoPanel({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-border">
+      <p className="border-b border-border bg-secondary px-4 py-2.5 text-xs font-semibold tracking-[0.12em] text-primary uppercase">
+        {label}
+      </p>
+      <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function InfoItem({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 px-4 py-3.5 text-sm">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">
+          {label}
+        </span>
+        <span className="font-medium text-primary">{value}</span>
+      </div>
+    </div>
+  );
+}
+
 export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onEdit }: ItineraryResultProps) {
   const [open, setOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const reduceMotion = useReducedMotion();
 
   const handleExportCalendar = () => {
     const icsContent = buildItineraryIcs(tripData, itinerary);
@@ -60,83 +116,54 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 px-8 pb-8">
-        <div className="space-y-4 rounded-2xl border-2 border-primary/45 bg-primary/[0.035] p-5 sm:p-6">
-          <p className="text-xs font-semibold tracking-wide text-primary uppercase">Il tuo viaggio</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {tripData.dateRange.from && tripData.dateRange.to && (
-              <div className="flex items-start gap-3.5 rounded-lg bg-card/70 px-4 py-3.5 text-sm">
-                <CalendarIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                    Date
-                  </span>
-                  <span className="font-medium text-foreground">
-                    {format(tripData.dateRange.from, "dd/MM/yyyy")} - {format(tripData.dateRange.to, "dd/MM/yyyy")}
-                  </span>
-                </div>
-              </div>
-            )}
-            <div className="flex items-start gap-3.5 rounded-lg bg-card/70 px-4 py-3.5 text-sm">
-              <Users className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                  Viaggiatori
-                </span>
-                <span className="font-medium text-foreground">
-                  {tripData.participants.map((p) => `${PARTICIPANT_TYPE_LABELS[p.type]} (${p.age})`).join(", ")}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-start gap-3.5 rounded-lg bg-card/70 px-4 py-3.5 text-sm">
-              <Euro className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Budget</span>
-                <span className="font-medium text-foreground">{tripData.budget}€</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <InfoPanel label="Il tuo viaggio">
+          {tripData.dateRange.from && tripData.dateRange.to && (
+            <InfoItem
+              icon={CalendarIcon}
+              label="Date"
+              value={`${format(tripData.dateRange.from, "dd/MM/yyyy")} – ${format(tripData.dateRange.to, "dd/MM/yyyy")}`}
+            />
+          )}
+          <InfoItem
+            icon={Users}
+            label="Viaggiatori"
+            value={tripData.participants
+              .map((p) => `${PARTICIPANT_TYPE_LABELS[p.type]} (${p.age})`)
+              .join(", ")}
+          />
+          <InfoItem icon={Euro} label="Budget" value={`${tripData.budget}€`} />
+        </InfoPanel>
 
         {countryInfo && (
-          <div className="space-y-4 rounded-2xl border-2 border-primary/45 bg-accent/25 p-5 sm:p-6">
-            <p className="text-xs font-semibold tracking-wide text-primary uppercase">Paese di destinazione</p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="flex items-start gap-3.5 rounded-lg bg-card/70 px-4 py-3.5 text-sm">
-                <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-accent-foreground" />
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Valuta</span>
-                  <span className="font-medium text-foreground">
-                    {countryInfo.currency.name} ({countryInfo.currency.symbol})
-                  </span>
-                </div>
-              </div>
-              {countryInfo.languages.length > 0 && (
-                <div className="flex items-start gap-3.5 rounded-lg bg-card/70 px-4 py-3.5 text-sm">
-                  <Languages className="mt-0.5 h-4 w-4 shrink-0 text-accent-foreground" />
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                      {countryInfo.languages.length > 1 ? "Lingue" : "Lingua"}
-                    </span>
-                    <span className="font-medium text-foreground">{countryInfo.languages.join(", ")}</span>
-                  </div>
-                </div>
-              )}
-              {countryInfo.timezones.length > 0 && (
-                <div className="flex items-start gap-3.5 rounded-lg bg-card/70 px-4 py-3.5 text-sm">
-                  <Clock className="mt-0.5 h-4 w-4 shrink-0 text-accent-foreground" />
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                      {countryInfo.timezones.length > 1 ? "Fusi orari" : "Fuso orario"}
-                    </span>
-                    <span className="font-medium text-foreground">{countryInfo.timezones.join(", ")}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <InfoPanel label="Paese di destinazione">
+            <InfoItem
+              icon={Banknote}
+              label="Valuta"
+              value={`${countryInfo.currency.name} (${countryInfo.currency.symbol})`}
+            />
+            {countryInfo.languages.length > 0 && (
+              <InfoItem
+                icon={Languages}
+                label={countryInfo.languages.length > 1 ? "Lingue" : "Lingua"}
+                value={countryInfo.languages.join(", ")}
+              />
+            )}
+            {countryInfo.timezones.length > 0 && (
+              <InfoItem
+                icon={Clock}
+                label={countryInfo.timezones.length > 1 ? "Fusi orari" : "Fuso orario"}
+                value={countryInfo.timezones.join(", ")}
+              />
+            )}
+          </InfoPanel>
         )}
 
-        <div className="space-y-6">
+        <motion.div
+          className="space-y-6"
+          variants={reduceMotion ? undefined : dayList}
+          initial={reduceMotion ? undefined : "hidden"}
+          animate={reduceMotion ? undefined : "visible"}
+        >
           {itinerary.days.map((day, dayIndex) => {
             const parsedDate = new Date(day.date);
             const formattedDate = Number.isNaN(parsedDate.getTime())
@@ -144,25 +171,29 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
               : format(parsedDate, "dd/MM/yyyy");
             const dayWeather = weather?.find((entry) => entry.date === day.date);
             return (
-              <div key={dayIndex} className="overflow-hidden rounded-2xl border">
-                <div className="flex items-center justify-between gap-3 bg-primary px-4 py-4 text-primary-foreground">
-                  <p className="font-display text-2xl">Giorno {dayIndex + 1}</p>
-                  <p className="text-base opacity-85">{formattedDate}</p>
+              <motion.div
+                key={dayIndex}
+                className="overflow-hidden rounded-xl border border-border"
+                variants={reduceMotion ? undefined : dayCard}
+              >
+                <div className="flex items-baseline justify-between gap-3 bg-primary px-4 py-3.5 text-primary-foreground">
+                  <p className="font-display text-xl font-black tracking-[-0.02em] uppercase">
+                    Giorno {dayIndex + 1}
+                  </p>
+                  <p className="text-sm tabular-nums opacity-75">{formattedDate}</p>
                 </div>
-                <div className="bg-card px-4 pb-1">
-                  {dayWeather && (
-                    <div className="mt-3 mb-1 flex justify-center">
-                      <p className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-                        Meteo tipico (media ultimi 5 anni): {dayWeather.tempMaxAvg}°C / {dayWeather.tempMinAvg}°C,
-                        Probabilità precipitazioni {dayWeather.precipitationChance}%
-                      </p>
-                    </div>
-                  )}
+                {dayWeather && (
+                  <p className="border-b border-border bg-secondary px-4 py-2.5 text-xs text-muted-foreground">
+                    Media degli ultimi 5 anni: {dayWeather.tempMaxAvg}°C / {dayWeather.tempMinAvg}°C,
+                    pioggia {dayWeather.precipitationChance}%
+                  </p>
+                )}
+                <div className="bg-card px-4">
                   {SLOTS.map(
                     ({ key, label }) =>
                       day[key].length > 0 && (
-                        <div key={key} className="border-t py-3 first:border-t-0">
-                          <p className="mb-2 text-xs font-bold tracking-wide text-primary uppercase">
+                        <div key={key} className="border-t border-border py-3 first:border-t-0">
+                          <p className="mb-2 text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">
                             {label}
                           </p>
                           <div className="space-y-1">
@@ -174,12 +205,12 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                                   setSelectedActivity(activity);
                                   setOpen(true);
                                 }}
-                                className="w-full cursor-pointer rounded-lg p-2 text-left transition hover:-translate-y-0.5 hover:bg-accent"
+                                className="w-full cursor-pointer rounded-md p-2 text-left transition-colors hover:bg-accent"
                               >
-                                <p className="text-sm font-medium">{activity.title}</p>
+                                <p className="text-sm font-medium text-primary">{activity.title}</p>
                                 <p className="text-sm text-muted-foreground">{activity.description}</p>
-                                <div className="mt-1.5 flex justify-between text-xs font-semibold text-primary">
-                                  <span>{activity.suggestedTime}</span>
+                                <div className="mt-1.5 flex justify-between text-xs font-semibold text-muted-foreground">
+                                  <span className="tabular-nums">{activity.suggestedTime}</span>
                                   <span>{activity.estimatedCost}</span>
                                 </div>
                               </button>
@@ -189,19 +220,23 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                       )
                   )}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button type="button" variant="outline" onClick={onEdit} className="flex-1">
-            Modifica
-          </Button>
-          <Button type="button" variant="outline" onClick={handleExportCalendar} className="flex-1">
+        <div className="flex flex-wrap items-center gap-6">
+          <Button type="button" onClick={handleExportCalendar} className="gap-2">
             <CalendarDays className="h-4 w-4" />
             Esporta calendario
           </Button>
+          <button
+            type="button"
+            onClick={onEdit}
+            className="text-sm font-medium text-primary underline underline-offset-4"
+          >
+            Modifica il viaggio
+          </button>
         </div>
       </CardContent>
 
