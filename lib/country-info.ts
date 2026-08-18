@@ -2,6 +2,8 @@ import countries from "world-countries";
 import { getCountry } from "countries-and-timezones";
 
 export interface CountryInfo {
+  name: string;
+  code: string;
   currency: { code: string; symbol: string; name: string };
   languages: string[];
   timezones: string[];
@@ -41,6 +43,8 @@ export function getCountryInfo(countryCode: string): CountryInfo | null {
   const timezones = Array.from(new Set((timezoneInfo?.timezones ?? []).map(formatUtcOffset)));
 
   return {
+    name: country.translations.ita?.common ?? country.name.common,
+    code,
     currency: {
       code: currencyCode,
       symbol: currencyData.symbol,

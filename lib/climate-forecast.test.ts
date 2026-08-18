@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { averageDailyClimate } from "./climate-forecast";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { averageDailyClimate, getClimateAverages } from "./climate-forecast";
 
 function makeResponse(tempsMax: (number | null)[], tempsMin: (number | null)[], precipitation: (number | null)[]) {
   return {
@@ -61,5 +61,85 @@ describe("averageDailyClimate", () => {
     const responses = [makeResponse([null], [null], [null])];
 
     expect(averageDailyClimate(responses, new Date("2026-09-01"))).toBeNull();
+  });
+});
+
+
+describe("getClimateAverages", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  const ok = () =>
+    new Response(JSON.stringify({
+  daily: {
+    time: ["2021-09-12"],
+    temperature_2m_max: [26],
+    temperature_2m_min: [18],
+    precipitation_sum: [0],
+  },
+}), { status: 200 });
+
+  it("interroga gli anni in sequenza, non in parallelo", async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((r) => setTimeout(r, 1));
+        inFlight -= 1;
+        return ok();
+      })
+    );
+
+    await getClimateAverages(38.7, -9.1, new Date("2026-09-12"), new Date("2026-09-12"));
+
+    expect(maxInFlight).toBe(1);
+  });
+
+  it("riprova una volta quando Open-Meteo risponde 429", async () => {
+    let call = 0;
+    const fetchMock = vi.fn(async () => {
+      call += 1;
+      return call === 1 ? new Response("", { status: 429 }) : ok();
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getClimateAverages(
+      38.7,
+      -9.1,
+      new Date("2026-09-12"),
+      new Date("2026-09-12")
+    );
+
+    // 5 anni + 1 ritentativo per il primo
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(result).not.toBeNull();
+  });
+
+  it("restituisce comunque una media se solo alcuni anni falliscono", async () => {
+    let call = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        call += 1;
+        // il primo anno fallisce sia al primo tentativo che al retry
+        if (call <= 2) return new Response("", { status: 400 });
+        return ok();
+      })
+    );
+
+    const result = await getClimateAverages(
+      38.7,
+      -9.1,
+      new Date("2026-09-12"),
+      new Date("2026-09-12")
+    );
+
+    expect(result).not.toBeNull();
+    expect(result?.[0].tempMaxAvg).toBe(26);
   });
 });
