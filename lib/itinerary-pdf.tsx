@@ -13,14 +13,33 @@ const SLATE = "#666b64";
 const NEBBIA = "#ecefe9";
 const FILETTO = "#d4dad1";
 
-Font.register({ family: "Fraunces", src: "/fonts/Fraunces-Bold.ttf", fontWeight: 700 });
-Font.register({
-  family: "Geist",
-  fonts: [
-    { src: "/fonts/Geist-Regular.ttf", fontWeight: 400 },
-    { src: "/fonts/Geist-Medium.ttf", fontWeight: 500 },
-  ],
-});
+export interface PdfFontSources {
+  fraunces: string;
+  geistRegular: string;
+  geistMedium: string;
+}
+
+/** Nel browser sono URL serviti da /public; in Node sono percorsi su disco. */
+const BROWSER_FONTS: PdfFontSources = {
+  fraunces: "/fonts/Fraunces-Bold.ttf",
+  geistRegular: "/fonts/Geist-Regular.ttf",
+  geistMedium: "/fonts/Geist-Medium.ttf",
+};
+
+let registered = false;
+
+export function registerPdfFonts(sources: PdfFontSources = BROWSER_FONTS): void {
+  if (registered) return;
+  Font.register({ family: "Fraunces", src: sources.fraunces, fontWeight: 700 });
+  Font.register({
+    family: "Geist",
+    fonts: [
+      { src: sources.geistRegular, fontWeight: 400 },
+      { src: sources.geistMedium, fontWeight: 500 },
+    ],
+  });
+  registered = true;
+}
 
 const SLOTS = [
   { key: "mattina", label: "Mattina" },
@@ -90,6 +109,32 @@ const s = StyleSheet.create({
   detailLabel: { width: 62, fontSize: 8, letterSpacing: 0.8, color: SLATE, textTransform: "uppercase" },
   detailText: { flex: 1, fontSize: 9, color: INCHIOSTRO },
 
+  coverMeta: { fontSize: 10, color: SLATE, marginTop: 6 },
+  indexTitle: {
+    fontFamily: "Fraunces",
+    fontWeight: 700,
+    fontSize: 15,
+    color: BOSCO,
+    textTransform: "uppercase",
+    marginTop: 26,
+    marginBottom: 10,
+  },
+  indexDay: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: FILETTO,
+    paddingBottom: 3,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  indexDayLabel: { fontSize: 8, letterSpacing: 1.4, color: BOSCO, textTransform: "uppercase" },
+  indexDayDate: { fontSize: 8, color: SLATE },
+  indexRow: { flexDirection: "row", marginBottom: 2 },
+  indexTime: { width: 66, fontSize: 9, color: SLATE },
+  indexName: { flex: 1, fontSize: 9, color: INCHIOSTRO },
+  indexTotals: { marginTop: 18, fontSize: 9, color: SLATE },
+
   footer: {
     position: "absolute",
     bottom: 26,
@@ -132,6 +177,33 @@ function ActivityBlock({ activity }: { activity: Activity }) {
         <Text style={s.detailLabel}>Consigli</Text>
         <Text style={s.detailText}>{activity.details.tips}</Text>
       </View>
+    </View>
+  );
+}
+
+function TripIndex({ itinerary }: { itinerary: ItineraryResponse }) {
+  return (
+    <View>
+      <Text style={s.indexTitle}>Il viaggio in breve</Text>
+      {itinerary.days.map((day, i) => {
+        const parsed = new Date(day.date);
+        const dayDate = Number.isNaN(parsed.getTime()) ? day.date : format(parsed, "dd/MM/yyyy");
+        const tappe = [...day.mattina, ...day.pomeriggio, ...day.sera];
+        return (
+          <View key={i} wrap={false}>
+            <View style={s.indexDay}>
+              <Text style={s.indexDayLabel}>Giorno {i + 1}</Text>
+              <Text style={s.indexDayDate}>{dayDate}</Text>
+            </View>
+            {tappe.map((t, j) => (
+              <View key={j} style={s.indexRow}>
+                <Text style={s.indexTime}>{t.suggestedTime}</Text>
+                <Text style={s.indexName}>{t.title}</Text>
+              </View>
+            ))}
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -211,13 +283,24 @@ export function ItineraryDocument({ tripData, itinerary, weather, countryInfo }:
           </View>
         )}
 
+        <TripIndex itinerary={itinerary} />
+
+        <Text style={s.indexTotals}>
+          {itinerary.days.length} giorni ·{" "}
+          {itinerary.days.reduce(
+            (n, d) => n + d.mattina.length + d.pomeriggio.length + d.sera.length,
+            0
+          )}{" "}
+          attività in programma
+        </Text>
+
         {itinerary.days.map((day, dayIndex) => {
           const parsed = new Date(day.date);
           const dayDate = Number.isNaN(parsed.getTime()) ? day.date : format(parsed, "dd/MM/yyyy");
           const dayWeather = weather?.find((entry) => entry.date === day.date);
 
           return (
-            <View key={dayIndex} break={dayIndex > 0}>
+            <View key={dayIndex} break>
               <View style={s.dayHeader}>
                 <Text style={s.dayTitle}>Giorno {dayIndex + 1}</Text>
                 <Text style={s.dayDate}>{dayDate}</Text>
@@ -252,5 +335,6 @@ export function ItineraryDocument({ tripData, itinerary, weather, countryInfo }:
 }
 
 export function buildItineraryPdfBlob(input: ItineraryPdfInput): Promise<Blob> {
+  registerPdfFonts();
   return pdf(<ItineraryDocument {...input} />).toBlob();
 }
