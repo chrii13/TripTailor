@@ -76,7 +76,7 @@ function TripStat({ label, value }: { label: string; value: string }) {
       <dt className="text-[10px] font-medium tracking-[0.14em] text-primary-foreground/60 uppercase">
         {label}
       </dt>
-      <dd className="mt-1.5 font-display text-base leading-tight font-[725] tracking-[-0.005em] tabular-nums">
+      <dd className="mt-1.5 text-[17px] leading-snug font-medium tabular-nums">
         {value}
       </dd>
     </div>
