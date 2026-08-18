@@ -1,7 +1,14 @@
 "use client";
 
 import { X } from "lucide-react";
-import { Controller, useWatch, type Control, type UseFormSetValue } from "react-hook-form";
+import {
+  Controller,
+  useWatch,
+  type Control,
+  type FieldValues,
+  type Path,
+  type UseFormSetValue,
+} from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -11,46 +18,48 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AGE_RANGES, PARTICIPANT_TYPE_LABELS, type ParticipantType, type TripFormValues } from "@/lib/schema";
+import { AGE_RANGES, PARTICIPANT_TYPE_LABELS, type ParticipantType } from "@/lib/schema";
 
-interface ParticipantRowProps {
+interface ParticipantRowProps<T extends FieldValues> {
   index: number;
-  control: Control<TripFormValues>;
-  setValue: UseFormSetValue<TripFormValues>;
+  control: Control<T>;
+  setValue: UseFormSetValue<T>;
   onRemove: () => void;
   canRemove: boolean;
   error?: string;
 }
 
-export function ParticipantRow({
+export function ParticipantRow<T extends FieldValues>({
   index,
   control,
   setValue,
   onRemove,
   canRemove,
   error,
-}: ParticipantRowProps) {
-  const type = useWatch({ control, name: `participants.${index}.type` });
+}: ParticipantRowProps<T>) {
+  const typeName = `participants.${index}.type` as Path<T>;
+  const ageName = `participants.${index}.age` as Path<T>;
+  const type = useWatch({ control, name: typeName }) as ParticipantType;
   const range = AGE_RANGES[type];
   const ages = Array.from({ length: range.max - range.min + 1 }, (_, i) => range.min + i);
 
   return (
     <div className="flex items-start gap-3">
       <div className="flex-1 space-y-1.5">
-        <Label htmlFor={`participants.${index}.type`}>Tipo</Label>
+        <Label htmlFor={typeName}>Tipo</Label>
         <Controller
           control={control}
-          name={`participants.${index}.type`}
+          name={typeName}
           render={({ field }) => (
             <Select
               value={field.value}
               onValueChange={(value) => {
                 const nextType = value as ParticipantType;
                 field.onChange(nextType);
-                setValue(`participants.${index}.age`, undefined);
+                setValue(ageName, undefined as never);
               }}
             >
-              <SelectTrigger id={`participants.${index}.type`} className="w-full">
+              <SelectTrigger id={typeName} className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -65,7 +74,7 @@ export function ParticipantRow({
         />
       </div>
       <div className="w-28 space-y-1.5">
-        <Label htmlFor={`participants.${index}.age`}>Età</Label>
+        <Label htmlFor={ageName}>Età</Label>
         {/*
           Keyed by `type`: the set of valid ages changes with the type, and
           Radix Select can race between registering a new option list and a
@@ -77,19 +86,19 @@ export function ParticipantRow({
         <Controller
           key={type}
           control={control}
-          name={`participants.${index}.age`}
+          name={ageName}
           render={({ field }) => (
             <Select
               value={field.value !== undefined ? String(field.value) : ""}
               onValueChange={(value) =>
                 setValue(
-                  `participants.${index}.age`,
-                  value === "" ? undefined : Number(value),
+                  ageName,
+                  (value === "" ? undefined : Number(value)) as never,
                   { shouldValidate: true }
                 )
               }
             >
-              <SelectTrigger id={`participants.${index}.age`} className="w-full">
+              <SelectTrigger id={ageName} className="w-full">
                 <SelectValue placeholder="–" />
               </SelectTrigger>
               <SelectContent className="max-h-64">

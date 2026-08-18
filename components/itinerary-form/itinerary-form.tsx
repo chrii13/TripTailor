@@ -195,7 +195,14 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
               <p id="gruppo-viaggio" className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
                 Il viaggio
               </p>
-              <DestinationAutocomplete control={control} error={errors.destination?.message} />
+              <DestinationAutocomplete
+                control={control}
+                name="destination"
+                id="destination"
+                label="Destinazione"
+                placeholder="Es. Roma, Italia"
+                error={errors.destination?.message}
+              />
 
             <div className="space-y-2">
               <Popover>
