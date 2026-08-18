@@ -76,7 +76,7 @@ function TripStat({ label, value }: { label: string; value: string }) {
       <dt className="text-[10px] font-medium tracking-[0.14em] text-primary-foreground/60 uppercase">
         {label}
       </dt>
-      <dd className="mt-1.5 font-display text-base leading-tight font-black tracking-[-0.01em] tabular-nums">
+      <dd className="mt-1.5 font-display text-base leading-tight font-[725] tracking-[-0.005em] tabular-nums">
         {value}
       </dd>
     </div>
@@ -97,7 +97,7 @@ function CountryPanel({
       <div className="flex items-center gap-3 border-b border-border bg-secondary px-5 py-3.5 sm:px-6">
         <span
           aria-hidden
-          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary font-display text-xs font-black tracking-[0.02em] text-primary-foreground"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary font-display text-xs font-[725] tracking-[0.02em] text-primary-foreground"
         >
           {code}
         </span>
@@ -105,7 +105,7 @@ function CountryPanel({
           <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             Paese di destinazione
           </p>
-          <p className="font-display text-base leading-tight font-black tracking-[-0.02em] text-primary uppercase">
+          <p className="font-display text-base leading-tight font-[725] tracking-[-0.005em] text-primary uppercase">
             {name}
           </p>
         </div>
@@ -161,7 +161,7 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
   return (
     <Card className="mx-auto w-full max-w-2xl overflow-hidden border-border shadow-none">
       <CardHeader className="px-8 pt-10 pb-8">
-        <CardTitle className="font-display text-3xl leading-[0.95] font-black tracking-[-0.03em] text-balance text-primary uppercase sm:text-5xl">
+        <CardTitle className="font-display text-3xl leading-[0.95] font-[725] tracking-[-0.01em] text-balance text-primary uppercase sm:text-5xl">
           Si parte per {tripData.destination}
         </CardTitle>
       </CardHeader>
@@ -225,7 +225,7 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                 variants={reduceMotion ? undefined : dayCard}
               >
                 <div className="flex items-baseline justify-between gap-3 bg-primary px-4 py-3.5 text-primary-foreground">
-                  <p className="font-display text-xl font-black tracking-[-0.02em] uppercase">
+                  <p className="font-display text-xl font-[725] tracking-[-0.005em] uppercase">
                     Giorno {dayIndex + 1}
                   </p>
                   <p className="text-sm tabular-nums opacity-75">{formattedDate}</p>
@@ -260,6 +260,11 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                       media degli ultimi 5 anni
                     </span>
                   </div>
+                )}
+                {!dayWeather && (
+                  <p className="border-b border-border bg-secondary px-4 py-3 text-xs text-muted-foreground">
+                    Media climatica non disponibile per questa data.
+                  </p>
                 )}
                 <div className="bg-card px-4">
                   {SLOTS.map(
@@ -319,7 +324,7 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
           {selectedActivity && (
             <>
               <DialogHeader>
-                <DialogTitle className="font-display text-2xl font-black tracking-[-0.02em] text-balance text-primary uppercase">
+                <DialogTitle className="font-display text-2xl font-[725] tracking-[-0.01em] text-balance text-primary uppercase">
                   {selectedActivity.title}
                 </DialogTitle>
                 <DialogDescription className="sr-only">
@@ -332,7 +337,7 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                   <dt className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
                     Orario
                   </dt>
-                  <dd className="mt-1 font-display text-lg font-black tabular-nums text-primary">
+                  <dd className="mt-1 font-display text-lg font-[725] tabular-nums text-primary">
                     {selectedActivity.suggestedTime}
                   </dd>
                 </div>
@@ -340,7 +345,7 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                   <dt className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
                     Costo
                   </dt>
-                  <dd className="mt-1 font-display text-lg font-black text-primary">
+                  <dd className="mt-1 font-display text-lg font-[725] text-primary">
                     {selectedActivity.estimatedCost}
                   </dd>
                 </div>

@@ -18,7 +18,7 @@ export function FinalCta() {
         viewport={{ once: true, amount: 0.6 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
-        <h2 className="font-display text-4xl leading-[0.9] font-black tracking-[-0.03em] text-balance uppercase sm:text-6xl">
+        <h2 className="font-display text-4xl leading-[0.9] font-[725] tracking-[-0.015em] text-balance uppercase sm:text-6xl">
           Pronto a partire?
         </h2>
         <p className="text-primary-foreground/75 sm:text-lg">

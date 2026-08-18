@@ -37,6 +37,21 @@ describe("buildItineraryPrompt", () => {
     expect(buildItineraryPrompt(baseRequest, null)).toContain("2000€");
   });
 
+  it("include la tappa imperdibile quando presente", () => {
+    const prompt = buildItineraryPrompt(
+      { ...baseRequest, mustSee: "Fushimi Inari all'alba" },
+      null
+    );
+    expect(prompt).toContain("Fushimi Inari all'alba");
+    expect(prompt).toContain("Tappa imperdibile");
+  });
+
+  it("non menziona la tappa imperdibile quando il campo è vuoto o assente", () => {
+    expect(buildItineraryPrompt(baseRequest, null)).not.toContain("Tappa imperdibile");
+    expect(
+      buildItineraryPrompt({ ...baseRequest, mustSee: "   " }, null)
+    ).not.toContain("Tappa imperdibile");
+  });
   it("include le note sullo stile quando presenti", () => {
     const request: GenerateItineraryRequest = { ...baseRequest, styleNotes: "lusso, relax" };
     expect(buildItineraryPrompt(request, null)).toContain("lusso, relax");

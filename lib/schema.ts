@@ -59,6 +59,7 @@ export const tripFormSchema = z.object({
   participants: z.array(participantSchema).min(1, "Aggiungi almeno un partecipante").max(20, "Massimo 20 partecipanti"),
   budget: z.number().min(0),
   styleNotes: z.string().optional(),
+  mustSee: z.string().optional(),
   arrivalTime: z.string().optional(),
   departureTime: z.string().optional(),
 });

@@ -18,6 +18,37 @@ export interface OpenMeteoArchiveResponse {
   };
 }
 
+const REQUEST_TIMEOUT_MS = 8000;
+const RETRY_DELAY_MS = 500;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function requestHistoricalYear(url: URL): Promise<OpenMeteoArchiveResponse | null> {
+  const response = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+
+  if (!response.ok) {
+    // 429 e 5xx sono transitori: li rilanciamo per far scattare il retry.
+    if (response.status === 429 || response.status >= 500) {
+      throw new Error(`Open-Meteo ha risposto ${response.status}`);
+    }
+    console.error(`Clima storico: Open-Meteo ha risposto ${response.status}`);
+    return null;
+  }
+
+  const data = await response.json();
+
+  if (
+    !data?.daily?.time ||
+    !data.daily.temperature_2m_max ||
+    !data.daily.temperature_2m_min ||
+    !data.daily.precipitation_sum
+  ) {
+    return null;
+  }
+
+  return data as OpenMeteoArchiveResponse;
+}
+
 async function fetchHistoricalYear(
   lat: number,
   lon: number,
@@ -33,28 +64,16 @@ async function fetchHistoricalYear(
   url.searchParams.set("timezone", "auto");
 
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(2500) });
-
-    if (!response.ok) {
-      console.error(`Clima storico: Open-Meteo ha risposto ${response.status}`);
-      return null;
-    }
-
-    const data = await response.json();
-
-    if (
-      !data?.daily?.time ||
-      !data.daily.temperature_2m_max ||
-      !data.daily.temperature_2m_min ||
-      !data.daily.precipitation_sum
-    ) {
-      return null;
-    }
-
-    return data as OpenMeteoArchiveResponse;
+    return await requestHistoricalYear(url);
   } catch (error) {
-    console.error("Clima storico: chiamata a Open-Meteo fallita", error);
-    return null;
+    console.error("Clima storico: primo tentativo fallito, riprovo", error);
+    await sleep(RETRY_DELAY_MS);
+    try {
+      return await requestHistoricalYear(url);
+    } catch (retryError) {
+      console.error("Clima storico: chiamata a Open-Meteo fallita", retryError);
+      return null;
+    }
   }
 }
 
@@ -113,15 +132,21 @@ export async function getClimateAverages(
   tripStart: Date,
   tripEnd: Date
 ): Promise<DailyClimateAverage[] | null> {
-  const fetches = Array.from({ length: HISTORY_YEARS }, (_, index) => {
-    const yearsAgo = index + 1;
-    return fetchHistoricalYear(lat, lon, subYears(tripStart, yearsAgo), subYears(tripEnd, yearsAgo));
-  });
+  // Sequenziale, non in parallelo: cinque richieste simultanee alla stessa API
+  // gratuita possono essere strozzate tutte insieme, lasciando l'itinerario senza meteo.
+  const successfulResponses: OpenMeteoArchiveResponse[] = [];
 
-  const responses = await Promise.all(fetches);
-  const successfulResponses = responses.filter(
-    (response): response is OpenMeteoArchiveResponse => response !== null
-  );
+  for (let yearsAgo = 1; yearsAgo <= HISTORY_YEARS; yearsAgo++) {
+    const response = await fetchHistoricalYear(
+      lat,
+      lon,
+      subYears(tripStart, yearsAgo),
+      subYears(tripEnd, yearsAgo)
+    );
+    if (response !== null) {
+      successfulResponses.push(response);
+    }
+  }
 
   return averageDailyClimate(successfulResponses, tripStart);
 }

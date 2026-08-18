@@ -136,3 +136,9 @@
     scroll-behavior: smooth;
   }
 }
+
+/* Fraunces è caricato come font variabile: fissa il taglio ottico dei titoli
+   display, altrimenti il browser usa il valore di default dell'asse. */
+.font-display {
+  font-variation-settings: "opsz" 70;
+}

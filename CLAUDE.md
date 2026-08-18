@@ -17,7 +17,7 @@
 - **Primary Commands:**
   - **Dev:** `npm run dev`
   - **Build:** `npm run build`
-  - **Test:** `npm test` (vitest, 89 tests across 12 test files)
+  - **Test:** `npm test` (vitest, 95 tests across 12 test files)
   - **Lint/Typecheck:** `npm run lint`
 - **Architecture & Conventions:**
   - **Stato:** Fase 1 in corso — scaffold Next.js + landing page informativa + form di input utente su route dedicata. Nessuna logica AI/meteo/calendario/mobile ancora implementata (fasi successive).
@@ -27,7 +27,7 @@
       layout.tsx
       page.tsx              # landing page informativa (hero, mete, come funziona, CTA)
       crea/
-        page.tsx             # renderizza <ItineraryForm />
+        page.tsx             # header sticky (logo + link "Home") + <ItineraryForm>, legge ?destination= dalla query
       globals.css
     components/
       landing/
@@ -35,32 +35,37 @@
         hero.tsx                 # hero: titolo display + CTA, con anteprima itinerario accanto
         itinerary-preview.tsx    # elemento firma: card itinerario che si compila in sequenza
         scroll-progress.tsx      # striscia di avanzamento scroll dentro la nav sticky
-        popular-destinations.tsx # card mete gettonate (solo testo/icone, no foto)
+        popular-destinations.tsx # card mete gettonate, cliccabili → /crea?destination=... (solo testo/icone, no foto)
         site-identity.tsx        # sezione identità/missione del sito
         how-it-works.tsx         # sezione "Come funziona" (timeline 01-04)
         final-cta.tsx            # CTA finale
       itinerary-form/
-        itinerary-form.tsx       # form + riepilogo, stesso componente/stato
+        itinerary-form.tsx       # form + riepilogo, stesso componente/stato; accetta prop initialDestination
         participant-row.tsx      # riga dinamica partecipante
-        trip-summary.tsx         # vista riepilogo (post-submit)
+        itinerary-result.tsx     # vista risultato (post-submit): riepilogo, paese, giorni, dialog attività
+        destination-autocomplete.tsx # campo Destinazione con suggerimenti LocationIQ
       ui/                         # componenti shadcn generati
     lib/
       schema.ts                # zod schema condiviso form/riepilogo
       utils.ts                 # cn() helper shadcn
-      popular-destinations.ts  # lista statica mete gettonate (nessun fetch/API)
+      popular-destinations.ts  # lista statica mete gettonate + query di prefill (nessun fetch/API)
     ```
   - Landing page (`/`) separata dal form (`/crea`), aggiunta 2026-08-17: hero con bottone centrale "Crea il tuo itinerario", sezione mete più gettonate (solo testo/icone, niente foto — coerente con "niente backend extra" di Fase 1), sezione identità del sito, sezione "Come funziona" (numerata perché descrive una sequenza reale del processo). Palette e font invariati rispetto al resto dell'app. Animazioni con framer-motion (fade/stagger in hero, reveal on-scroll nelle sezioni), `useReducedMotion` rispettato ovunque.
+  - Le card delle mete gettonate sono cliccabili (aggiunto 2026-08-18): portano a `/crea?destination=<nome, paese>`, `app/crea/page.tsx` legge il query param `destination` (server component async, Next.js 15+/16 `searchParams` è una Promise) e lo passa come `initialDestination` a `<ItineraryForm>`, che lo usa come valore iniziale del campo Destinazione.
+  - Header di `/crea` (rifatto 2026-08-18): sticky, logo a sinistra + link "← Home" a destra (prima era solo il logo, striscia vuota).
   - Nessun backend/API route nella Fase 1 oltre a quelle già esistenti (generate-itinerary, geocode-autocomplete): tutto client-side, dati tenuti in stato React (nessuna persistenza).
   - Il riepilogo post-invio del form appare nella stessa pagina (il form si trasforma in riepilogo), non su una route separata. Bottone "Modifica" riporta al form con i dati precompilati.
   - Composizione gruppo: righe dinamiche per partecipante (tipo + età), non semplice conteggio.
   - Date viaggio: date range picker (check-in/check-out).
   - Budget: slider in € + campo note testuali per lo stile di viaggio.
+  - Campo "Cosa non vuoi perderti" (aggiunto 2026-08-18): input opzionale di testo libero (`mustSee`, max 200 caratteri), ultimo del gruppo "Le tue preferenze". Il prompt istruisce Gemini a inserirlo come attività vera in uno dei giorni — con orario e costo come le altre — scegliendo giorno e fascia in base a posizione e orari di apertura, non a nominarlo dentro la descrizione di un'altra attività.
+  - Il form di `/crea` è diviso in due gruppi etichettati: "Il viaggio" (destinazione, date, chi viaggia) e "Le tue preferenze" (budget, stile, cosa non vuoi perderti), separati da un filetto. La CTA vive in una fascia Nebbia che chiude la card.
   - Stile visivo (rifatto 2026-08-17, branch `redesign/wise-idiom`): sistema "gravità + voltaggio" ispirato al design system Wise. Token in `app/globals.css` — Canvas `#ffffff`, Nebbia `#ecefe9` (superfici), Bosco `#1a4d33` (`--primary`: testo forte, sezioni invertite), Inchiostro `#3d423c` (`--foreground`), Sole `#f0b429` (`--voltage`: **solo** CTA e stati attivi, un elemento per schermata), wash `#e4f1dc` (`--accent`). Regole: niente gradienti né ombre (bordi 1px), pill `rounded-full` per bottoni/badge, `10px` per card e input, display Fraunces 900 maiuscolo con `tracking-[-0.03em]`, sezioni alternate chiaro/scuro per il ritmo. Analisi comparativa e razionale in `docs/design/wise-breakdown.html`.
   - Design docs dettagliate per fase in `docs/superpowers/specs/`.
   - Composizione gruppo: 3 tipi (Bambino/a 0-12, Ragazzo/a 13-25, Adulto/a 26-100), età obbligatoria da selezionare esplicitamente (nessun default) tramite menu a tendina, non input numerico libero.
   - Decisione (2026-08-11): l'autocompletamento della Destinazione (suggerimenti città mentre l'utente scrive) è rimandato alla Fase 2, da introdurre insieme al backend per la generazione AI — richiede una API route (es. proxy verso OpenStreetMap Nominatim) e quindi rompe la regola "niente backend" della Fase 1, meglio farlo in un colpo solo con l'altro backend.
   - Pattern "Date del viaggio" e "Chi viaggia": bottone compatto con icona + testo auto-esplicativo che apre un Popover (stile Booking.com), senza etichetta separata sopra (evita la ridondanza label+testo). "Chi viaggia" apre un Popover con le righe tipo+età per persona (età individuale mantenuta, non un contatore aggregato come Booking) e un bottone "Fatto" per chiudere.
-  - Feedback utente (2026-08-11): il design crema/smeraldo "non convince ancora del tutto". Risolto il 2026-08-17 con il redesign sopra: la landing è passata a Canvas bianco + Bosco + Sole. La pagina `/crea` eredita i nuovi token ma non è stata ancora ridisegnata (mantiene gradiente e ombra sulla card del form).
+  - Feedback utente (2026-08-11): il design crema/smeraldo "non convince ancora del tutto". Risolto il 2026-08-17 con il redesign sopra: la landing è passata a Canvas bianco + Bosco + Sole. La pagina `/crea` eredita i nuovi token (card del form ora `shadow-none border-border`, niente più gradiente/ombra).
 - **Required Environment Variables:**
   - `GEMINI_API_KEY` — Google Gemini API (generazione itinerario)
   - `GEMINI_API_KEY_BACKUP` — chiave Gemini di riserva opzionale, usata automaticamente solo quando la chiave primaria va in rate limit (429)

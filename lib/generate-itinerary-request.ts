@@ -23,6 +23,7 @@ export const generateItineraryRequestSchema = z.object({
   participants: z.array(participantSchema).min(1).max(20),
   budget: z.number().min(0).max(1_000_000),
   styleNotes: z.string().max(1000).optional(),
+  mustSee: z.string().max(200).optional(),
   arrivalTime: z.string().max(5).optional(),
   departureTime: z.string().max(5).optional(),
 });

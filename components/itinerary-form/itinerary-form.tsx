@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { CalendarIcon, Euro, Loader2, Plus, Sparkles, Users } from "lucide-react";
+import { CalendarIcon, Euro, Loader2, Plus, Sparkles, Star, Users } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ const defaultValues: TripFormValues = {
   participants: [{ type: "adulto", age: undefined }],
   budget: 1000,
   styleNotes: "",
+  mustSee: "",
   arrivalTime: "",
   departureTime: "",
 };
@@ -62,7 +63,11 @@ function isErrorCode(value: unknown): value is ErrorCode {
   );
 }
 
-export function ItineraryForm() {
+interface ItineraryFormProps {
+  initialDestination?: string;
+}
+
+export function ItineraryForm({ initialDestination }: ItineraryFormProps) {
   const [mode, setMode] = useState<"form" | "loading" | "result">("form");
   const [submittedData, setSubmittedData] = useState<TripFormValues | null>(null);
   const [itinerary, setItinerary] = useState<ItineraryResponse | null>(null);
@@ -82,7 +87,9 @@ export function ItineraryForm() {
     formState: { errors },
   } = useForm<TripFormValues>({
     resolver: zodResolver(tripFormSchema),
-    defaultValues,
+    defaultValues: initialDestination
+      ? { ...defaultValues, destination: initialDestination }
+      : defaultValues,
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -165,19 +172,21 @@ export function ItineraryForm() {
   }
 
   return (
-    <Card className="mx-auto w-full max-w-2xl overflow-hidden border-border shadow-none">
+    <Card className="mx-auto w-full max-w-2xl overflow-hidden border-border pb-0 shadow-none">
       <CardHeader className="px-8 pt-8">
-        <CardTitle className="font-display text-3xl font-black tracking-[-0.02em] text-primary uppercase sm:text-4xl">
+        <span aria-hidden className="mb-4 block h-[3px] w-7 bg-voltage" />
+        <CardTitle className="font-display text-3xl font-[725] tracking-[-0.01em] text-primary uppercase sm:text-4xl">
           Pianifica il tuo viaggio
         </CardTitle>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Cinque campi, poi ci pensa l&apos;AI.
-        </p>
       </CardHeader>
       <CardContent className="px-8 pb-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           <div className={cn("space-y-8", mode === "loading" && "pointer-events-none opacity-60")}>
-            <DestinationAutocomplete control={control} error={errors.destination?.message} />
+            <div role="group" aria-labelledby="gruppo-viaggio" className="space-y-5">
+              <p id="gruppo-viaggio" className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                Il viaggio
+              </p>
+              <DestinationAutocomplete control={control} error={errors.destination?.message} />
 
             <div className="space-y-2">
               <Popover>
@@ -295,6 +304,12 @@ export function ItineraryForm() {
               {participantsError && <p className="text-sm text-destructive">{participantsError}</p>}
             </div>
 
+            </div>
+
+            <div role="group" aria-labelledby="gruppo-preferenze" className="space-y-5 border-t border-border pt-6">
+              <p id="gruppo-preferenze" className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                Le tue preferenze
+              </p>
             <div className="space-y-2">
               <Label htmlFor="budget-amount">
                 <Euro className="h-4 w-4 text-muted-foreground" />
@@ -343,6 +358,22 @@ export function ItineraryForm() {
                 {...register("styleNotes")}
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="mustSee">
+                <Star className="h-4 w-4 text-muted-foreground" />
+                Cosa non vuoi perderti
+              </Label>
+              <Input
+                id="mustSee"
+                placeholder="Es. Sagrada Família, il tramonto a Oia..."
+                {...register("mustSee")}
+              />
+              <p className="text-xs text-muted-foreground">
+                Dicci cosa non può mancare nel tuo viaggio.
+              </p>
+            </div>
+            </div>
           </div>
 
           {apiError && (
@@ -351,16 +382,21 @@ export function ItineraryForm() {
             </p>
           )}
 
-          <Button type="submit" className="w-full" disabled={mode === "loading"}>
-            {mode === "loading" ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {LOADING_MESSAGES[loadingMessageIndex]}
-              </>
-            ) : (
-              "Genera itinerario"
-            )}
-          </Button>
+          <div className="-mx-8 -mb-8 border-t border-border bg-secondary px-8 pt-6 pb-6">
+            <Button type="submit" className="w-full" disabled={mode === "loading"}>
+              {mode === "loading" ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {LOADING_MESSAGES[loadingMessageIndex]}
+                </>
+              ) : (
+                "Genera itinerario"
+              )}
+            </Button>
+            <p className="mt-3 text-center text-xs text-muted-foreground">
+              Ci vuole meno di un minuto. Potrai modificare tutto in seguito.
+            </p>
+          </div>
         </form>
       </CardContent>
     </Card>

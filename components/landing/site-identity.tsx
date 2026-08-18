@@ -17,7 +17,7 @@ export function SiteIdentity() {
         viewport={{ once: true, amount: 0.5 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
-        <p className="max-w-3xl font-display text-3xl leading-[1.15] font-black tracking-[-0.02em] text-balance text-voltage sm:text-5xl">
+        <p className="max-w-3xl font-display text-3xl leading-[1.15] font-[725] tracking-[-0.01em] text-balance text-voltage sm:text-5xl">
           Niente più tab aperte tra mappe, meteo e fogli di calcolo.
         </p>
         <p className="mt-8 max-w-xl text-primary-foreground/75 sm:text-lg">

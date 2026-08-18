@@ -39,7 +39,7 @@ export function Hero() {
           </motion.span>
           <motion.h1
             variants={reduceMotion ? undefined : item}
-            className="font-display text-[clamp(2.5rem,5.5vw,4rem)] leading-[0.9] font-black tracking-[-0.03em] text-balance text-primary uppercase"
+            className="font-display text-[clamp(2.5rem,5.5vw,4rem)] leading-[0.9] font-[725] tracking-[-0.015em] text-balance text-primary uppercase"
           >
             Il tuo itinerario, cucito su misura.
           </motion.h1>

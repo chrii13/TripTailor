@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import {
   Building2,
@@ -53,7 +54,7 @@ export function PopularDestinations() {
           viewport={{ once: true, amount: 0.6 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          <h2 className="font-display text-3xl font-black tracking-[-0.02em] text-primary uppercase sm:text-5xl">
+          <h2 className="font-display text-3xl font-[725] tracking-[-0.01em] text-primary uppercase sm:text-5xl">
             Le mete più gettonate
           </h2>
           <p className="mt-3 text-muted-foreground">
@@ -74,20 +75,25 @@ export function PopularDestinations() {
                 key={destination.name}
                 variants={reduceMotion ? undefined : item}
               >
-                <Card className="h-full gap-3 border-border py-5 shadow-none transition-colors hover:border-primary hover:bg-accent">
-                  <CardContent className="flex flex-col items-center gap-2 px-4 text-center">
-                    <Icon className="size-6 text-primary" />
-                    <div>
-                      <p className="font-medium">{destination.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {destination.country}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs text-accent-foreground">
-                      {destination.badge}
-                    </span>
-                  </CardContent>
-                </Card>
+                <Link
+                  href={`/crea?destination=${encodeURIComponent(destination.query)}`}
+                  className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  <Card className="h-full gap-3 border-border py-5 shadow-none transition-colors hover:border-primary hover:bg-accent">
+                    <CardContent className="flex flex-col items-center gap-2 px-4 text-center">
+                      <Icon className="size-6 text-primary" />
+                      <div>
+                        <p className="font-medium">{destination.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {destination.country}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs text-accent-foreground">
+                        {destination.badge}
+                      </span>
+                    </CardContent>
+                  </Card>
+                </Link>
               </motion.div>
             );
           })}

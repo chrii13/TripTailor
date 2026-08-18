@@ -42,7 +42,7 @@ export function ItineraryPreview() {
     <div className="overflow-hidden rounded-xl border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border bg-secondary px-5 py-4">
         <div>
-          <p className="font-display text-lg font-black tracking-[-0.01em] text-primary">
+          <p className="font-display text-lg font-[725] tracking-[-0.005em] text-primary">
             Lisbona
           </p>
           <p className="text-xs text-muted-foreground">
