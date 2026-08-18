@@ -71,7 +71,7 @@
 
 **Interfaces:**
 - Consumes: `participantSchema` e `MAX_TRIP_DAYS` da `lib/schema.ts`
-- Produces: `discoverTripsRequestSchema` (zod), tipo `DiscoverTripsRequest`, costante `VACATION_TYPES` e tipo `VacationType`
+- Produces: `discoverTripsRequestSchema` (zod), tipo `DiscoverTripsRequest`, costante `VACATION_TYPES`, mappa `VACATION_TYPE_LABELS` e tipo `VacationType`
 
 - [ ] **Step 1: Scrivi il test che fallisce**
 
@@ -948,7 +948,9 @@ Decisione fissata qui: se **un solo** partecipante nella stringa è malformato, 
 
 - [ ] **Step 1: Scrivi il test che fallisce**
 
-Crea `lib/crea-query-params.test.ts`:
+Crea `lib/crea-query-params.test.ts`.
+
+**Nota sui fixture di data:** le date si costruiscono con `new Date(2026, 8, 1)` (ora locale), **mai** con `new Date("2026-09-01T00:00:00.000Z")`. `format` di date-fns lavora in ora locale: un istante UTC di mezzanotte diventa il giorno precedente in qualunque fuso a ovest di Greenwich, e il test passerebbe qui e fallirebbe altrove.
 
 ```ts
 import { describe, it, expect } from "vitest";
@@ -958,8 +960,8 @@ describe("buildCreaHref", () => {
   it("costruisce un link con tutti i parametri", () => {
     const href = buildCreaHref({
       destination: "Lisbona, Portogallo",
-      from: new Date("2026-09-01T00:00:00.000Z"),
-      to: new Date("2026-09-05T00:00:00.000Z"),
+      from: new Date(2026, 8, 1),
+      to: new Date(2026, 8, 5),
       budget: 1500,
       participants: [
         { type: "adulto", age: 30 },
@@ -989,8 +991,8 @@ describe("decodeCreaPrefill", () => {
   it("fa il percorso inverso di buildCreaHref", () => {
     const prefill = {
       destination: "Lisbona, Portogallo",
-      from: new Date("2026-09-01T00:00:00.000Z"),
-      to: new Date("2026-09-05T00:00:00.000Z"),
+      from: new Date(2026, 8, 1),
+      to: new Date(2026, 8, 5),
       budget: 1500,
       participants: [{ type: "adulto" as const, age: 30 }],
     };
