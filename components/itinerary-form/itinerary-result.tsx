@@ -6,6 +6,8 @@ import { motion, useReducedMotion, type Variants } from "framer-motion";
 import {
   Banknote,
   CalendarDays,
+  FileDown,
+  Loader2,
   Clock,
   Droplets,
   Languages,
@@ -40,6 +42,21 @@ const SLOTS = [
   { key: "pomeriggio", label: "Pomeriggio" },
   { key: "sera", label: "Sera" },
 ] as const;
+
+function sanitizeFileName(value: string): string {
+  return value.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function triggerDownload(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
 function formatDateRange(from: Date, to: Date): string {
   const sameMonth = from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear();
@@ -140,22 +157,29 @@ function CountryStat({
 export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onEdit }: ItineraryResultProps) {
   const [open, setOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [pdfState, setPdfState] = useState<"idle" | "loading" | "error">("idle");
   const reduceMotion = useReducedMotion();
 
   const handleExportCalendar = () => {
-    const icsContent = buildItineraryIcs(tripData, itinerary);
-    const sanitizedDestination = tripData.destination
-      .replace(/[^a-zA-Z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `itinerario-${sanitizedDestination}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const blob = new Blob([buildItineraryIcs(tripData, itinerary)], {
+      type: "text/calendar;charset=utf-8",
+    });
+    triggerDownload(blob, `itinerario-${sanitizeFileName(tripData.destination)}.ics`);
+  };
+
+  const handleDownloadPdf = async () => {
+    if (pdfState === "loading") return;
+    setPdfState("loading");
+    try {
+      // caricata solo al clic: la libreria pesa ~400 KB
+      const { buildItineraryPdfBlob } = await import("@/lib/itinerary-pdf");
+      const blob = await buildItineraryPdfBlob({ tripData, itinerary, weather, countryInfo });
+      triggerDownload(blob, `itinerario-${sanitizeFileName(tripData.destination)}.pdf`);
+      setPdfState("idle");
+    } catch (error) {
+      console.error("Esportazione PDF fallita", error);
+      setPdfState("error");
+    }
   };
 
   return (
@@ -303,8 +327,26 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
           })}
         </motion.div>
 
-        <div className="flex flex-wrap items-center gap-6">
-          <Button type="button" onClick={handleExportCalendar} className="gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="button" onClick={handleDownloadPdf} disabled={pdfState === "loading"} className="gap-2">
+            {pdfState === "loading" ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Preparo il PDF…
+              </>
+            ) : (
+              <>
+                <FileDown className="h-4 w-4" />
+                Scarica il PDF
+              </>
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleExportCalendar}
+            className="gap-2 border-primary shadow-none"
+          >
             <CalendarDays className="h-4 w-4" />
             Esporta calendario
           </Button>
@@ -317,6 +359,12 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
             Modifica il viaggio
           </Button>
         </div>
+
+        {pdfState === "error" && (
+          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            Non siamo riusciti a creare il PDF. Riprova, oppure esporta il calendario.
+          </p>
+        )}
       </CardContent>
 
       <Dialog open={open} onOpenChange={setOpen}>
