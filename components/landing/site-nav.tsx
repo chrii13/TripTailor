@@ -11,7 +11,7 @@ const NAV_LINKS = [
   { id: "destinazioni", label: "Destinazioni" },
   { id: "perche", label: "Perché TripTailor" },
   { id: "come-funziona", label: "Come funziona" },
-  { id: "scopri", label: "Dal budget" },
+  { id: "scopri", label: "Dal budget", className: "hidden sm:inline-flex" },
 ];
 
 export function SiteNav() {
@@ -91,7 +91,8 @@ export function SiteNav() {
                   "rounded-full px-2.5 py-1.5 text-xs whitespace-nowrap transition-colors sm:px-3.5 sm:text-sm",
                   isActive
                     ? "bg-primary text-primary-foreground"
-                    : "text-primary hover:bg-accent"
+                    : "text-primary hover:bg-accent",
+                  link.className
                 )}
               >
                 {link.label}
