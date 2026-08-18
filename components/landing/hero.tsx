@@ -60,6 +60,14 @@ export function Hero() {
                 <ArrowRight className="size-4" />
               </Link>
             </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="gap-2 border-primary px-8 shadow-none has-[>svg]:px-8"
+            >
+              <Link href="/scopri">Non so dove andare</Link>
+            </Button>
             <Link
               href="#come-funziona"
               className="text-sm font-medium text-primary underline underline-offset-4"

@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { id: "destinazioni", label: "Destinazioni" },
   { id: "perche", label: "Perché TripTailor" },
   { id: "come-funziona", label: "Come funziona" },
+  { id: "scopri", label: "Dal budget" },
 ];
 
 export function SiteNav() {
