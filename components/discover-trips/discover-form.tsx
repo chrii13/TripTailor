@@ -22,6 +22,7 @@ import type { TripProposal } from "@/lib/discover-trips-schema";
 import type { ErrorCode } from "@/lib/generate-itinerary-errors";
 import { DestinationAutocomplete } from "@/components/itinerary-form/destination-autocomplete";
 import { ParticipantRow } from "@/components/itinerary-form/participant-row";
+import { DiscoverResults } from "@/components/discover-trips/discover-results";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -158,12 +159,12 @@ export function DiscoverForm() {
 
   if (mode === "results" && submitted) {
     return (
-      <Card className="mx-auto w-full max-w-2xl border-border p-8 text-center shadow-none">
-        <p className="text-primary">Trovate {proposals.length} proposte.</p>
-        <Button variant="outline" onClick={() => setMode("form")} className="mx-auto">
-          Modifica
-        </Button>
-      </Card>
+      <DiscoverResults
+        proposals={proposals}
+        dateRange={submitted.dateRange}
+        participants={submitted.participants}
+        onEdit={() => setMode("form")}
+      />
     );
   }
 
