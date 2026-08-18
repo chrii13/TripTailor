@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Controller, type Control } from "react-hook-form";
+import { Controller, type Control, type FieldValues, type Path } from "react-hook-form";
 import { MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import type { TripFormValues } from "@/lib/schema";
 
-interface DestinationAutocompleteProps {
-  control: Control<TripFormValues>;
+interface DestinationAutocompleteProps<T extends FieldValues> {
+  control: Control<T>;
+  name: Path<T>;
+  label: string;
+  placeholder: string;
+  id: string;
   error?: string;
 }
 
@@ -21,7 +24,14 @@ interface Suggestion {
 const DEBOUNCE_MS = 500;
 const MIN_QUERY_LENGTH = 3;
 
-export function DestinationAutocomplete({ control, error }: DestinationAutocompleteProps) {
+export function DestinationAutocomplete<T extends FieldValues>({
+  control,
+  name,
+  label,
+  placeholder,
+  id,
+  error,
+}: DestinationAutocompleteProps<T>) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -73,26 +83,26 @@ export function DestinationAutocomplete({ control, error }: DestinationAutocompl
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="destination">
+      <Label htmlFor={id}>
         <MapPin className="h-4 w-4 text-muted-foreground" />
-        Destinazione
+        {label}
       </Label>
       <Controller
         control={control}
-        name="destination"
+        name={name}
         render={({ field }) => (
           <div className="relative">
             <Input
-              id="destination"
-              placeholder="Es. Roma, Italia"
+              id={id}
+              placeholder={placeholder}
               autoComplete="off"
               role="combobox"
               aria-expanded={isOpen}
-              aria-controls="destination-suggestions"
+              aria-controls={`${id}-suggestions`}
               aria-autocomplete="list"
-              aria-activedescendant={highlightedIndex >= 0 ? `destination-option-${highlightedIndex}` : undefined}
+              aria-activedescendant={highlightedIndex >= 0 ? `${id}-option-${highlightedIndex}` : undefined}
               ref={field.ref}
-              value={field.value}
+              value={field.value ?? ""}
               onChange={(e) => {
                 field.onChange(e);
                 setHighlightedIndex(-1);
@@ -120,14 +130,14 @@ export function DestinationAutocomplete({ control, error }: DestinationAutocompl
               }}
             />
             {isOpen && suggestions.length > 0 && (
-              <ul id="destination-suggestions" role="listbox" className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+              <ul id={`${id}-suggestions`} role="listbox" className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                 {suggestions.map((suggestion, index) => (
                   <li key={suggestion.id}>
                     <button
                       type="button"
                       role="option"
                       aria-selected={index === highlightedIndex}
-                      id={`destination-option-${index}`}
+                      id={`${id}-option-${index}`}
                       tabIndex={-1}
                       onMouseDown={(e) => {
                         e.preventDefault();

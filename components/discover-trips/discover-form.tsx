@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, Euro, Loader2, Plus, Sparkles, Star, Users } from "lucide-react";
+import { CalendarIcon, Compass, Euro, Loader2, Plus, Users } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -15,42 +16,58 @@ import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/compone
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { tripFormSchema, type TripFormValues } from "@/lib/schema";
-import type { CreaPrefill } from "@/lib/crea-query-params";
+import { participantSchema, MAX_TRIP_DAYS } from "@/lib/schema";
+import { VACATION_TYPES, VACATION_TYPE_LABELS, type VacationType } from "@/lib/discover-trips-request";
+import type { TripProposal } from "@/lib/discover-trips-schema";
 import type { ErrorCode } from "@/lib/generate-itinerary-errors";
-import type { ItineraryResponse } from "@/lib/itinerary-schema";
-import type { DailyClimateAverage } from "@/lib/climate-forecast";
-import type { CountryInfo } from "@/lib/country-info";
-import { ParticipantRow } from "./participant-row";
-import { ItineraryResult } from "./itinerary-result";
-import { DestinationAutocomplete } from "./destination-autocomplete";
+import { DestinationAutocomplete } from "@/components/itinerary-form/destination-autocomplete";
+import { ParticipantRow } from "@/components/itinerary-form/participant-row";
+import { DiscoverResults } from "@/components/discover-trips/discover-results";
 
-const defaultValues: TripFormValues = {
-  destination: "",
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+export const discoverFormSchema = z.object({
+  departureCity: z.string().trim().min(1, "Inserisci la città da cui parti"),
+  dateRange: z
+    .object({ from: z.date().optional(), to: z.date().optional() })
+    .refine((range) => !!range.from && !!range.to, { message: "Seleziona le date di inizio e fine" })
+    .refine((range) => !range.from || !range.to || range.to >= range.from, {
+      message: "La data di fine deve essere successiva o uguale alla data di inizio",
+    })
+    .refine(
+      (range) => {
+        if (!range.from || !range.to) return true;
+        const days = Math.round((range.to.getTime() - range.from.getTime()) / MS_PER_DAY) + 1;
+        return days <= MAX_TRIP_DAYS;
+      },
+      { message: `Il viaggio non può superare i ${MAX_TRIP_DAYS} giorni` }
+    ),
+  participants: z.array(participantSchema).min(1, "Aggiungi almeno un viaggiatore").max(20, "Massimo 20 viaggiatori"),
+  budget: z.number().min(0),
+  vacationType: z.enum(VACATION_TYPES).optional(),
+});
+
+export type DiscoverFormValues = z.infer<typeof discoverFormSchema>;
+
+const defaultValues: DiscoverFormValues = {
+  departureCity: "",
   dateRange: { from: undefined, to: undefined },
   participants: [{ type: "adulto", age: undefined }],
   budget: 1000,
-  styleNotes: "",
-  mustSee: "",
-  arrivalTime: "",
-  departureTime: "",
 };
 
 const LOADING_MESSAGES = [
-  "Stiamo consultando le mappe…",
-  "Cerchiamo i posti migliori…",
-  "Controlliamo gli orari di apertura…",
-  "Chiediamo consiglio a un local…",
-  "Ottimizziamo il tuo itinerario…",
-  "Prepariamo le valigie (metaforicamente)…",
+  "Confrontiamo le mete possibili…",
+  "Stimiamo voli e alloggi…",
+  "Scartiamo quelle fuori budget…",
+  "Mettiamo in fila le proposte…",
 ];
 
 const ERROR_MESSAGES: Record<ErrorCode, string> = {
-  network:
-    "Non siamo riusciti a contattare il servizio di generazione. Controlla la connessione e riprova.",
+  network: "Non siamo riusciti a contattare il servizio. Controlla la connessione e riprova.",
   config: "Si è verificato un problema tecnico. Riprova tra poco.",
   rate_limit: "Troppe richieste in questo momento, riprova tra qualche secondo.",
-  invalid_response: "Non siamo riusciti a generare l'itinerario. Riprova.",
+  invalid_response: "Non siamo riusciti a trovare proposte. Riprova.",
 };
 
 const MAX_PARTICIPANTS = 20;
@@ -64,51 +81,30 @@ function isErrorCode(value: unknown): value is ErrorCode {
   );
 }
 
-interface ItineraryFormProps {
-  prefill?: CreaPrefill;
-}
-
-export function ItineraryForm({ prefill }: ItineraryFormProps) {
-  const [mode, setMode] = useState<"form" | "loading" | "result">("form");
-  const [submittedData, setSubmittedData] = useState<TripFormValues | null>(null);
-  const [itinerary, setItinerary] = useState<ItineraryResponse | null>(null);
-  const [weather, setWeather] = useState<DailyClimateAverage[] | null>(null);
-  const [countryInfo, setCountryInfo] = useState<CountryInfo | null>(null);
+export function DiscoverForm() {
+  const [mode, setMode] = useState<"form" | "loading" | "results">("form");
+  const [proposals, setProposals] = useState<TripProposal[]>([]);
+  const [submitted, setSubmitted] = useState<DiscoverFormValues | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
-  const [participantsPopoverOpen, setParticipantsPopoverOpen] = useState(false);
-
-  const initialValues: TripFormValues = {
-    ...defaultValues,
-    ...(prefill?.destination ? { destination: prefill.destination } : {}),
-    ...(prefill?.budget !== undefined ? { budget: prefill.budget } : {}),
-    ...(prefill?.participants?.length ? { participants: prefill.participants } : {}),
-    ...(prefill?.from || prefill?.to
-      ? { dateRange: { from: prefill.from, to: prefill.to } }
-      : {}),
-  };
 
   const {
-    register,
     handleSubmit,
     control,
     watch,
     setValue,
-    trigger,
     formState: { errors },
-  } = useForm<TripFormValues>({
-    resolver: zodResolver(tripFormSchema),
-    defaultValues: initialValues,
+  } = useForm<DiscoverFormValues>({
+    resolver: zodResolver(discoverFormSchema),
+    defaultValues,
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "participants",
-  });
+  const { fields, append, remove } = useFieldArray({ control, name: "participants" });
 
   const dateRange = watch("dateRange");
   const budget = watch("budget");
   const participants = watch("participants");
+  const vacationType = watch("vacationType");
   const travelerSummary = `${participants.length} ${participants.length === 1 ? "viaggiatore" : "viaggiatori"}`;
   const participantsError = Array.isArray(errors.participants)
     ? "Completa i dati di ogni viaggiatore"
@@ -133,49 +129,41 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
     return () => clearInterval(interval);
   }, [mode]);
 
-  const onSubmit = async (data: TripFormValues) => {
-    if (mode === "loading") return;
-
+  const onSubmit = async (values: DiscoverFormValues) => {
     setApiError(null);
     setMode("loading");
 
     try {
-      const response = await fetch("/api/generate-itinerary", {
+      const response = await fetch("/api/discover-trips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(values),
       });
-
       const body = await response.json();
 
       if (!response.ok) {
-        throw new Error(isErrorCode(body?.error) ? body.error : "invalid_response");
+        const code: ErrorCode = isErrorCode(body?.error) ? body.error : "invalid_response";
+        setApiError(ERROR_MESSAGES[code]);
+        setMode("form");
+        return;
       }
 
-      setSubmittedData(data);
-      setItinerary(body.itinerary);
-      setWeather(body.weather ?? null);
-      setCountryInfo(body.countryInfo ?? null);
-      setMode("result");
-    } catch (error) {
-      const code = error instanceof Error && isErrorCode(error.message) ? error.message : "invalid_response";
-      setApiError(ERROR_MESSAGES[code]);
+      setProposals(body.proposals ?? []);
+      setSubmitted(values);
+      setMode("results");
+    } catch {
+      setApiError(ERROR_MESSAGES.network);
       setMode("form");
     }
   };
 
-  const handleEdit = () => {
-    setMode("form");
-  };
-
-  if (mode === "result" && submittedData && itinerary) {
+  if (mode === "results" && submitted) {
     return (
-      <ItineraryResult
-        tripData={submittedData}
-        itinerary={itinerary}
-        weather={weather}
-        countryInfo={countryInfo}
-        onEdit={handleEdit}
+      <DiscoverResults
+        proposals={proposals}
+        dateRange={submitted.dateRange}
+        participants={submitted.participants}
+        onEdit={() => setMode("form")}
       />
     );
   }
@@ -185,24 +173,20 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
       <CardHeader className="px-8 pt-8">
         <span aria-hidden className="mb-4 block h-[3px] w-7 bg-voltage" />
         <CardTitle className="font-display text-3xl font-[725] tracking-[-0.01em] text-primary uppercase sm:text-4xl">
-          Pianifica il tuo viaggio
+          Trova il tuo viaggio
         </CardTitle>
       </CardHeader>
       <CardContent className="px-8 pb-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           <div className={cn("space-y-8", mode === "loading" && "pointer-events-none opacity-60")}>
-            <div role="group" aria-labelledby="gruppo-viaggio" className="space-y-5">
-              <p id="gruppo-viaggio" className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                Il viaggio
-              </p>
-              <DestinationAutocomplete
-                control={control}
-                name="destination"
-                id="destination"
-                label="Destinazione"
-                placeholder="Es. Roma, Italia"
-                error={errors.destination?.message}
-              />
+            <DestinationAutocomplete
+              control={control}
+              name="departureCity"
+              id="departure-city"
+              label="Da dove parti"
+              placeholder="Es. Milano, Italia"
+              error={errors.departureCity?.message}
+            />
 
             <div className="space-y-2">
               <Popover>
@@ -218,8 +202,8 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {dateRange?.from && dateRange?.to
-                      ? `${format(dateRange.from, "dd/MM/yyyy")} - ${format(dateRange.to, "dd/MM/yyyy")}`
-                      : "Seleziona le date"}
+                      ? `${format(dateRange.from, "dd MMM")} - ${format(dateRange.to, "dd MMM")}`
+                      : "Quando parti"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -235,20 +219,6 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
                     }}
                     numberOfMonths={2}
                   />
-                  <div className="grid grid-cols-2 gap-3 border-t p-3">
-                    <div className="space-y-1">
-                      <Label htmlFor="arrival-time" className="text-xs text-muted-foreground">
-                        Arrivo (opzionale)
-                      </Label>
-                      <Input id="arrival-time" type="time" {...register("arrivalTime")} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="departure-time" className="text-xs text-muted-foreground">
-                        Partenza (opzionale)
-                      </Label>
-                      <Input id="departure-time" type="time" {...register("departureTime")} />
-                    </div>
-                  </div>
                 </PopoverContent>
               </Popover>
               {errors.dateRange && (
@@ -257,15 +227,7 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Popover
-                open={participantsPopoverOpen}
-                onOpenChange={(open) => {
-                  setParticipantsPopoverOpen(open);
-                  if (!open) {
-                    trigger("participants");
-                  }
-                }}
-              >
+              <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     type="button"
@@ -320,20 +282,14 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
               {participantsError && <p className="text-sm text-destructive">{participantsError}</p>}
             </div>
 
-            </div>
-
-            <div role="group" aria-labelledby="gruppo-preferenze" className="space-y-5 border-t border-border pt-6">
-              <p id="gruppo-preferenze" className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                Le preferenze
-              </p>
             <div className="space-y-2">
               <Label htmlFor="budget-amount">
                 <Euro className="h-4 w-4 text-muted-foreground" />
-                Budget indicativo
+                Budget totale
               </Label>
               <div className="flex items-center gap-4">
                 <Slider
-                  aria-label="Budget indicativo in euro"
+                  aria-label="Budget totale in euro"
                   min={0}
                   max={10000}
                   step={50}
@@ -364,31 +320,36 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="styleNotes">
-                <Sparkles className="h-4 w-4 text-muted-foreground" />
-                Stile di viaggio
+              <Label>
+                <Compass className="h-4 w-4 text-muted-foreground" />
+                Che tipo di vacanza cerchi?{" "}
+                <span className="font-normal text-muted-foreground">(facoltativo)</span>
               </Label>
-              <Input
-                id="styleNotes"
-                placeholder="Es. lusso, economico, avventura..."
-                {...register("styleNotes")}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="mustSee">
-                <Star className="h-4 w-4 text-muted-foreground" />
-                Cosa non vuoi perderti
-              </Label>
-              <Input
-                id="mustSee"
-                placeholder="Es. Sagrada Família, il tramonto a Oia..."
-                {...register("mustSee")}
-              />
-              <p className="text-xs text-muted-foreground">
-                Dicci cosa non può mancare nel tuo viaggio.
-              </p>
-            </div>
+              <div className="flex flex-wrap gap-2">
+                {VACATION_TYPES.map((type) => {
+                  const isActive = vacationType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() =>
+                        setValue("vacationType", isActive ? undefined : (type as VacationType), {
+                          shouldValidate: true,
+                        })
+                      }
+                      className={cn(
+                        "rounded-full px-4 py-2 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "border border-border text-primary hover:bg-accent"
+                      )}
+                    >
+                      {VACATION_TYPE_LABELS[type]}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -406,12 +367,9 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
                   {LOADING_MESSAGES[loadingMessageIndex]}
                 </>
               ) : (
-                "Genera itinerario"
+                "Trova i miei viaggi"
               )}
             </Button>
-            <p className="mt-3 text-center text-xs text-muted-foreground">
-              Ci vuole meno di un minuto. Potrai modificare tutto in seguito.
-            </p>
           </div>
         </form>
       </CardContent>

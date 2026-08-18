@@ -54,8 +54,8 @@ export function HowItWorks() {
             Come funziona
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Dal racconto del tuo viaggio all&apos;itinerario pronto, in
-            quattro passi.
+            Dal racconto del tuo viaggio all&apos;itinerario pronto, in quattro passi. Vale se la
+            meta ce l&apos;hai già in mente: se non ce l&apos;hai, si parte dal budget.
           </p>
         </motion.div>
         <ol className="relative max-w-2xl border-l border-border pl-8">
