@@ -114,7 +114,7 @@ La sezione spiega cos'è la ricerca inversa, per chi è utile, e chiude con un r
 
 La correzione è deliberatamente minima: **i quattro passi e la numerazione non si toccano**, perché descrivono correttamente la sequenza della generazione dell'itinerario. Cambia solo il sottotitolo, oggi *"Dal racconto del tuo viaggio all'itinerario pronto, in quattro passi"*, che va riformulato per chiarire che quei passi sono il percorso di chi la meta ce l'ha già e che ne esiste un secondo per chi non ce l'ha ancora. Una frase, nello stesso tono.
 
-**Voce di navigazione.** `site-nav.tsx` espone oggi le ancore `#mete`, `#chi-siamo`, `#come-funziona`. La nuova sezione ne riceve una propria, altrimenti esiste solo per chi scorre fino in fondo alla pagina.
+**Voce di navigazione.** `site-nav.tsx` espone oggi tre ancore — `#destinazioni`, `#perche`, `#come-funziona` — più un bottone "Crea itinerario" a destra. La nuova sezione riceve la propria voce (`#scopri`), altrimenti esiste solo per chi scorre fino in fondo alla pagina. Da verificare a mano che con quattro voci la barra regga anche sugli schermi stretti: le voci sono già a `text-xs` con `gap-0.5` sotto i 640px.
 
 ## Testing
 
