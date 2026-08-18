@@ -73,7 +73,7 @@ export function ProposalCard({ proposal, href }: ProposalCardProps) {
           </div>
         </dl>
 
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Stime indicative generate dall&apos;AI, non prezzi prenotabili.
         </p>
 
