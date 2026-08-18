@@ -8,13 +8,21 @@ import { cn } from "@/lib/utils";
 import { ScrollProgress } from "./scroll-progress";
 
 const NAV_LINKS = [
-  { id: "mete", label: "Mete" },
-  { id: "chi-siamo", label: "Chi siamo" },
+  { id: "destinazioni", label: "Destinazioni" },
+  { id: "perche", label: "Perché TripTailor" },
   { id: "come-funziona", label: "Come funziona" },
 ];
 
 export function SiteNav() {
   const [active, setActive] = useState<string | null>(null);
+  const [condensed, setCondensed] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setCondensed(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     const sections = NAV_LINKS.map((l) => document.getElementById(l.id)).filter(
@@ -43,12 +51,28 @@ export function SiteNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background text-primary">
       <ScrollProgress />
-      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-3 px-4 sm:px-8">
-        <a
-          href="#"
-          className="font-display text-sm font-[725] tracking-[0.15em] whitespace-nowrap uppercase"
-        >
-          TripTailor
+      <div
+        className={cn(
+          "mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 motion-safe:transition-[height] motion-safe:duration-200 sm:px-8",
+          condensed ? "h-[60px]" : "h-[88px]"
+        )}
+      >
+        <a href="#" className="relative shrink-0">
+          <span
+            className={cn(
+              "font-display font-[725] tracking-[0.15em] whitespace-nowrap uppercase motion-safe:transition-[font-size] motion-safe:duration-200",
+              condensed ? "text-sm" : "text-lg"
+            )}
+          >
+            TripTailor
+          </span>
+          <span
+            aria-hidden
+            className={cn(
+              "absolute -bottom-2 left-0 h-[3px] bg-voltage motion-safe:transition-all motion-safe:duration-200",
+              condensed ? "w-0 opacity-0" : "w-7 opacity-100"
+            )}
+          />
         </a>
 
         <nav

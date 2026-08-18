@@ -7,7 +7,7 @@ export function SiteIdentity() {
 
   return (
     <section
-      id="chi-siamo"
+      id="perche"
       className="scroll-mt-20 bg-primary px-4 py-20 text-primary-foreground sm:px-8 sm:py-28"
     >
       <motion.div
