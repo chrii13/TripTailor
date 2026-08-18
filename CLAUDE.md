@@ -39,6 +39,7 @@
         site-identity.tsx        # sezione identità/missione del sito
         how-it-works.tsx         # sezione "Come funziona" (timeline 01-04)
         final-cta.tsx            # CTA finale
+        site-footer.tsx          # footer: naviga, fonti dei dati, dati personali, progetto
       itinerary-form/
         itinerary-form.tsx       # form + riepilogo, stesso componente/stato; accetta prop initialDestination
         participant-row.tsx      # riga dinamica partecipante
