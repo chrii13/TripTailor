@@ -22,7 +22,12 @@ describe("discoverTripsResponseSchema", () => {
   });
 
   it("rifiuta una proposta senza ripartizione dei costi", () => {
-    const { costs: _costs, ...withoutCosts } = validProposal;
+    const withoutCosts = {
+      destination: validProposal.destination,
+      country: validProposal.country,
+      whyItFits: validProposal.whyItFits,
+      highlights: validProposal.highlights,
+    };
     const result = discoverTripsResponseSchema.safeParse({ proposals: [withoutCosts] });
     expect(result.success).toBe(false);
   });
