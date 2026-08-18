@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Menu } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { ScrollProgress } from "./scroll-progress";
 
@@ -16,6 +18,7 @@ const NAV_LINKS = [
 export function SiteNav() {
   const [active, setActive] = useState<string | null>(null);
   const [condensed, setCondensed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setCondensed(window.scrollY > 24);
@@ -75,9 +78,10 @@ export function SiteNav() {
           />
         </a>
 
+        {/* sotto md le voci non ci stanno in riga: passano nel menu a comparsa */}
         <nav
           aria-label="Sezioni della pagina"
-          className="flex items-center gap-0.5 rounded-full bg-secondary p-1"
+          className="hidden items-center gap-0.5 rounded-full bg-secondary p-1 md:flex"
         >
           {NAV_LINKS.map((link) => {
             const isActive = active === link.id;
@@ -87,7 +91,7 @@ export function SiteNav() {
                 href={`#${link.id}`}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "rounded-full px-2.5 py-1.5 text-xs whitespace-nowrap transition-colors sm:px-3.5 sm:text-sm",
+                  "rounded-full px-3.5 py-1.5 text-sm whitespace-nowrap transition-colors",
                   isActive
                     ? "bg-primary text-primary-foreground"
                     : "text-primary hover:bg-accent"
@@ -98,6 +102,47 @@ export function SiteNav() {
             );
           })}
         </nav>
+
+        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="outline"
+              aria-label="Sezioni della pagina"
+              className="border-primary shadow-none md:hidden"
+            >
+              <Menu />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            sideOffset={8}
+            className="w-56 rounded-lg border-border p-1 shadow-none md:hidden"
+          >
+            <nav aria-label="Sezioni della pagina" className="flex flex-col gap-0.5">
+              {NAV_LINKS.map((link) => {
+                const isActive = active === link.id;
+                return (
+                  <a
+                    key={link.id}
+                    href={`#${link.id}`}
+                    aria-current={isActive ? "true" : undefined}
+                    onClick={() => setMenuOpen(false)}
+                    className={cn(
+                      "rounded-full px-3.5 py-2 text-sm transition-colors",
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-primary hover:bg-accent"
+                    )}
+                  >
+                    {link.label}
+                  </a>
+                );
+              })}
+            </nav>
+          </PopoverContent>
+        </Popover>
 
         <Button
           asChild
