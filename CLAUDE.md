@@ -17,7 +17,7 @@
 - **Primary Commands:**
   - **Dev:** `npm run dev`
   - **Build:** `npm run build`
-  - **Test:** `npm test` (vitest, 100 tests across 13 test files)
+  - **Test:** `npm test` (vitest, 156 tests across 19 test files)
   - **Lint/Typecheck:** `npm run lint`
 - **Architecture & Conventions:**
   - **Stato:** Fase 1 in corso — scaffold Next.js + landing page informativa + form di input utente su route dedicata. Nessuna logica AI/meteo/calendario/mobile ancora implementata (fasi successive).
@@ -27,7 +27,12 @@
       layout.tsx
       page.tsx              # landing page informativa (hero, mete, come funziona, CTA)
       crea/
-        page.tsx             # header sticky (logo + link "Home") + <ItineraryForm>, legge ?destination= dalla query
+        page.tsx             # header sticky (logo + link "Home") + <ItineraryForm>, legge destination/from/to/budget/p dalla query
+      scopri/
+        page.tsx             # intestazione sticky + <DiscoverForm>
+      api/
+        discover-trips/
+          route.ts           # budget+viaggiatori+date+partenza → proposte costificate
       globals.css
     components/
       landing/
@@ -36,23 +41,33 @@
         itinerary-preview.tsx    # elemento firma: card itinerario che si compila in sequenza
         scroll-progress.tsx      # striscia di avanzamento scroll dentro la nav sticky
         popular-destinations.tsx # card mete gettonate, cliccabili → /crea?destination=... (solo testo/icone, no foto)
+        reverse-search.tsx       # sezione landing sul percorso dal budget
         site-identity.tsx        # sezione identità/missione del sito
         how-it-works.tsx         # sezione "Come funziona" (timeline 01-04)
         final-cta.tsx            # CTA finale
         site-footer.tsx          # footer: naviga, fonti dei dati, dati personali, progetto
       itinerary-form/
-        itinerary-form.tsx       # form + riepilogo, stesso componente/stato; accetta prop initialDestination
+        itinerary-form.tsx       # form + riepilogo, stesso componente/stato; accetta prop prefill (CreaPrefill)
         participant-row.tsx      # riga dinamica partecipante
         itinerary-result.tsx     # vista risultato (post-submit): riepilogo, paese, giorni, dialog attività
         destination-autocomplete.tsx # campo Destinazione con suggerimenti LocationIQ
+      discover-trips/
+        discover-form.tsx    # form + stato + chiamata API
+        discover-results.tsx # griglia delle proposte
+        proposal-card.tsx    # scheda singola con ripartizione costi
       ui/                         # componenti shadcn generati
     lib/
       schema.ts                # zod schema condiviso form/riepilogo
       utils.ts                 # cn() helper shadcn
       popular-destinations.ts  # lista statica mete gettonate + query di prefill (nessun fetch/API)
+      crea-query-params.ts     # prefill di /crea via query string
+      discover-trips-request.ts  # schema richiesta
+      discover-trips-schema.ts   # schema risposta AI
+      discover-trips-prompt.ts   # prompt (funzione pura)
+      verify-proposal-budget.ts  # ricalcolo totali + filtro budget
     ```
   - Landing page (`/`) separata dal form (`/crea`), aggiunta 2026-08-17: hero con bottone centrale "Crea il tuo itinerario", sezione mete più gettonate (solo testo/icone, niente foto — coerente con "niente backend extra" di Fase 1), sezione identità del sito, sezione "Come funziona" (numerata perché descrive una sequenza reale del processo). Palette e font invariati rispetto al resto dell'app. Animazioni con framer-motion (fade/stagger in hero, reveal on-scroll nelle sezioni), `useReducedMotion` rispettato ovunque.
-  - Le card delle mete gettonate sono cliccabili (aggiunto 2026-08-18): portano a `/crea?destination=<nome, paese>`, `app/crea/page.tsx` legge il query param `destination` (server component async, Next.js 15+/16 `searchParams` è una Promise) e lo passa come `initialDestination` a `<ItineraryForm>`, che lo usa come valore iniziale del campo Destinazione.
+  - Le card delle mete gettonate sono cliccabili (aggiunto 2026-08-18): portano a `/crea?destination=<nome, paese>`, `app/crea/page.tsx` legge i query param `destination`, `from`, `to`, `budget` e `p` (server component async, Next.js 15+/16 `searchParams` è una Promise) tramite `decodeCreaPrefill` (`lib/crea-query-params.ts`) e passa il risultato come prop `prefill` (`CreaPrefill`) a `<ItineraryForm>`, che lo usa per precompilare destinazione, date, budget e partecipanti.
   - Header di `/crea` (rifatto 2026-08-18): sticky, logo a sinistra + link "← Home" a destra (prima era solo il logo, striscia vuota).
   - Nessun backend/API route nella Fase 1 oltre a quelle già esistenti (generate-itinerary, geocode-autocomplete): tutto client-side, dati tenuti in stato React (nessuna persistenza).
   - Il riepilogo post-invio del form appare nella stessa pagina (il form si trasforma in riepilogo), non su una route separata. Bottone "Modifica" riporta al form con i dati precompilati.
@@ -67,6 +82,7 @@
   - Decisione (2026-08-11): l'autocompletamento della Destinazione (suggerimenti città mentre l'utente scrive) è rimandato alla Fase 2, da introdurre insieme al backend per la generazione AI — richiede una API route (es. proxy verso OpenStreetMap Nominatim) e quindi rompe la regola "niente backend" della Fase 1, meglio farlo in un colpo solo con l'altro backend.
   - Pattern "Date del viaggio" e "Chi viaggia": bottone compatto con icona + testo auto-esplicativo che apre un Popover (stile Booking.com), senza etichetta separata sopra (evita la ridondanza label+testo). "Chi viaggia" apre un Popover con le righe tipo+età per persona (età individuale mantenuta, non un contatore aggregato come Booking) e un bottone "Fatto" per chiudere. **Riconfermato il 2026-08-18**: questi due restano gli unici campi senza etichetta sopra, mentre Destinazione, Budget, Stile e "Cosa non vuoi perderti" ce l'hanno. L'asimmetria è consapevole, non una dimenticanza — non "correggerla" aggiungendo le etichette senza chiedere. Nota per chi rivaluterà la scelta: la motivazione originale (evitare la ridondanza etichetta+testo) di fatto non vale più, perché gli altri campi hanno già etichetta sopra e placeholder dentro; l'utente ha comunque scelto di tenere l'asimmetria.
   - Il design crema/smeraldo della prima versione è stato abbandonato il 2026-08-17 in favore del sistema descritto sopra: la landing è passata a Canvas bianco + Bosco + Sole. La pagina `/crea` eredita i nuovi token (card del form ora `shadow-none border-border`, niente più gradiente/ombra).
+  - Ricerca inversa (aggiunta 2026-08-18): `/scopri` chiede budget, viaggiatori, date e città di partenza — **mai la destinazione**, che è ciò che la funzionalità deve scoprire — e restituisce 5 proposte con stime AI di volo/alloggio/spese in loco. I totali sono ricalcolati e filtrati lato server (`verify-proposal-budget.ts`): il campo `total` restituito dal modello non è considerato attendibile. Ogni proposta rimanda a `/crea` precompilata. Le cifre sono stime dichiarate come tali nell'interfaccia, non prezzi prenotabili.
 - **Required Environment Variables:**
   - `GEMINI_API_KEY` — Google Gemini API (generazione itinerario)
   - `GEMINI_API_KEY_BACKUP` — chiave Gemini di riserva opzionale, usata automaticamente solo quando la chiave primaria va in rate limit (429)
