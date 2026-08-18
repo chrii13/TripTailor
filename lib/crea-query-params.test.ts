@@ -101,4 +101,24 @@ describe("decodeCreaPrefill", () => {
   it("ignora una destinazione composta solo da spazi", () => {
     expect(decodeCreaPrefill({ destination: "   " }).destination).toBeUndefined();
   });
+
+  it("ignora un budget composto solo da spazi invece di convertirlo a 0", () => {
+    expect(decodeCreaPrefill({ budget: "   " }).budget).toBeUndefined();
+  });
+
+  it("ignora un budget in notazione esadecimale", () => {
+    expect(decodeCreaPrefill({ budget: "0x10" }).budget).toBeUndefined();
+  });
+
+  it("ignora un budget in notazione scientifica", () => {
+    expect(decodeCreaPrefill({ budget: "1e3" }).budget).toBeUndefined();
+  });
+
+  it("scarta l'intero elenco se un'età è in notazione scientifica", () => {
+    expect(decodeCreaPrefill({ p: "adulto:3e1" }).participants).toBeUndefined();
+  });
+
+  it("scarta l'intero elenco se un chunk di partecipante contiene più di un colon", () => {
+    expect(decodeCreaPrefill({ p: "adulto:30:garbage" }).participants).toBeUndefined();
+  });
 });

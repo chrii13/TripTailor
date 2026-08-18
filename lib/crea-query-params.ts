@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { z } from "zod";
 import { AGE_RANGES, type Participant, type ParticipantType } from "./schema";
 
 export type CreaPrefill = {
@@ -18,10 +19,49 @@ export type CreaSearchParams = {
 };
 
 const PARTICIPANT_TYPES = ["bambino", "ragazzo", "adulto"] as const;
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+const dateStringSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .transform((str) => {
+    const date = new Date(`${str}T00:00:00`);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+  })
+  .pipe(z.date().optional());
+
+const budgetSchema = z
+  .string()
+  .regex(/^\d+$/, "Budget must be decimal digits only")
+  .transform((str) => Number(str))
+  .refine((n) => n >= 0 && n <= 1_000_000, "Budget must be 0 to 1,000,000")
+  .optional();
 
 function isParticipantType(value: string): value is ParticipantType {
   return (PARTICIPANT_TYPES as readonly string[]).includes(value);
+}
+
+function decodeParticipants(value: string | undefined): Participant[] | undefined {
+  if (!value) return undefined;
+
+  const participants: Participant[] = [];
+  for (const chunk of value.split(",")) {
+    const parts = chunk.split(":");
+    if (parts.length !== 2) return undefined;
+
+    const [type, rawAge] = parts;
+    if (!type || !isParticipantType(type)) return undefined;
+
+    if (!/^\d+$/.test(rawAge)) return undefined;
+    const age = Number(rawAge);
+    if (!Number.isInteger(age)) return undefined;
+
+    const range = AGE_RANGES[type];
+    if (age < range.min || age > range.max) return undefined;
+
+    participants.push({ type, age });
+  }
+
+  return participants.length > 0 ? participants : undefined;
 }
 
 export function buildCreaHref(prefill: CreaPrefill): string {
@@ -38,53 +78,20 @@ export function buildCreaHref(prefill: CreaPrefill): string {
   return `/crea?${params.toString()}`;
 }
 
-function decodeDate(value: string | undefined): Date | undefined {
-  if (!value || !DATE_PATTERN.test(value)) return undefined;
-  const date = new Date(`${value}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? undefined : date;
-}
-
-function decodeBudget(value: string | undefined): number | undefined {
-  if (!value) return undefined;
-  const budget = Number(value);
-  if (!Number.isFinite(budget) || budget < 0 || budget > 1_000_000) return undefined;
-  return budget;
-}
-
-function decodeParticipants(value: string | undefined): Participant[] | undefined {
-  if (!value) return undefined;
-
-  const participants: Participant[] = [];
-  for (const chunk of value.split(",")) {
-    const [type, rawAge] = chunk.split(":");
-    if (!type || !isParticipantType(type)) return undefined;
-
-    const age = Number(rawAge);
-    if (!Number.isInteger(age)) return undefined;
-
-    const range = AGE_RANGES[type];
-    if (age < range.min || age > range.max) return undefined;
-
-    participants.push({ type, age });
-  }
-
-  return participants.length > 0 ? participants : undefined;
-}
-
 export function decodeCreaPrefill(params: CreaSearchParams): CreaPrefill {
   const prefill: CreaPrefill = {};
 
   const destination = params.destination?.trim();
   if (destination) prefill.destination = destination;
 
-  const from = decodeDate(params.from);
-  if (from) prefill.from = from;
+  const from = dateStringSchema.safeParse(params.from);
+  if (from.success && from.data) prefill.from = from.data;
 
-  const to = decodeDate(params.to);
-  if (to) prefill.to = to;
+  const to = dateStringSchema.safeParse(params.to);
+  if (to.success && to.data) prefill.to = to.data;
 
-  const budget = decodeBudget(params.budget);
-  if (budget !== undefined) prefill.budget = budget;
+  const budget = budgetSchema.safeParse(params.budget);
+  if (budget.success && budget.data !== undefined) prefill.budget = budget.data;
 
   const participants = decodeParticipants(params.p);
   if (participants) prefill.participants = participants;
