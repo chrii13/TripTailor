@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { z } from "zod";
-import { AGE_RANGES, type Participant, type ParticipantType } from "./schema";
+import { AGE_RANGES, type Participant } from "./schema";
 
 export type CreaPrefill = {
   destination?: string;
@@ -20,6 +20,8 @@ export type CreaSearchParams = {
 
 const PARTICIPANT_TYPES = ["bambino", "ragazzo", "adulto"] as const;
 
+const destinationSchema = z.string().trim().min(1).optional();
+
 const dateStringSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -27,7 +29,8 @@ const dateStringSchema = z
     const date = new Date(`${str}T00:00:00`);
     return Number.isNaN(date.getTime()) ? undefined : date;
   })
-  .pipe(z.date().optional());
+  .pipe(z.date().optional())
+  .optional();
 
 const budgetSchema = z
   .string()
@@ -36,9 +39,15 @@ const budgetSchema = z
   .refine((n) => n >= 0 && n <= 1_000_000, "Budget must be 0 to 1,000,000")
   .optional();
 
-function isParticipantType(value: string): value is ParticipantType {
-  return (PARTICIPANT_TYPES as readonly string[]).includes(value);
-}
+const participantChunkSchema = z
+  .object({
+    type: z.enum(PARTICIPANT_TYPES),
+    age: z.string().regex(/^\d+$/).transform(Number),
+  })
+  .refine(
+    ({ type, age }) => age >= AGE_RANGES[type].min && age <= AGE_RANGES[type].max,
+    "Age out of range for participant type"
+  );
 
 function decodeParticipants(value: string | undefined): Participant[] | undefined {
   if (!value) return undefined;
@@ -48,17 +57,10 @@ function decodeParticipants(value: string | undefined): Participant[] | undefine
     const parts = chunk.split(":");
     if (parts.length !== 2) return undefined;
 
-    const [type, rawAge] = parts;
-    if (!type || !isParticipantType(type)) return undefined;
+    const result = participantChunkSchema.safeParse({ type: parts[0], age: parts[1] });
+    if (!result.success) return undefined;
 
-    if (!/^\d+$/.test(rawAge)) return undefined;
-    const age = Number(rawAge);
-    if (!Number.isInteger(age)) return undefined;
-
-    const range = AGE_RANGES[type];
-    if (age < range.min || age > range.max) return undefined;
-
-    participants.push({ type, age });
+    participants.push(result.data);
   }
 
   return participants.length > 0 ? participants : undefined;
@@ -81,8 +83,8 @@ export function buildCreaHref(prefill: CreaPrefill): string {
 export function decodeCreaPrefill(params: CreaSearchParams): CreaPrefill {
   const prefill: CreaPrefill = {};
 
-  const destination = params.destination?.trim();
-  if (destination) prefill.destination = destination;
+  const destination = destinationSchema.safeParse(params.destination);
+  if (destination.success && destination.data) prefill.destination = destination.data;
 
   const from = dateStringSchema.safeParse(params.from);
   if (from.success && from.data) prefill.from = from.data;
