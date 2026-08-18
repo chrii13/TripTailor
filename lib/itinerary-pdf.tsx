@@ -144,11 +144,12 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     borderTopWidth: 1,
     borderTopColor: FILETTO,
-    paddingTop: 8,
-    fontSize: 8,
+    paddingTop: 9,
+    fontSize: 9.5,
     color: SLATE,
+    alignItems: "baseline",
   },
-  footerLink: { color: BOSCO, textDecoration: "none" },
+  footerLink: { color: BOSCO, fontWeight: 500, textDecoration: "none" },
 });
 
 const SITO = "https://trip-tailor-ten.vercel.app";
