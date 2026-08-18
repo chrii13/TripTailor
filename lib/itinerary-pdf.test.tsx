@@ -45,6 +45,13 @@ describe("PDF dell'itinerario", () => {
     expect(raw).toMatch(/\/FontFile2/);
   });
 
+  it("rimanda al sito da ogni pagina, con link cliccabile", () => {
+    const annotazioni = raw.match(/\/URI\s*\(([^)]*)\)/g) || [];
+    // una per pagina: copertina + un giorno ciascuna
+    expect(annotazioni.length).toBe(PDF_FIXTURE.itinerary.days.length + 1);
+    expect(annotazioni.every((a) => a.includes("trip-tailor-ten.vercel.app"))).toBe(true);
+  });
+
   it("non lascia fuori nessuna attività", () => {
     const attese = PDF_FIXTURE.itinerary.days.flatMap((d) => [...d.mattina, ...d.pomeriggio, ...d.sera]);
     expect(attese.length).toBeGreaterThan(0);

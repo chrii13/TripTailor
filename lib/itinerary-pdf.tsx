@@ -1,4 +1,4 @@
-import { Document, Font, Page, StyleSheet, Text, View, pdf } from "@react-pdf/renderer";
+import { Document, Font, Link, Page, StyleSheet, Text, View, pdf } from "@react-pdf/renderer";
 import { format } from "date-fns";
 
 import { PARTICIPANT_TYPE_LABELS, type TripFormValues } from "@/lib/schema";
@@ -148,7 +148,10 @@ const s = StyleSheet.create({
     fontSize: 8,
     color: SLATE,
   },
+  footerLink: { color: BOSCO, textDecoration: "none" },
 });
+
+const SITO = "https://trip-tailor-ten.vercel.app";
 
 function formatDateRange(from: Date, to: Date): string {
   const sameMonth = from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear();
@@ -326,7 +329,12 @@ export function ItineraryDocument({ tripData, itinerary, weather, countryInfo }:
         })}
 
         <View style={s.footer} fixed>
-          <Text>Itinerario generato da TripTailor</Text>
+          <Text>
+            Itinerario generato da{" "}
+            <Link src={SITO} style={s.footerLink}>
+              trip-tailor-ten.vercel.app
+            </Link>
+          </Text>
           <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
         </View>
       </Page>

@@ -17,7 +17,7 @@
 - **Primary Commands:**
   - **Dev:** `npm run dev`
   - **Build:** `npm run build`
-  - **Test:** `npm test` (vitest, 99 tests across 13 test files)
+  - **Test:** `npm test` (vitest, 100 tests across 13 test files)
   - **Lint/Typecheck:** `npm run lint`
 - **Architecture & Conventions:**
   - **Stato:** Fase 1 in corso — scaffold Next.js + landing page informativa + form di input utente su route dedicata. Nessuna logica AI/meteo/calendario/mobile ancora implementata (fasi successive).
