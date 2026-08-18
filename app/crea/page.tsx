@@ -11,9 +11,11 @@ export default async function Crea({ searchParams }: CreaPageProps) {
   const { destination } = await searchParams;
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-secondary p-4 sm:p-8">
-      <div className="w-full max-w-2xl">
-        <div className="mb-6 flex items-center justify-between gap-4">
+    <div className="min-h-screen bg-secondary">
+      {/* Non è una barra: è il fondo della pagina che resta fermo. Niente bordo,
+          niente superficie propria, il contenuto ci scorre sotto. */}
+      <div className="sticky top-0 z-20 bg-secondary">
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-4 px-4 py-5 sm:px-0">
           <Link
             href="/"
             className="font-display text-sm font-[725] tracking-[0.15em] whitespace-nowrap text-primary uppercase transition-opacity hover:opacity-70"
@@ -28,8 +30,11 @@ export default async function Crea({ searchParams }: CreaPageProps) {
             Home
           </Link>
         </div>
-        <ItineraryForm initialDestination={destination} />
       </div>
-    </main>
+
+      <main className="mx-auto w-full max-w-2xl px-4 pb-16 sm:px-0">
+        <ItineraryForm initialDestination={destination} />
+      </main>
+    </div>
   );
 }
