@@ -16,6 +16,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { tripFormSchema, type TripFormValues } from "@/lib/schema";
+import type { CreaPrefill } from "@/lib/crea-query-params";
 import type { ErrorCode } from "@/lib/generate-itinerary-errors";
 import type { ItineraryResponse } from "@/lib/itinerary-schema";
 import type { DailyClimateAverage } from "@/lib/climate-forecast";
@@ -64,10 +65,10 @@ function isErrorCode(value: unknown): value is ErrorCode {
 }
 
 interface ItineraryFormProps {
-  initialDestination?: string;
+  prefill?: CreaPrefill;
 }
 
-export function ItineraryForm({ initialDestination }: ItineraryFormProps) {
+export function ItineraryForm({ prefill }: ItineraryFormProps) {
   const [mode, setMode] = useState<"form" | "loading" | "result">("form");
   const [submittedData, setSubmittedData] = useState<TripFormValues | null>(null);
   const [itinerary, setItinerary] = useState<ItineraryResponse | null>(null);
@@ -76,6 +77,16 @@ export function ItineraryForm({ initialDestination }: ItineraryFormProps) {
   const [apiError, setApiError] = useState<string | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [participantsPopoverOpen, setParticipantsPopoverOpen] = useState(false);
+
+  const initialValues: TripFormValues = {
+    ...defaultValues,
+    ...(prefill?.destination ? { destination: prefill.destination } : {}),
+    ...(prefill?.budget !== undefined ? { budget: prefill.budget } : {}),
+    ...(prefill?.participants?.length ? { participants: prefill.participants } : {}),
+    ...(prefill?.from || prefill?.to
+      ? { dateRange: { from: prefill.from, to: prefill.to } }
+      : {}),
+  };
 
   const {
     register,
@@ -87,9 +98,7 @@ export function ItineraryForm({ initialDestination }: ItineraryFormProps) {
     formState: { errors },
   } = useForm<TripFormValues>({
     resolver: zodResolver(tripFormSchema),
-    defaultValues: initialDestination
-      ? { ...defaultValues, destination: initialDestination }
-      : defaultValues,
+    defaultValues: initialValues,
   });
 
   const { fields, append, remove } = useFieldArray({

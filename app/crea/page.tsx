@@ -2,13 +2,14 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { ItineraryForm } from "@/components/itinerary-form/itinerary-form";
+import { decodeCreaPrefill, type CreaSearchParams } from "@/lib/crea-query-params";
 
 type CreaPageProps = {
-  searchParams: Promise<{ destination?: string }>;
+  searchParams: Promise<CreaSearchParams>;
 };
 
 export default async function Crea({ searchParams }: CreaPageProps) {
-  const { destination } = await searchParams;
+  const prefill = decodeCreaPrefill(await searchParams);
 
   return (
     <div className="min-h-screen bg-secondary">
@@ -33,7 +34,7 @@ export default async function Crea({ searchParams }: CreaPageProps) {
       </div>
 
       <main className="mx-auto w-full max-w-2xl px-4 pb-16 sm:px-0">
-        <ItineraryForm initialDestination={destination} />
+        <ItineraryForm prefill={prefill} />
       </main>
     </div>
   );
