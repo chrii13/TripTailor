@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { ItineraryForm } from "@/components/itinerary-form/itinerary-form";
 
 type CreaPageProps = {
@@ -12,26 +11,25 @@ export default async function Crea({ searchParams }: CreaPageProps) {
   const { destination } = await searchParams;
 
   return (
-    <div className="flex min-h-screen flex-col bg-secondary">
-      <header className="sticky top-0 z-50 border-b border-border bg-background">
-        <div className="mx-auto flex h-16 max-w-2xl items-center justify-between gap-3 px-4 sm:px-0">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-secondary p-4 sm:p-8">
+      <div className="w-full max-w-2xl">
+        <div className="mb-6 flex items-center justify-between gap-4">
           <Link
             href="/"
-            className="font-display text-sm font-[725] tracking-[0.15em] whitespace-nowrap text-primary uppercase"
+            className="font-display text-sm font-[725] tracking-[0.15em] whitespace-nowrap text-primary uppercase transition-opacity hover:opacity-70"
           >
             TripTailor
           </Link>
-          <Button asChild size="sm" variant="outline" className="border-primary shadow-none">
-            <Link href="/">
-              <ArrowLeft className="size-4" />
-              Home
-            </Link>
-          </Button>
+          <Link
+            href="/"
+            className="group inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-primary transition-colors hover:border-primary hover:bg-accent"
+          >
+            <ArrowLeft className="size-4 motion-safe:transition-transform motion-safe:group-hover:-translate-x-0.5" />
+            Home
+          </Link>
         </div>
-      </header>
-      <main className="flex flex-1 flex-col items-center justify-center p-4 sm:p-8">
         <ItineraryForm initialDestination={destination} />
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }

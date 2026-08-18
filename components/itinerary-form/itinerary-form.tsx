@@ -308,7 +308,7 @@ export function ItineraryForm({ initialDestination }: ItineraryFormProps) {
 
             <div role="group" aria-labelledby="gruppo-preferenze" className="space-y-5 border-t border-border pt-6">
               <p id="gruppo-preferenze" className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                Le tue preferenze
+                Le preferenze
               </p>
             <div className="space-y-2">
               <Label htmlFor="budget-amount">
