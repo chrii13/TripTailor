@@ -249,7 +249,7 @@ export function DiscoverForm() {
               control={control}
               name="departureCity"
               id="departure-city"
-              label="Da dove parti"
+              label="Città di partenza"
               placeholder="Es. Milano, Italia"
               error={errors.departureCity?.message}
             />
@@ -269,7 +269,7 @@ export function DiscoverForm() {
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {dateRange?.from && dateRange?.to
                       ? `${format(dateRange.from, "dd MMM")} - ${format(dateRange.to, "dd MMM")}`
-                      : "Quando parti"}
+                      : "Seleziona date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
