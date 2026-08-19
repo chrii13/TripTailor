@@ -70,6 +70,8 @@ export function DiscoverResults({
               budget={budget}
               travelerCount={travelerCount}
               nights={nights}
+              departureCity={departureCity}
+              departureDate={dateRange.from}
               href={buildCreaHref({
                 destination: `${proposal.destination}, ${proposal.country}`,
                 from: dateRange.from,

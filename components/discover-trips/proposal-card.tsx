@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { TripProposal } from "@/lib/discover-trips-schema";
 import { roundProposalCosts, roundToNearestFifty } from "@/lib/round-proposal-costs";
+import { buildRealPriceSearchUrl } from "@/lib/real-price-search-link";
 
 interface ProposalCardProps {
   proposal: TripProposal;
@@ -12,6 +13,8 @@ interface ProposalCardProps {
   budget: number;
   travelerCount: number;
   nights: number;
+  departureCity: string;
+  departureDate?: Date;
 }
 
 const euro = new Intl.NumberFormat("it-IT", {
@@ -24,11 +27,22 @@ function formatApprox(value: number): string {
   return `~${euro.format(value)}`;
 }
 
-export function ProposalCard({ proposal, href, budget, travelerCount, nights }: ProposalCardProps) {
+export function ProposalCard({
+  proposal,
+  href,
+  budget,
+  travelerCount,
+  nights,
+  departureCity,
+  departureDate,
+}: ProposalCardProps) {
   const costs = roundProposalCosts(proposal.costs);
   const remaining = budget - costs.total;
   const roundedRemaining = remaining > 0 ? roundToNearestFifty(remaining) : 0;
   const perPerson = travelerCount > 1 ? roundToNearestFifty(costs.total / travelerCount) : null;
+  const realPriceSearchUrl = departureDate
+    ? buildRealPriceSearchUrl(departureCity, proposal.destination, departureDate)
+    : null;
 
   return (
     <Card className="flex h-full flex-col border-border shadow-none">
@@ -104,6 +118,19 @@ export function ProposalCard({ proposal, href, budget, travelerCount, nights }: 
 
         <p className="text-sm text-muted-foreground">
           Stime indicative generate dall&apos;AI, non prezzi prenotabili.
+          {realPriceSearchUrl && (
+            <>
+              {" "}
+              <a
+                href={realPriceSearchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-primary"
+              >
+                Verifica i prezzi reali
+              </a>
+            </>
+          )}
         </p>
 
         <Button asChild variant="outline" className="w-full gap-2 border-primary shadow-none">
