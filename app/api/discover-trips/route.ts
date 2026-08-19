@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
-import { differenceInCalendarDays } from "date-fns";
 import { z } from "zod";
-import { discoverTripsRequestSchema } from "@/lib/discover-trips-request";
+import { discoverTripsRequestSchema, getRequestNights } from "@/lib/discover-trips-request";
 import { discoverTripsResponseSchema } from "@/lib/discover-trips-schema";
 import { buildDiscoverTripsPrompt } from "@/lib/discover-trips-prompt";
 import { verifyProposalsAgainstBudget } from "@/lib/verify-proposal-budget";
+import { verifyProposalsAgainstSuggestedWindow } from "@/lib/verify-suggested-window";
 import { classifyGenerationError } from "@/lib/generate-itinerary-errors";
 import { getGeminiApiKeys } from "@/lib/gemini-api-keys";
 
@@ -127,15 +127,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_response" }, { status: 502 });
   }
 
-  const nights = differenceInCalendarDays(
-    parsedRequest.data.dateRange.to,
-    parsedRequest.data.dateRange.from
-  );
-  const proposals = verifyProposalsAgainstBudget(
+  const nights = getRequestNights(parsedRequest.data);
+  const proposalsWithinBudget = verifyProposalsAgainstBudget(
     parsedResult.data.proposals,
     parsedRequest.data.budget,
     parsedRequest.data.participants.length,
     nights
+  );
+  const proposals = verifyProposalsAgainstSuggestedWindow(
+    proposalsWithinBudget,
+    parsedRequest.data.flexiblePeriod
   );
 
   return NextResponse.json({ proposals });
