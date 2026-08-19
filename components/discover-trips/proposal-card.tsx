@@ -41,7 +41,7 @@ export function ProposalCard({
   const roundedRemaining = remaining > 0 ? roundToNearestFifty(remaining) : 0;
   const perPerson = travelerCount > 1 ? roundToNearestFifty(costs.total / travelerCount) : null;
   const realPriceSearchUrl = departureDate
-    ? buildRealPriceSearchUrl(departureCity, proposal.destination, departureDate)
+    ? buildRealPriceSearchUrl(departureCity, proposal.destination, departureDate, proposal.country)
     : null;
 
   return (

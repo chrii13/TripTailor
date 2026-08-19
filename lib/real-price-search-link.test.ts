@@ -12,6 +12,34 @@ describe("buildRealPriceSearchQuery", () => {
     const query = buildRealPriceSearchQuery("Roma", "Tokyo", new Date("2026-12-01T00:00:00"));
     expect(query).not.toMatch(/volo|flight|aereo/i);
   });
+
+  it("riduce la città di partenza al primo segmento quando arriva come 'Città, Paese'", () => {
+    const query = buildRealPriceSearchQuery(
+      "Milano, Italia",
+      "Barcellona",
+      new Date("2026-09-30T00:00:00")
+    );
+    expect(query).toBe("viaggio Milano Barcellona 30 settembre 2026");
+  });
+
+  it("riduce la città di partenza al primo segmento anche con una stringa amministrativa lunga", () => {
+    const query = buildRealPriceSearchQuery(
+      "Città Metropolitana di Roma Capitale, Lazio, Italia",
+      "Vienna",
+      new Date("2026-09-20T00:00:00")
+    );
+    expect(query).toBe("viaggio Città Metropolitana di Roma Capitale Vienna 20 settembre 2026");
+  });
+
+  it("aggiunge il paese di destinazione quando fornito", () => {
+    const query = buildRealPriceSearchQuery(
+      "Milano",
+      "Valencia",
+      new Date("2026-09-30T00:00:00"),
+      "Spagna"
+    );
+    expect(query).toBe("viaggio Milano Valencia Spagna 30 settembre 2026");
+  });
 });
 
 describe("buildRealPriceSearchUrl", () => {
@@ -31,5 +59,18 @@ describe("buildRealPriceSearchUrl", () => {
     );
     expect(url).toContain(encodeURIComponent("São Paulo, Brasile"));
     expect(url).not.toContain(" ");
+  });
+
+  it("riduce la città di partenza al primo segmento e aggiunge il paese di destinazione", () => {
+    const url = buildRealPriceSearchUrl(
+      "Milano, Italia",
+      "Barcellona",
+      new Date("2026-09-30T00:00:00"),
+      "Spagna"
+    );
+    expect(url).toBe(
+      "https://www.google.com/search?q=" +
+        encodeURIComponent("viaggio Milano Barcellona Spagna 30 settembre 2026")
+    );
   });
 });
