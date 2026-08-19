@@ -6,7 +6,7 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 // Un soggiorno di N notti copre N+1 giorni: il tetto di MAX_TRIP_DAYS giorni
 // diventa quindi MAX_TRIP_DAYS - 1 notti.
-const MAX_TRIP_NIGHTS = MAX_TRIP_DAYS - 1;
+export const MAX_TRIP_NIGHTS = MAX_TRIP_DAYS - 1;
 
 export const VACATION_TYPES = [
   "mare",
