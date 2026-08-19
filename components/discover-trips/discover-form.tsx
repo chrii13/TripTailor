@@ -17,7 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { participantSchema, MAX_TRIP_DAYS } from "@/lib/schema";
-import { VACATION_TYPES, VACATION_TYPE_LABELS, type VacationType } from "@/lib/discover-trips-request";
+import { VACATION_TYPES, VACATION_TYPE_LABELS } from "@/lib/discover-trips-request";
 import { tripProposalSchema, type TripProposal } from "@/lib/discover-trips-schema";
 import type { ErrorCode } from "@/lib/generate-itinerary-errors";
 import { DestinationAutocomplete } from "@/components/itinerary-form/destination-autocomplete";
@@ -44,7 +44,7 @@ export const discoverFormSchema = z.object({
     ),
   participants: z.array(participantSchema).min(1, "Aggiungi almeno un viaggiatore").max(20, "Massimo 20 viaggiatori"),
   budget: z.number().min(0),
-  vacationType: z.enum(VACATION_TYPES).optional(),
+  vacationType: z.string().trim().max(100).optional(),
 });
 
 export type DiscoverFormValues = z.infer<typeof discoverFormSchema>;
@@ -82,7 +82,7 @@ const storedSubmittedSchema = z.object({
   dateRange: z.object({ from: z.coerce.date(), to: z.coerce.date() }),
   participants: z.array(participantSchema).min(1).max(20),
   budget: z.number().min(0),
-  vacationType: z.enum(VACATION_TYPES).optional(),
+  vacationType: z.string().trim().max(100).optional(),
 });
 
 const storedPayloadSchema = z.object({
@@ -386,21 +386,22 @@ export function DiscoverForm() {
             </div>
 
             <div className="space-y-2">
-              <Label>
+              <Label htmlFor="vacation-type">
                 <Compass className="h-4 w-4 text-muted-foreground" />
                 Che tipo di vacanza cerchi?{" "}
                 <span className="font-normal text-muted-foreground">(facoltativo)</span>
               </Label>
               <div className="flex flex-wrap gap-2">
                 {VACATION_TYPES.map((type) => {
-                  const isActive = vacationType === type;
+                  const label = VACATION_TYPE_LABELS[type];
+                  const isActive = vacationType?.trim() === label;
                   return (
                     <button
                       key={type}
                       type="button"
                       aria-pressed={isActive}
                       onClick={() =>
-                        setValue("vacationType", isActive ? undefined : (type as VacationType), {
+                        setValue("vacationType", isActive ? undefined : label, {
                           shouldValidate: true,
                         })
                       }
@@ -411,11 +412,20 @@ export function DiscoverForm() {
                           : "border border-border text-primary hover:bg-accent"
                       )}
                     >
-                      {VACATION_TYPE_LABELS[type]}
+                      {label}
                     </button>
                   );
                 })}
               </div>
+              <Input
+                id="vacation-type"
+                placeholder="Es. terme e relax in montagna"
+                maxLength={100}
+                value={vacationType ?? ""}
+                onChange={(e) =>
+                  setValue("vacationType", e.target.value, { shouldValidate: true })
+                }
+              />
             </div>
           </div>
 

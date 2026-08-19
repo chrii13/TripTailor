@@ -20,8 +20,16 @@ describe("discoverTripsRequestSchema", () => {
     }
   });
 
-  it("rifiuta un tipo di vacanza non previsto", () => {
+  it("accetta un tipo di vacanza libero, non solo quelli previsti", () => {
     const result = discoverTripsRequestSchema.safeParse({ ...validBody, vacationType: "crociera" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rifiuta un tipo di vacanza troppo lungo", () => {
+    const result = discoverTripsRequestSchema.safeParse({
+      ...validBody,
+      vacationType: "a".repeat(101),
+    });
     expect(result.success).toBe(false);
   });
 

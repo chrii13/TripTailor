@@ -1,6 +1,5 @@
 import { differenceInCalendarDays, format } from "date-fns";
 import type { DiscoverTripsRequest } from "./discover-trips-request";
-import { VACATION_TYPE_LABELS } from "./discover-trips-request";
 import { PARTICIPANT_TYPE_LABELS } from "./schema";
 
 export const PROPOSALS_COUNT = 5;
@@ -13,8 +12,8 @@ export function buildDiscoverTripsPrompt(request: DiscoverTripsRequest): string 
     .map((p) => `- ${PARTICIPANT_TYPE_LABELS[p.type]}, ${p.age} anni`)
     .join("\n");
 
-  const vacationTypeSection = vacationType
-    ? `\nTipo di vacanza desiderato: ${VACATION_TYPE_LABELS[vacationType]}. Tutte le proposte devono essere coerenti con questo tipo di vacanza.\n`
+  const vacationTypeSection = vacationType?.trim()
+    ? `\nTipo di vacanza desiderato: ${vacationType.trim()}. Tutte le proposte devono essere coerenti con questo tipo di vacanza.\n`
     : "";
 
   return `Il viaggiatore non ha ancora scelto una destinazione: sa solo quanto può spendere, quando parte, da dove e con chi. Proponi ${PROPOSALS_COUNT} proposte di viaggio compatibili con questi vincoli.

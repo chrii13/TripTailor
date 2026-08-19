@@ -42,7 +42,7 @@ export const discoverTripsRequestSchema = z.object({
     ),
   participants: z.array(participantSchema).min(1).max(20),
   budget: z.number().min(0).max(1_000_000),
-  vacationType: z.enum(VACATION_TYPES).optional(),
+  vacationType: z.string().trim().max(100).optional(),
 });
 
 export type DiscoverTripsRequest = z.infer<typeof discoverTripsRequestSchema>;

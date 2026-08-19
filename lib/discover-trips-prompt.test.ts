@@ -52,9 +52,17 @@ describe("buildDiscoverTripsPrompt", () => {
     expect(buildDiscoverTripsPrompt(baseRequest)).toContain(`${PROPOSALS_COUNT} proposte`);
   });
 
-  it("include il tipo di vacanza quando presente", () => {
+  it("include il tipo di vacanza quando presente, testuale così com'è scritto", () => {
     const prompt = buildDiscoverTripsPrompt({ ...baseRequest, vacationType: "montagna" });
-    expect(prompt).toContain("Montagna");
+    expect(prompt).toContain("montagna");
+  });
+
+  it("include una frase libera di tipo di vacanza senza passare per l'enum", () => {
+    const prompt = buildDiscoverTripsPrompt({
+      ...baseRequest,
+      vacationType: "terme e relax in montagna",
+    });
+    expect(prompt).toContain("terme e relax in montagna");
   });
 
   it("non nomina alcun tipo di vacanza quando non è indicato", () => {
