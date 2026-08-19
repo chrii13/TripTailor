@@ -140,6 +140,7 @@ export function DiscoverForm() {
     control,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<DiscoverFormValues>({
     resolver: zodResolver(discoverFormSchema),
@@ -164,7 +165,12 @@ export function DiscoverForm() {
     setSubmitted(stored.submitted);
     setProposals(stored.proposals);
     setMode("results");
-  }, []);
+    // Il form sotto ai risultati deve corrispondere a ciò che è a schermo:
+    // se l'utente preme "Modifica la ricerca" deve ritrovare la sua ricerca,
+    // non il form vuoto. storedSubmittedSchema usa z.coerce.date(), quindi
+    // stored.submitted.dateRange.from/to sono già oggetti Date veri.
+    reset(stored.submitted);
+  }, [reset]);
 
   useEffect(() => {
     if (mode !== "loading") return;
