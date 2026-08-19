@@ -55,7 +55,7 @@ export function PopularDestinations() {
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
           <h2 className="font-display text-3xl font-[725] tracking-[-0.01em] text-primary uppercase sm:text-5xl">
-            Le mete più gettonate
+            Le mete più <span className="emphasis-mark-display">gettonate</span>
           </h2>
           <p className="mt-3 text-muted-foreground">
             Da dove partono di solito i nostri viaggiatori.

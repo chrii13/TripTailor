@@ -41,7 +41,8 @@ export function Hero() {
             variants={reduceMotion ? undefined : item}
             className="font-display text-[clamp(2.5rem,5.5vw,4rem)] leading-[0.9] font-[725] tracking-[-0.015em] text-balance text-primary uppercase"
           >
-            Il tuo itinerario, cucito su misura.
+            Il tuo <span className="emphasis-mark-display">itinerario</span>, cucito{" "}
+            <span className="emphasis-mark-display">su misura</span>.
           </motion.h1>
           <motion.p
             variants={reduceMotion ? undefined : item}

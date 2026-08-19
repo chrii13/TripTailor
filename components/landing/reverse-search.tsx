@@ -28,9 +28,10 @@ export function ReverseSearch() {
           Parti dal budget, non dalla meta.
         </h2>
         <p className="mt-4 max-w-xl text-balance text-foreground">
-          Dicci quanto puoi spendere, quando vorresti partire e con chi. Ti mostriamo 5 possibili
-          proposte di viaggio, ognuna con quanto costa arrivarci, dormirci e viverci. Scegli, e
-          all&apos;itinerario ci pensiamo noi.
+          Dicci quanto puoi spendere, quando vorresti partire e con chi. Ti mostriamo{" "}
+          <span className="emphasis-mark">5 possibili proposte di viaggio</span>, ognuna con
+          quanto costa arrivarci, dormirci e viverci. Scegli, e all&apos;itinerario ci pensiamo
+          noi.
         </p>
 
         <div aria-hidden className="scopri-marquee relative mt-8 overflow-hidden">

@@ -167,3 +167,26 @@
     animation: none;
   }
 }
+
+/* Sottolineatura spessa per l'enfasi su parole chiave: una barra Sole dietro
+   la parola (background, non colore del testo) così il testo resta leggibile
+   e la barra passa dietro ai discendenti (g, p...). Variante "display" più
+   sottile per i titoli Fraunces, dove una barra proporzionata al corpo del
+   testo sembrerebbe uno scarabocchio. */
+.emphasis-mark {
+  background-image: linear-gradient(var(--voltage), var(--voltage));
+  background-repeat: no-repeat;
+  background-position: 0 82%;
+  background-size: 100% 0.32em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.emphasis-mark-display {
+  background-image: linear-gradient(var(--voltage), var(--voltage));
+  background-repeat: no-repeat;
+  background-position: 0 88%;
+  background-size: 100% 0.14em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
