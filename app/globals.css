@@ -144,7 +144,9 @@
 }
 
 /* Ribbon di destinazioni in reverse-search.tsx: scorrimento continuo in loop,
-   in pausa sull'hover e fermo se l'utente preferisce meno movimento. */
+   fermo solo se l'utente preferisce meno movimento. Non si mette in pausa al
+   passaggio del cursore: è un fregio decorativo (aria-hidden), non un elenco
+   da leggere, e fermarlo sotto il mouse spezzava il movimento della sezione. */
 @keyframes scopri-marquee {
   from {
     transform: translateX(0);
@@ -156,10 +158,6 @@
 
 .scopri-marquee-track {
   animation: scopri-marquee 36s linear infinite;
-}
-
-.scopri-marquee:hover .scopri-marquee-track {
-  animation-play-state: paused;
 }
 
 @media (prefers-reduced-motion: reduce) {
