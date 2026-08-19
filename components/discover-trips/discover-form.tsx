@@ -18,7 +18,7 @@ import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { participantSchema, MAX_TRIP_DAYS } from "@/lib/schema";
 import { VACATION_TYPES, VACATION_TYPE_LABELS, type VacationType } from "@/lib/discover-trips-request";
-import type { TripProposal } from "@/lib/discover-trips-schema";
+import { tripProposalSchema, type TripProposal } from "@/lib/discover-trips-schema";
 import type { ErrorCode } from "@/lib/generate-itinerary-errors";
 import { DestinationAutocomplete } from "@/components/itinerary-form/destination-autocomplete";
 import { ParticipantRow } from "@/components/itinerary-form/participant-row";
@@ -72,6 +72,53 @@ const ERROR_MESSAGES: Record<ErrorCode, string> = {
 
 const MAX_PARTICIPANTS = 20;
 
+// Le proposte servono a confrontare: scegliere una non deve far svanire le altre.
+// sessionStorage (non localStorage) perché i risultati appartengono a questa
+// sessione di navigazione, non devono ricomparire giorni dopo come se fossero attuali.
+const STORAGE_KEY = "discover-trips-session";
+
+const storedSubmittedSchema = z.object({
+  departureCity: z.string().trim().min(1),
+  dateRange: z.object({ from: z.coerce.date(), to: z.coerce.date() }),
+  participants: z.array(participantSchema).min(1).max(20),
+  budget: z.number().min(0),
+  vacationType: z.enum(VACATION_TYPES).optional(),
+});
+
+const storedPayloadSchema = z.object({
+  submitted: storedSubmittedSchema,
+  proposals: z.array(tripProposalSchema),
+});
+
+type StoredPayload = z.infer<typeof storedPayloadSchema>;
+
+function saveResultsToSession(values: DiscoverFormValues, proposals: TripProposal[]): void {
+  try {
+    const payload = {
+      submitted: {
+        ...values,
+        dateRange: { from: values.dateRange.from, to: values.dateRange.to },
+      },
+      proposals,
+    };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // sessionStorage non disponibile (es. navigazione privata): non blocca il flusso
+  }
+}
+
+function loadResultsFromSession(): StoredPayload | null {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const result = storedPayloadSchema.safeParse(JSON.parse(raw));
+    return result.success ? result.data : null;
+  } catch {
+    // valore corrotto o non leggibile: si riparte dal form vuoto senza errori
+    return null;
+  }
+}
+
 function isErrorCode(value: unknown): value is ErrorCode {
   return (
     value === "network" ||
@@ -111,6 +158,15 @@ export function DiscoverForm() {
     : errors.participants?.message;
 
   useEffect(() => {
+    const stored = loadResultsFromSession();
+    if (!stored) return;
+
+    setSubmitted(stored.submitted);
+    setProposals(stored.proposals);
+    setMode("results");
+  }, []);
+
+  useEffect(() => {
     if (mode !== "loading") return;
 
     setLoadingMessageIndex(Math.floor(Math.random() * LOADING_MESSAGES.length));
@@ -148,9 +204,11 @@ export function DiscoverForm() {
         return;
       }
 
-      setProposals(body.proposals ?? []);
+      const receivedProposals: TripProposal[] = body.proposals ?? [];
+      setProposals(receivedProposals);
       setSubmitted(values);
       setMode("results");
+      saveResultsToSession(values, receivedProposals);
     } catch {
       setApiError(ERROR_MESSAGES.network);
       setMode("form");
