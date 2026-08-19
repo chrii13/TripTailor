@@ -5,8 +5,7 @@ import { PARTICIPANT_TYPE_LABELS } from "./schema";
 export const PROPOSALS_COUNT = 5;
 
 export function buildDiscoverTripsPrompt(request: DiscoverTripsRequest): string {
-  const { departureCity, dateRange, participants, budget, vacationType } = request;
-  const dayCount = differenceInCalendarDays(dateRange.to, dateRange.from) + 1;
+  const { departureCity, dateRange, flexiblePeriod, participants, budget, vacationType } = request;
   const travelerCount = participants.length;
   const participantsList = participants
     .map((p) => `- ${PARTICIPANT_TYPE_LABELS[p.type]}, ${p.age} anni`)
@@ -16,10 +15,23 @@ export function buildDiscoverTripsPrompt(request: DiscoverTripsRequest): string 
     ? `\nTipo di vacanza desiderato: ${vacationType.trim()}. Tutte le proposte devono essere coerenti con questo tipo di vacanza.\n`
     : "";
 
+  const dayCount = dateRange
+    ? differenceInCalendarDays(dateRange.to, dateRange.from) + 1
+    : flexiblePeriod!.nights + 1;
+
+  const dateSection = dateRange
+    ? `Date: dal ${format(dateRange.from, "dd/MM/yyyy")} al ${format(dateRange.to, "dd/MM/yyyy")} (${dayCount} giorni)`
+    : `Periodo: mese di ${flexiblePeriod!.month}, soggiorno di ${flexiblePeriod!.nights} notti (${dayCount} giorni). Le date esatte non sono ancora state scelte: per ogni proposta scegli tu la finestra di ${flexiblePeriod!.nights} notti migliore dentro questo mese, e spiega la scelta in whyItFits in base a prezzi, meteo o eventi nel periodo. Restituisci la finestra scelta come suggestedFrom e suggestedTo, entrambe date in formato YYYY-MM-DD, entrambe dentro il mese ${flexiblePeriod!.month} e a distanza di esattamente ${flexiblePeriod!.nights} notti l'una dall'altra.`;
+
+  const suggestedFieldsSection = flexiblePeriod
+    ? `\n- suggestedFrom: la data di inizio scelta per questa proposta, in formato YYYY-MM-DD, dentro il mese ${flexiblePeriod.month}.
+- suggestedTo: la data di fine scelta per questa proposta, in formato YYYY-MM-DD, esattamente ${flexiblePeriod.nights} notti dopo suggestedFrom.`
+    : "";
+
   return `Il viaggiatore non ha ancora scelto una destinazione: sa solo quanto può spendere, quando parte, da dove e con chi. Proponi ${PROPOSALS_COUNT} proposte di viaggio compatibili con questi vincoli.
 
 Città di partenza: ${departureCity}
-Date: dal ${format(dateRange.from, "dd/MM/yyyy")} al ${format(dateRange.to, "dd/MM/yyyy")} (${dayCount} giorni)
+${dateSection}
 Budget totale disponibile per l'intero gruppo: ${budget}€
 Viaggiatori: ${travelerCount} ${travelerCount === 1 ? "viaggiatore" : "viaggiatori"}
 ${participantsList}
@@ -34,7 +46,7 @@ Per ogni proposta fornisci:
   - travelTotal: travelPerPerson moltiplicato per ${travelerCount}.
   - lodgingTotal: costo complessivo dell'alloggio per l'intero gruppo per ${dayCount} giorni, coerente con il numero di persone.
   - onSiteTotal: spese in loco per l'intero gruppo (pasti, trasporti locali, ingressi, attività) per l'intera durata.
-  - total: la somma esatta di travelTotal, lodgingTotal e onSiteTotal.
+  - total: la somma esatta di travelTotal, lodgingTotal e onSiteTotal.${suggestedFieldsSection}
 
 Vincoli da rispettare:
 - Il totale di ogni proposta non deve superare ${budget}€. Una proposta fuori budget è inutile: meglio una meta più vicina o più economica.
