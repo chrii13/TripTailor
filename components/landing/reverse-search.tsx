@@ -25,8 +25,9 @@ export function ReverseSearch() {
           Parti dal budget, non dalla meta.
         </h2>
         <p className="mt-4 max-w-xl text-balance text-muted-foreground">
-          Dicci quanto vuoi spendere, quando parti, da dove e con chi. Ti proponiamo cinque viaggi
-          possibili, ognuno con la stima di viaggio, alloggio e spese sul posto: scegli quello che ti
+          Dicci quanto vuoi spendere, quando parti (anche solo un mese e per quante notti), da dove e
+          con chi. Ti proponiamo cinque viaggi possibili, ognuno con la stima di viaggio, alloggio e
+          spese sul posto e, se non hai date fisse, con le date consigliate: scegli quello che ti
           convince e da lì costruiamo l&apos;itinerario.
         </p>
         <Button
