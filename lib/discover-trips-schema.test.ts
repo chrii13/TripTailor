@@ -7,8 +7,8 @@ const validProposal = {
   whyItFits: "Voli brevi e costo della vita contenuto per il periodo scelto.",
   highlights: ["Quartiere dell'Alfama", "Pastéis de Belém", "Gita a Sintra"],
   costs: {
-    flightsPerPerson: 120,
-    flightsTotal: 240,
+    travelPerPerson: 120,
+    travelTotal: 240,
     lodgingTotal: 400,
     onSiteTotal: 300,
     total: 940,
@@ -55,5 +55,31 @@ describe("discoverTripsResponseSchema", () => {
 
   it("accetta un elenco vuoto di proposte", () => {
     expect(discoverTripsResponseSchema.safeParse({ proposals: [] }).success).toBe(true);
+  });
+
+  it("accetta una proposta senza suggestedFrom/suggestedTo (modalità date esatte)", () => {
+    const result = discoverTripsResponseSchema.safeParse({ proposals: [validProposal] });
+    expect(result.success).toBe(true);
+  });
+
+  it("accetta una proposta con suggestedFrom e suggestedTo entrambi presenti", () => {
+    const result = discoverTripsResponseSchema.safeParse({
+      proposals: [{ ...validProposal, suggestedFrom: "2026-10-05", suggestedTo: "2026-10-12" }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rifiuta una proposta con solo suggestedFrom", () => {
+    const result = discoverTripsResponseSchema.safeParse({
+      proposals: [{ ...validProposal, suggestedFrom: "2026-10-05" }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rifiuta una proposta con solo suggestedTo", () => {
+    const result = discoverTripsResponseSchema.safeParse({
+      proposals: [{ ...validProposal, suggestedTo: "2026-10-12" }],
+    });
+    expect(result.success).toBe(false);
   });
 });

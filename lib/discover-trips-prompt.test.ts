@@ -52,9 +52,17 @@ describe("buildDiscoverTripsPrompt", () => {
     expect(buildDiscoverTripsPrompt(baseRequest)).toContain(`${PROPOSALS_COUNT} proposte`);
   });
 
-  it("include il tipo di vacanza quando presente", () => {
+  it("include il tipo di vacanza quando presente, testuale così com'è scritto", () => {
     const prompt = buildDiscoverTripsPrompt({ ...baseRequest, vacationType: "montagna" });
-    expect(prompt).toContain("Montagna");
+    expect(prompt).toContain("montagna");
+  });
+
+  it("include una frase libera di tipo di vacanza senza passare per l'enum", () => {
+    const prompt = buildDiscoverTripsPrompt({
+      ...baseRequest,
+      vacationType: "terme e relax in montagna",
+    });
+    expect(prompt).toContain("terme e relax in montagna");
   });
 
   it("non nomina alcun tipo di vacanza quando non è indicato", () => {
@@ -69,5 +77,76 @@ describe("buildDiscoverTripsPrompt", () => {
   it("non chiede mai un itinerario giorno per giorno", () => {
     const prompt = buildDiscoverTripsPrompt(baseRequest);
     expect(prompt).not.toContain("giorno per giorno");
+  });
+
+  it("chiede il mezzo più sensato, non solo l'aereo", () => {
+    const prompt = buildDiscoverTripsPrompt(baseRequest);
+    expect(prompt).toContain("treno");
+    expect(prompt).toContain("traghetto");
+  });
+
+  it("chiede coerenza tra il mezzo fatturato e whyItFits", () => {
+    const prompt = buildDiscoverTripsPrompt(baseRequest);
+    expect(prompt).toContain("coerente con quanto scritto in whyItFits");
+  });
+
+  it("in modalità date esatte non nomina mai suggestedFrom/suggestedTo", () => {
+    const prompt = buildDiscoverTripsPrompt(baseRequest);
+    expect(prompt).not.toContain("suggestedFrom");
+    expect(prompt).not.toContain("suggestedTo");
+  });
+});
+
+describe("buildDiscoverTripsPrompt con periodo flessibile", () => {
+  const flexibleRequest: DiscoverTripsRequest = {
+    departureCity: "Milano, Italia",
+    flexiblePeriod: { month: "2026-10", nights: 7 },
+    participants: [{ type: "adulto", age: 34 }],
+    budget: 1500,
+  };
+
+  it("include il mese e il numero di notti al posto delle date esatte", () => {
+    const prompt = buildDiscoverTripsPrompt(flexibleRequest);
+    expect(prompt).toContain("2026-10");
+    expect(prompt).toContain("7 notti");
+  });
+
+  it("chiede al modello di scegliere la finestra migliore dentro il mese", () => {
+    const prompt = buildDiscoverTripsPrompt(flexibleRequest);
+    expect(prompt).toMatch(/scegli|scegliere/);
+    expect(prompt).toContain("7 notti");
+  });
+
+  it("chiede di motivare la scelta della finestra con prezzi, meteo o eventi", () => {
+    const prompt = buildDiscoverTripsPrompt(flexibleRequest);
+    expect(prompt).toContain("prezzi");
+    expect(prompt).toContain("meteo");
+    expect(prompt).toContain("eventi");
+  });
+
+  it("chiede suggestedFrom e suggestedTo in formato YYYY-MM-DD", () => {
+    const prompt = buildDiscoverTripsPrompt(flexibleRequest);
+    expect(prompt).toContain("suggestedFrom");
+    expect(prompt).toContain("suggestedTo");
+    expect(prompt).toContain("YYYY-MM-DD");
+  });
+
+  it("chiede che la finestra sia dentro il mese richiesto e lunga esattamente il numero di notti indicato", () => {
+    const prompt = buildDiscoverTripsPrompt(flexibleRequest);
+    expect(prompt).toContain("dentro");
+    expect(prompt).toContain("2026-10");
+  });
+
+  it("mantiene il budget, il numero di proposte e la ripartizione dei costi", () => {
+    const prompt = buildDiscoverTripsPrompt(flexibleRequest);
+    expect(prompt).toContain("1500€");
+    expect(prompt).toContain(`${PROPOSALS_COUNT} proposte`);
+    expect(prompt).toContain("travelPerPerson");
+    expect(prompt).toContain("lodgingTotal");
+  });
+
+  it("mantiene la richiesta di coerenza tra mezzo di trasporto e whyItFits", () => {
+    const prompt = buildDiscoverTripsPrompt(flexibleRequest);
+    expect(prompt).toContain("coerente con quanto scritto in whyItFits");
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,43 +15,93 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { participantSchema, MAX_TRIP_DAYS } from "@/lib/schema";
-import { VACATION_TYPES, VACATION_TYPE_LABELS, type VacationType } from "@/lib/discover-trips-request";
-import type { TripProposal } from "@/lib/discover-trips-schema";
+import {
+  VACATION_TYPES,
+  VACATION_TYPE_LABELS,
+  MAX_TRIP_NIGHTS,
+} from "@/lib/discover-trips-request";
+import { tripProposalSchema, type TripProposal } from "@/lib/discover-trips-schema";
+import { buildFlexibleMonthOptions } from "@/lib/discover-trips-flexible-period";
+import { buildDiscoverTripsRequestBody } from "@/lib/discover-trips-request-body";
 import type { ErrorCode } from "@/lib/generate-itinerary-errors";
 import { DestinationAutocomplete } from "@/components/itinerary-form/destination-autocomplete";
 import { ParticipantRow } from "@/components/itinerary-form/participant-row";
 import { DiscoverResults } from "@/components/discover-trips/discover-results";
 
+const NIGHT_OPTIONS = Array.from({ length: MAX_TRIP_NIGHTS }, (_, i) => i + 1);
+
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
-export const discoverFormSchema = z.object({
-  departureCity: z.string().trim().min(1, "Inserisci la città da cui parti"),
-  dateRange: z
-    .object({ from: z.date().optional(), to: z.date().optional() })
-    .refine((range) => !!range.from && !!range.to, { message: "Seleziona le date di inizio e fine" })
-    .refine((range) => !range.from || !range.to || range.to >= range.from, {
-      message: "La data di fine deve essere successiva o uguale alla data di inizio",
-    })
-    .refine(
-      (range) => {
-        if (!range.from || !range.to) return true;
-        const days = Math.round((range.to.getTime() - range.from.getTime()) / MS_PER_DAY) + 1;
-        return days <= MAX_TRIP_DAYS;
-      },
-      { message: `Il viaggio non può superare i ${MAX_TRIP_DAYS} giorni` }
-    ),
-  participants: z.array(participantSchema).min(1, "Aggiungi almeno un viaggiatore").max(20, "Massimo 20 viaggiatori"),
-  budget: z.number().min(0),
-  vacationType: z.enum(VACATION_TYPES).optional(),
-});
+export const discoverFormSchema = z
+  .object({
+    departureCity: z.string().trim().min(1, "Inserisci la città da cui parti"),
+    dateMode: z.enum(["esatte", "flessibili"]),
+    dateRange: z.object({ from: z.date().optional(), to: z.date().optional() }),
+    flexiblePeriod: z.object({ month: z.string().optional(), nights: z.number().int().optional() }),
+    participants: z.array(participantSchema).min(1, "Aggiungi almeno un viaggiatore").max(20, "Massimo 20 viaggiatori"),
+    budget: z.number().min(0),
+    vacationType: z.string().trim().max(100).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.dateMode === "esatte") {
+      if (!data.dateRange.from || !data.dateRange.to) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["dateRange"],
+          message: "Seleziona le date di inizio e fine",
+        });
+        return;
+      }
+      if (data.dateRange.to < data.dateRange.from) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["dateRange"],
+          message: "La data di fine deve essere successiva o uguale alla data di inizio",
+        });
+        return;
+      }
+      const days = Math.round((data.dateRange.to.getTime() - data.dateRange.from.getTime()) / MS_PER_DAY) + 1;
+      if (days > MAX_TRIP_DAYS) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["dateRange"],
+          message: `Il viaggio non può superare i ${MAX_TRIP_DAYS} giorni`,
+        });
+      }
+    } else {
+      if (!data.flexiblePeriod.month) {
+        ctx.addIssue({ code: "custom", path: ["flexiblePeriod", "month"], message: "Seleziona un mese" });
+      }
+      if (
+        data.flexiblePeriod.nights === undefined ||
+        data.flexiblePeriod.nights < 1 ||
+        data.flexiblePeriod.nights > MAX_TRIP_NIGHTS
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["flexiblePeriod", "nights"],
+          message: `Seleziona un numero di notti tra 1 e ${MAX_TRIP_NIGHTS}`,
+        });
+      }
+    }
+  });
 
 export type DiscoverFormValues = z.infer<typeof discoverFormSchema>;
 
 const defaultValues: DiscoverFormValues = {
   departureCity: "",
+  dateMode: "esatte",
   dateRange: { from: undefined, to: undefined },
+  flexiblePeriod: { month: undefined, nights: undefined },
   participants: [{ type: "adulto", age: undefined }],
   budget: 1000,
 };
@@ -71,6 +121,57 @@ const ERROR_MESSAGES: Record<ErrorCode, string> = {
 };
 
 const MAX_PARTICIPANTS = 20;
+
+// Le proposte servono a confrontare: scegliere una non deve far svanire le altre.
+// sessionStorage (non localStorage) perché i risultati appartengono a questa
+// sessione di navigazione, non devono ricomparire giorni dopo come se fossero attuali.
+const STORAGE_KEY = "discover-trips-session";
+
+const storedSubmittedSchema = z
+  .object({
+    departureCity: z.string().trim().min(1),
+    dateMode: z.enum(["esatte", "flessibili"]),
+    dateRange: z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional() }),
+    flexiblePeriod: z.object({ month: z.string().optional(), nights: z.number().int().optional() }),
+    participants: z.array(participantSchema).min(1).max(20),
+    budget: z.number().min(0),
+    vacationType: z.string().trim().max(100).optional(),
+  })
+  .refine(
+    (data) =>
+      data.dateMode === "esatte"
+        ? !!data.dateRange.from && !!data.dateRange.to
+        : !!data.flexiblePeriod.month && data.flexiblePeriod.nights !== undefined,
+    { message: "Dati del periodo mancanti per la modalità salvata" }
+  );
+
+const storedPayloadSchema = z.object({
+  submitted: storedSubmittedSchema,
+  proposals: z.array(tripProposalSchema),
+});
+
+type StoredPayload = z.infer<typeof storedPayloadSchema>;
+
+function saveResultsToSession(values: DiscoverFormValues, proposals: TripProposal[]): void {
+  try {
+    const payload = { submitted: values, proposals };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // sessionStorage non disponibile (es. navigazione privata): non blocca il flusso
+  }
+}
+
+function loadResultsFromSession(): StoredPayload | null {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const result = storedPayloadSchema.safeParse(JSON.parse(raw));
+    return result.success ? result.data : null;
+  } catch {
+    // valore corrotto o non leggibile: si riparte dal form vuoto senza errori
+    return null;
+  }
+}
 
 function isErrorCode(value: unknown): value is ErrorCode {
   return (
@@ -93,6 +194,7 @@ export function DiscoverForm() {
     control,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<DiscoverFormValues>({
     resolver: zodResolver(discoverFormSchema),
@@ -101,7 +203,9 @@ export function DiscoverForm() {
 
   const { fields, append, remove } = useFieldArray({ control, name: "participants" });
 
+  const dateMode = watch("dateMode");
   const dateRange = watch("dateRange");
+  const flexiblePeriod = watch("flexiblePeriod");
   const budget = watch("budget");
   const participants = watch("participants");
   const vacationType = watch("vacationType");
@@ -109,6 +213,24 @@ export function DiscoverForm() {
   const participantsError = Array.isArray(errors.participants)
     ? "Completa i dati di ogni viaggiatore"
     : errors.participants?.message;
+  const dateError = errors.dateRange?.message ?? errors.flexiblePeriod?.month?.message;
+  const nightsError = errors.flexiblePeriod?.nights?.message;
+
+  const monthOptions = useMemo(() => buildFlexibleMonthOptions(new Date()), []);
+
+  useEffect(() => {
+    const stored = loadResultsFromSession();
+    if (!stored) return;
+
+    setSubmitted(stored.submitted);
+    setProposals(stored.proposals);
+    setMode("results");
+    // Il form sotto ai risultati deve corrispondere a ciò che è a schermo:
+    // se l'utente preme "Modifica la ricerca" deve ritrovare la sua ricerca,
+    // non il form vuoto. storedSubmittedSchema usa z.coerce.date(), quindi
+    // stored.submitted.dateRange.from/to sono già oggetti Date veri.
+    reset(stored.submitted);
+  }, [reset]);
 
   useEffect(() => {
     if (mode !== "loading") return;
@@ -137,7 +259,7 @@ export function DiscoverForm() {
       const response = await fetch("/api/discover-trips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify(buildDiscoverTripsRequestBody(values)),
       });
       const body = await response.json();
 
@@ -148,9 +270,11 @@ export function DiscoverForm() {
         return;
       }
 
-      setProposals(body.proposals ?? []);
+      const receivedProposals: TripProposal[] = body.proposals ?? [];
+      setProposals(receivedProposals);
       setSubmitted(values);
       setMode("results");
+      saveResultsToSession(values, receivedProposals);
     } catch {
       setApiError(ERROR_MESSAGES.network);
       setMode("form");
@@ -161,8 +285,12 @@ export function DiscoverForm() {
     return (
       <DiscoverResults
         proposals={proposals}
+        dateMode={submitted.dateMode}
         dateRange={submitted.dateRange}
+        flexiblePeriod={submitted.flexiblePeriod}
         participants={submitted.participants}
+        budget={submitted.budget}
+        departureCity={submitted.departureCity}
         onEdit={() => setMode("form")}
       />
     );
@@ -183,46 +311,111 @@ export function DiscoverForm() {
               control={control}
               name="departureCity"
               id="departure-city"
-              label="Da dove parti"
+              label="Città di partenza"
               placeholder="Es. Milano, Italia"
               error={errors.departureCity?.message}
             />
 
             <div className="space-y-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
+              <div className="inline-flex rounded-full border border-border p-0.5">
+                {(["esatte", "flessibili"] as const).map((option) => (
+                  <button
+                    key={option}
                     type="button"
-                    variant="outline"
-                    aria-label="Date del viaggio"
+                    aria-pressed={dateMode === option}
+                    onClick={() => setValue("dateMode", option, { shouldValidate: true })}
                     className={cn(
-                      "w-full justify-start rounded-md text-left font-normal",
-                      !dateRange?.from && "text-muted-foreground"
+                      "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+                      dateMode === option
+                        ? "bg-primary text-primary-foreground"
+                        : "text-primary hover:bg-accent"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange?.from && dateRange?.to
-                      ? `${format(dateRange.from, "dd MMM")} - ${format(dateRange.to, "dd MMM")}`
-                      : "Quando parti"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="range"
-                    selected={dateRange as DateRange | undefined}
-                    onSelect={(range) => {
-                      setValue(
-                        "dateRange",
-                        { from: range?.from, to: range?.to },
-                        { shouldValidate: true }
-                      );
-                    }}
-                    numberOfMonths={2}
-                  />
-                </PopoverContent>
-              </Popover>
-              {errors.dateRange && (
-                <p className="text-sm text-destructive">{errors.dateRange.message}</p>
+                    {option === "esatte" ? "Date esatte" : "Date flessibili"}
+                  </button>
+                ))}
+              </div>
+
+              {dateMode === "esatte" ? (
+                <div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        aria-label="Date del viaggio"
+                        className={cn(
+                          "w-full justify-start rounded-md text-left font-normal",
+                          !dateRange?.from && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRange?.from && dateRange?.to
+                          ? `${format(dateRange.from, "dd MMM")} - ${format(dateRange.to, "dd MMM")}`
+                          : "Seleziona date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="range"
+                        selected={dateRange as DateRange | undefined}
+                        onSelect={(range) => {
+                          setValue(
+                            "dateRange",
+                            { from: range?.from, to: range?.to },
+                            { shouldValidate: true }
+                          );
+                        }}
+                        numberOfMonths={2}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {dateError && <p className="mt-2 text-sm text-destructive">{dateError}</p>}
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <Select
+                      value={flexiblePeriod?.month ?? ""}
+                      onValueChange={(value) =>
+                        setValue("flexiblePeriod.month", value, { shouldValidate: true })
+                      }
+                    >
+                      <SelectTrigger aria-label="Mese del viaggio" className="w-full">
+                        <SelectValue placeholder="Scegli il mese" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {monthOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-40">
+                    <Select
+                      value={flexiblePeriod?.nights !== undefined ? String(flexiblePeriod.nights) : ""}
+                      onValueChange={(value) =>
+                        setValue("flexiblePeriod.nights", Number(value), { shouldValidate: true })
+                      }
+                    >
+                      <SelectTrigger aria-label="Numero di notti" className="w-full">
+                        <SelectValue placeholder="Notti" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-64">
+                        {NIGHT_OPTIONS.map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            {n} {n === 1 ? "notte" : "notti"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {(dateError || nightsError) && (
+                    <p className="w-full text-sm text-destructive">{dateError ?? nightsError}</p>
+                  )}
+                </div>
               )}
             </div>
 
@@ -291,7 +484,7 @@ export function DiscoverForm() {
                 <Slider
                   aria-label="Budget totale in euro"
                   min={0}
-                  max={10000}
+                  max={20000}
                   step={50}
                   value={[budget]}
                   onValueChange={([value]) => setValue("budget", value, { shouldValidate: true })}
@@ -302,12 +495,12 @@ export function DiscoverForm() {
                     id="budget-amount"
                     type="number"
                     min={0}
-                    max={10000}
+                    max={20000}
                     step={1}
                     value={budget}
                     onChange={(e) => {
                       const next = Number(e.target.value);
-                      const clamped = Number.isNaN(next) ? 0 : Math.min(10000, Math.max(0, next));
+                      const clamped = Number.isNaN(next) ? 0 : Math.min(20000, Math.max(0, next));
                       setValue("budget", clamped, { shouldValidate: true });
                     }}
                     className="pr-7"
@@ -320,21 +513,22 @@ export function DiscoverForm() {
             </div>
 
             <div className="space-y-2">
-              <Label>
+              <Label htmlFor="vacation-type">
                 <Compass className="h-4 w-4 text-muted-foreground" />
                 Che tipo di vacanza cerchi?{" "}
                 <span className="font-normal text-muted-foreground">(facoltativo)</span>
               </Label>
               <div className="flex flex-wrap gap-2">
                 {VACATION_TYPES.map((type) => {
-                  const isActive = vacationType === type;
+                  const label = VACATION_TYPE_LABELS[type];
+                  const isActive = vacationType?.trim() === label;
                   return (
                     <button
                       key={type}
                       type="button"
                       aria-pressed={isActive}
                       onClick={() =>
-                        setValue("vacationType", isActive ? undefined : (type as VacationType), {
+                        setValue("vacationType", isActive ? undefined : label, {
                           shouldValidate: true,
                         })
                       }
@@ -345,11 +539,20 @@ export function DiscoverForm() {
                           : "border border-border text-primary hover:bg-accent"
                       )}
                     >
-                      {VACATION_TYPE_LABELS[type]}
+                      {label}
                     </button>
                   );
                 })}
               </div>
+              <Input
+                id="vacation-type"
+                placeholder="Es. terme e relax in montagna"
+                maxLength={100}
+                value={vacationType ?? ""}
+                onChange={(e) =>
+                  setValue("vacationType", e.target.value, { shouldValidate: true })
+                }
+              />
             </div>
           </div>
 
