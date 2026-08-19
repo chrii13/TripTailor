@@ -357,7 +357,7 @@ export function DiscoverForm() {
                 <Slider
                   aria-label="Budget totale in euro"
                   min={0}
-                  max={10000}
+                  max={20000}
                   step={50}
                   value={[budget]}
                   onValueChange={([value]) => setValue("budget", value, { shouldValidate: true })}
@@ -368,12 +368,12 @@ export function DiscoverForm() {
                     id="budget-amount"
                     type="number"
                     min={0}
-                    max={10000}
+                    max={20000}
                     step={1}
                     value={budget}
                     onChange={(e) => {
                       const next = Number(e.target.value);
-                      const clamped = Number.isNaN(next) ? 0 : Math.min(10000, Math.max(0, next));
+                      const clamped = Number.isNaN(next) ? 0 : Math.min(20000, Math.max(0, next));
                       setValue("budget", clamped, { shouldValidate: true });
                     }}
                     className="pr-7"
