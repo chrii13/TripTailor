@@ -6,6 +6,7 @@ import { discoverTripsResponseSchema } from "@/lib/discover-trips-schema";
 import { buildDiscoverTripsPrompt } from "@/lib/discover-trips-prompt";
 import { verifyProposalsAgainstBudget } from "@/lib/verify-proposal-budget";
 import { verifyProposalsAgainstSuggestedWindow } from "@/lib/verify-suggested-window";
+import { stripSuggestedWindowIfExact } from "@/lib/strip-suggested-window";
 import { classifyGenerationError } from "@/lib/generate-itinerary-errors";
 import { getGeminiApiKeys } from "@/lib/gemini-api-keys";
 
@@ -134,9 +135,13 @@ export async function POST(request: Request) {
     parsedRequest.data.participants.length,
     nights
   );
-  const proposals = verifyProposalsAgainstSuggestedWindow(
+  const proposalsWithConsistentWindow = verifyProposalsAgainstSuggestedWindow(
     proposalsWithinBudget,
     parsedRequest.data.flexiblePeriod
+  );
+  const proposals = stripSuggestedWindowIfExact(
+    proposalsWithConsistentWindow,
+    parsedRequest.data.flexiblePeriod !== undefined
   );
 
   return NextResponse.json({ proposals });
