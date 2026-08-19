@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { discoverTripsRequestSchema, VACATION_TYPES } from "./discover-trips-request";
+import { discoverTripsRequestSchema, VACATION_TYPES, getRequestNights } from "./discover-trips-request";
 
 const validBody = {
   departureCity: "Milano, Italia",
@@ -68,5 +68,85 @@ describe("discoverTripsRequestSchema", () => {
 
   it("rifiuta un elenco di partecipanti vuoto", () => {
     expect(discoverTripsRequestSchema.safeParse({ ...validBody, participants: [] }).success).toBe(false);
+  });
+
+  describe("periodo flessibile", () => {
+    const flexibleBody = {
+      departureCity: "Milano, Italia",
+      flexiblePeriod: { month: "2026-10", nights: 7 },
+      participants: [{ type: "adulto", age: 35 }],
+      budget: 1500,
+    };
+
+    it("accetta una richiesta con periodo flessibile e senza dateRange", () => {
+      expect(discoverTripsRequestSchema.safeParse(flexibleBody).success).toBe(true);
+    });
+
+    it("rifiuta una richiesta con sia dateRange che flexiblePeriod", () => {
+      const result = discoverTripsRequestSchema.safeParse({
+        ...validBody,
+        flexiblePeriod: { month: "2026-10", nights: 7 },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rifiuta una richiesta senza dateRange né flexiblePeriod", () => {
+      const withoutDates = {
+        departureCity: validBody.departureCity,
+        participants: validBody.participants,
+        budget: validBody.budget,
+      };
+      const result = discoverTripsRequestSchema.safeParse(withoutDates);
+      expect(result.success).toBe(false);
+    });
+
+    it("rifiuta un mese non nel formato YYYY-MM", () => {
+      const result = discoverTripsRequestSchema.safeParse({
+        ...flexibleBody,
+        flexiblePeriod: { month: "ottobre 2026", nights: 7 },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rifiuta un numero di notti inferiore a 1", () => {
+      const result = discoverTripsRequestSchema.safeParse({
+        ...flexibleBody,
+        flexiblePeriod: { month: "2026-10", nights: 0 },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("accetta il massimo di notti consentito (13, un giorno in meno del massimo di 14 giorni)", () => {
+      const result = discoverTripsRequestSchema.safeParse({
+        ...flexibleBody,
+        flexiblePeriod: { month: "2026-10", nights: 13 },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("rifiuta un numero di notti superiore al massimo consentito", () => {
+      const result = discoverTripsRequestSchema.safeParse({
+        ...flexibleBody,
+        flexiblePeriod: { month: "2026-10", nights: 14 },
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+});
+
+describe("getRequestNights", () => {
+  it("calcola le notti da un intervallo di date esatte", () => {
+    const request = discoverTripsRequestSchema.parse(validBody);
+    expect(getRequestNights(request)).toBe(4);
+  });
+
+  it("usa direttamente il numero di notti quando il periodo è flessibile", () => {
+    const request = discoverTripsRequestSchema.parse({
+      departureCity: "Milano, Italia",
+      flexiblePeriod: { month: "2026-10", nights: 7 },
+      participants: [{ type: "adulto", age: 35 }],
+      budget: 1500,
+    });
+    expect(getRequestNights(request)).toBe(7);
   });
 });
