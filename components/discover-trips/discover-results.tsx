@@ -48,7 +48,9 @@ export function DiscoverResults({
 
       <p className="rounded-md border border-border bg-secondary px-4 py-3 text-sm text-muted-foreground">
         Da {departureCity} · {dateRange.from && dateRange.to
-          ? `${format(dateRange.from, "dd MMM")} - ${format(dateRange.to, "dd MMM")}`
+          ? nights === 0
+            ? `${format(dateRange.from, "dd MMM")} (in giornata)`
+            : `${format(dateRange.from, "dd MMM")} - ${format(dateRange.to, "dd MMM")}`
           : "date da confermare"}{" "}
         · {travelerCount} {travelerCount === 1 ? "viaggiatore" : "viaggiatori"} · budget{" "}
         {euro.format(budget)}

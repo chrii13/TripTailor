@@ -19,7 +19,7 @@ function proposal(destination: string, travel: number, lodging: number, onSite: 
 }
 
 describe("computeProposalTotal", () => {
-  it("somma volo, alloggio e spese in loco ignorando il totale dichiarato", () => {
+  it("somma viaggio, alloggio e spese in loco ignorando il totale dichiarato", () => {
     expect(computeProposalTotal(proposal("Lisbona", 240, 400, 300, 99))).toBe(940);
   });
 });

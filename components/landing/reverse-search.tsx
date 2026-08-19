@@ -26,7 +26,7 @@ export function ReverseSearch() {
         </h2>
         <p className="mt-4 max-w-xl text-balance text-muted-foreground">
           Dicci quanto vuoi spendere, quando parti, da dove e con chi. Ti proponiamo cinque viaggi
-          possibili, ognuno con la stima di volo, alloggio e spese sul posto: scegli quello che ti
+          possibili, ognuno con la stima di viaggio, alloggio e spese sul posto: scegli quello che ti
           convince e da lì costruiamo l&apos;itinerario.
         </p>
         <Button

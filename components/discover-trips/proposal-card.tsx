@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Bed, MapPin, Moon, Plane, Wallet } from "lucide-react";
+import { ArrowRight, Bed, MapPin, Moon, Route, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,7 +44,7 @@ export function ProposalCard({ proposal, href, budget, travelerCount, nights }: 
             </span>
             <span className="flex items-center gap-1.5">
               <Moon className="size-3.5" />
-              {nights} {nights === 1 ? "notte" : "notti"}
+              {nights === 0 ? "in giornata" : `${nights} ${nights === 1 ? "notte" : "notti"}`}
             </span>
           </p>
         </div>
@@ -63,7 +63,7 @@ export function ProposalCard({ proposal, href, budget, travelerCount, nights }: 
         <dl className="mt-auto space-y-2 border-t border-border pt-4 text-sm">
           <div className="flex items-center justify-between gap-2">
             <dt className="flex items-center gap-2 text-muted-foreground">
-              <Plane className="size-4" />
+              <Route className="size-4" />
               Viaggio A/R ({formatApprox(costs.travelPerPerson)} a persona)
             </dt>
             <dd className="font-medium text-primary">{formatApprox(costs.travelTotal)}</dd>
