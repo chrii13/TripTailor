@@ -1,13 +1,17 @@
 import Link from "next/link";
-import { ArrowRight, Bed, MapPin, Plane, Wallet } from "lucide-react";
+import { ArrowRight, Bed, MapPin, Moon, Plane, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { TripProposal } from "@/lib/discover-trips-schema";
+import { roundProposalCosts, roundToNearestFifty } from "@/lib/round-proposal-costs";
 
 interface ProposalCardProps {
   proposal: TripProposal;
   href: string;
+  budget: number;
+  travelerCount: number;
+  nights: number;
 }
 
 const euro = new Intl.NumberFormat("it-IT", {
@@ -16,8 +20,15 @@ const euro = new Intl.NumberFormat("it-IT", {
   maximumFractionDigits: 0,
 });
 
-export function ProposalCard({ proposal, href }: ProposalCardProps) {
-  const { costs } = proposal;
+function formatApprox(value: number): string {
+  return `~${euro.format(value)}`;
+}
+
+export function ProposalCard({ proposal, href, budget, travelerCount, nights }: ProposalCardProps) {
+  const costs = roundProposalCosts(proposal.costs);
+  const remaining = budget - costs.total;
+  const roundedRemaining = remaining > 0 ? roundToNearestFifty(remaining) : 0;
+  const perPerson = travelerCount > 1 ? roundToNearestFifty(costs.total / travelerCount) : null;
 
   return (
     <Card className="flex h-full flex-col border-border shadow-none">
@@ -26,9 +37,15 @@ export function ProposalCard({ proposal, href }: ProposalCardProps) {
           <h3 className="font-display text-xl font-[725] tracking-[-0.01em] text-primary uppercase">
             {proposal.destination}
           </h3>
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-            <MapPin className="size-3.5" />
-            {proposal.country}
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <MapPin className="size-3.5" />
+              {proposal.country}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Moon className="size-3.5" />
+              {nights} {nights === 1 ? "notte" : "notti"}
+            </span>
           </p>
         </div>
 
@@ -47,30 +64,42 @@ export function ProposalCard({ proposal, href }: ProposalCardProps) {
           <div className="flex items-center justify-between gap-2">
             <dt className="flex items-center gap-2 text-muted-foreground">
               <Plane className="size-4" />
-              Viaggio A/R ({euro.format(costs.travelPerPerson)} a persona)
+              Viaggio A/R ({formatApprox(costs.travelPerPerson)} a persona)
             </dt>
-            <dd className="font-medium text-primary">{euro.format(costs.travelTotal)}</dd>
+            <dd className="font-medium text-primary">{formatApprox(costs.travelTotal)}</dd>
           </div>
           <div className="flex items-center justify-between gap-2">
             <dt className="flex items-center gap-2 text-muted-foreground">
               <Bed className="size-4" />
               Alloggio
             </dt>
-            <dd className="font-medium text-primary">{euro.format(costs.lodgingTotal)}</dd>
+            <dd className="font-medium text-primary">{formatApprox(costs.lodgingTotal)}</dd>
           </div>
           <div className="flex items-center justify-between gap-2">
             <dt className="flex items-center gap-2 text-muted-foreground">
               <Wallet className="size-4" />
               Spese in loco
             </dt>
-            <dd className="font-medium text-primary">{euro.format(costs.onSiteTotal)}</dd>
+            <dd className="font-medium text-primary">{formatApprox(costs.onSiteTotal)}</dd>
           </div>
           <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
             <dt className="font-semibold text-primary">Totale</dt>
             <dd className="font-display text-lg font-[725] text-primary">
-              {euro.format(costs.total)}
+              {formatApprox(costs.total)}
             </dd>
           </div>
+          {perPerson !== null && (
+            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+              <dt>Per persona</dt>
+              <dd>{formatApprox(perPerson)}</dd>
+            </div>
+          )}
+          {roundedRemaining > 0 && (
+            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+              <dt>Ti restano</dt>
+              <dd>{formatApprox(roundedRemaining)}</dd>
+            </div>
+          )}
         </dl>
 
         <p className="text-sm text-muted-foreground">

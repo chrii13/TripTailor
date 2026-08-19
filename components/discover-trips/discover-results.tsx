@@ -1,13 +1,23 @@
+import { differenceInCalendarDays, format } from "date-fns";
+
 import { Button } from "@/components/ui/button";
 import { buildCreaHref } from "@/lib/crea-query-params";
 import type { TripProposal } from "@/lib/discover-trips-schema";
 import type { Participant } from "@/lib/schema";
 import { ProposalCard } from "./proposal-card";
 
+const euro = new Intl.NumberFormat("it-IT", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
+
 interface DiscoverResultsProps {
   proposals: TripProposal[];
   dateRange: { from?: Date; to?: Date };
   participants: Participant[];
+  budget: number;
+  departureCity: string;
   onEdit: () => void;
 }
 
@@ -15,8 +25,16 @@ export function DiscoverResults({
   proposals,
   dateRange,
   participants,
+  budget,
+  departureCity,
   onEdit,
 }: DiscoverResultsProps) {
+  const nights =
+    dateRange.from && dateRange.to
+      ? Math.max(differenceInCalendarDays(dateRange.to, dateRange.from), 0)
+      : 0;
+  const travelerCount = participants.length;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -27,6 +45,14 @@ export function DiscoverResults({
           Modifica la ricerca
         </Button>
       </div>
+
+      <p className="rounded-md border border-border bg-secondary px-4 py-3 text-sm text-muted-foreground">
+        Da {departureCity} · {dateRange.from && dateRange.to
+          ? `${format(dateRange.from, "dd MMM")} - ${format(dateRange.to, "dd MMM")}`
+          : "date da confermare"}{" "}
+        · {travelerCount} {travelerCount === 1 ? "viaggiatore" : "viaggiatori"} · budget{" "}
+        {euro.format(budget)}
+      </p>
 
       {proposals.length === 0 ? (
         <p className="text-muted-foreground">
@@ -39,6 +65,9 @@ export function DiscoverResults({
             <ProposalCard
               key={`${proposal.destination}-${proposal.country}-${index}`}
               proposal={proposal}
+              budget={budget}
+              travelerCount={travelerCount}
+              nights={nights}
               href={buildCreaHref({
                 destination: `${proposal.destination}, ${proposal.country}`,
                 from: dateRange.from,

@@ -163,6 +163,8 @@ export function DiscoverForm() {
         proposals={proposals}
         dateRange={submitted.dateRange}
         participants={submitted.participants}
+        budget={submitted.budget}
+        departureCity={submitted.departureCity}
         onEdit={() => setMode("form")}
       />
     );
