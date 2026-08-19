@@ -1,7 +1,7 @@
-import { differenceInCalendarDays, format } from "date-fns";
-
 import { Button } from "@/components/ui/button";
 import { buildCreaHref } from "@/lib/crea-query-params";
+import { formatSearchPeriod, getSearchNights } from "@/lib/discover-trips-recap";
+import { resolveProposalDates } from "@/lib/discover-trips-proposal-dates";
 import type { TripProposal } from "@/lib/discover-trips-schema";
 import type { Participant } from "@/lib/schema";
 import { ProposalCard } from "./proposal-card";
@@ -14,7 +14,9 @@ const euro = new Intl.NumberFormat("it-IT", {
 
 interface DiscoverResultsProps {
   proposals: TripProposal[];
+  dateMode: "esatte" | "flessibili";
   dateRange: { from?: Date; to?: Date };
+  flexiblePeriod: { month?: string; nights?: number };
   participants: Participant[];
   budget: number;
   departureCity: string;
@@ -23,16 +25,16 @@ interface DiscoverResultsProps {
 
 export function DiscoverResults({
   proposals,
+  dateMode,
   dateRange,
+  flexiblePeriod,
   participants,
   budget,
   departureCity,
   onEdit,
 }: DiscoverResultsProps) {
-  const nights =
-    dateRange.from && dateRange.to
-      ? Math.max(differenceInCalendarDays(dateRange.to, dateRange.from), 0)
-      : 0;
+  const nights = getSearchNights({ dateMode, dateRange, flexiblePeriod });
+  const periodLabel = formatSearchPeriod({ dateMode, dateRange, flexiblePeriod });
   const travelerCount = participants.length;
 
   return (
@@ -47,13 +49,8 @@ export function DiscoverResults({
       </div>
 
       <p className="rounded-md border border-border bg-secondary px-4 py-3 text-sm text-muted-foreground">
-        Da {departureCity} · {dateRange.from && dateRange.to
-          ? nights === 0
-            ? `${format(dateRange.from, "dd MMM")} (in giornata)`
-            : `${format(dateRange.from, "dd MMM")} - ${format(dateRange.to, "dd MMM")}`
-          : "date da confermare"}{" "}
-        · {travelerCount} {travelerCount === 1 ? "viaggiatore" : "viaggiatori"} · budget{" "}
-        {euro.format(budget)}
+        Da {departureCity} · {periodLabel} · {travelerCount}{" "}
+        {travelerCount === 1 ? "viaggiatore" : "viaggiatori"} · budget {euro.format(budget)}
       </p>
 
       {proposals.length === 0 ? (
@@ -63,24 +60,27 @@ export function DiscoverResults({
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {proposals.map((proposal, index) => (
-            <ProposalCard
-              key={`${proposal.destination}-${proposal.country}-${index}`}
-              proposal={proposal}
-              budget={budget}
-              travelerCount={travelerCount}
-              nights={nights}
-              departureCity={departureCity}
-              departureDate={dateRange.from}
-              href={buildCreaHref({
-                destination: `${proposal.destination}, ${proposal.country}`,
-                from: dateRange.from,
-                to: dateRange.to,
-                budget: proposal.costs.onSiteTotal,
-                participants,
-              })}
-            />
-          ))}
+          {proposals.map((proposal, index) => {
+            const proposalDates = resolveProposalDates(proposal, dateMode, dateRange);
+            return (
+              <ProposalCard
+                key={`${proposal.destination}-${proposal.country}-${index}`}
+                proposal={proposal}
+                budget={budget}
+                travelerCount={travelerCount}
+                nights={nights}
+                departureCity={departureCity}
+                departureDate={dateRange.from}
+                href={buildCreaHref({
+                  destination: `${proposal.destination}, ${proposal.country}`,
+                  from: proposalDates.from,
+                  to: proposalDates.to,
+                  budget: proposal.costs.onSiteTotal,
+                  participants,
+                })}
+              />
+            );
+          })}
         </div>
       )}
     </div>

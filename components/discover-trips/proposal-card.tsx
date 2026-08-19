@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, Bed, MapPin, Moon, Route, Wallet } from "lucide-react";
+import { ArrowRight, Bed, CalendarDays, MapPin, Moon, Route, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { TripProposal } from "@/lib/discover-trips-schema";
 import { roundProposalCosts, roundToNearestFifty } from "@/lib/round-proposal-costs";
 import { buildRealPriceSearchUrl } from "@/lib/real-price-search-link";
+import { formatSuggestedWindowLabel } from "@/lib/discover-trips-suggested-window-label";
 
 interface ProposalCardProps {
   proposal: TripProposal;
@@ -37,6 +38,7 @@ export function ProposalCard({
   departureDate,
 }: ProposalCardProps) {
   const costs = roundProposalCosts(proposal.costs);
+  const suggestedWindow = formatSuggestedWindowLabel(proposal);
   const remaining = budget - costs.total;
   const roundedRemaining = remaining > 0 ? roundToNearestFifty(remaining) : 0;
   const perPerson = travelerCount > 1 ? roundToNearestFifty(costs.total / travelerCount) : null;
@@ -60,6 +62,12 @@ export function ProposalCard({
               <Moon className="size-3.5" />
               {nights === 0 ? "in giornata" : `${nights} ${nights === 1 ? "notte" : "notti"}`}
             </span>
+            {suggestedWindow && (
+              <span className="flex items-center gap-1.5">
+                <CalendarDays className="size-3.5" />
+                Consigliato {suggestedWindow}
+              </span>
+            )}
           </p>
         </div>
 
