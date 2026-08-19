@@ -17,7 +17,7 @@
 - **Primary Commands:**
   - **Dev:** `npm run dev`
   - **Build:** `npm run build`
-  - **Test:** `npm test` (vitest, 156 tests across 19 test files)
+  - **Test:** `npm test` (vitest, 237 tests across 28 test files)
   - **Lint/Typecheck:** `npm run lint`
 - **Architecture & Conventions:**
   - **Stato:** Fase 1 in corso — scaffold Next.js + landing page informativa + form di input utente su route dedicata. Nessuna logica AI/meteo/calendario/mobile ancora implementata (fasi successive).
@@ -61,10 +61,19 @@
       utils.ts                 # cn() helper shadcn
       popular-destinations.ts  # lista statica mete gettonate + query di prefill (nessun fetch/API)
       crea-query-params.ts     # prefill di /crea via query string
-      discover-trips-request.ts  # schema richiesta
-      discover-trips-schema.ts   # schema risposta AI
+      discover-trips-request.ts  # schema richiesta (date esatte o periodo flessibile, non entrambi)
+      discover-trips-request-body.ts # form → corpo richiesta /api/discover-trips
+      discover-trips-schema.ts   # schema risposta AI (+ suggestedFrom/suggestedTo opzionali)
       discover-trips-prompt.ts   # prompt (funzione pura)
-      verify-proposal-budget.ts  # ricalcolo totali + filtro budget
+      discover-trips-flexible-period.ts # mesi selezionabili per il periodo flessibile
+      discover-trips-proposal-dates.ts  # date da passare a /crea per una proposta
+      discover-trips-suggested-window-label.ts # etichetta "10 - 17 ott" della finestra suggerita
+      discover-trips-recap.ts    # ricapitolazione testuale della ricerca sulla card
+      verify-proposal-budget.ts  # ricalcolo totali + filtro budget + soglia di plausibilità
+      verify-suggested-window.ts # scarta proposte con finestra fuori mese o durata sbagliata
+      strip-suggested-window.ts  # rimuove suggestedFrom/suggestedTo in modalità date esatte
+      round-proposal-costs.ts    # arrotondamento cifre mostrate (cinquina/cinquantina)
+      real-price-search-link.ts  # link "Verifica i prezzi reali" → ricerca Google generica
     ```
   - Landing page (`/`) separata dal form (`/crea`), aggiunta 2026-08-17: hero con bottone centrale "Crea il tuo itinerario", sezione mete più gettonate (solo testo/icone, niente foto — coerente con "niente backend extra" di Fase 1), sezione identità del sito, sezione "Come funziona" (numerata perché descrive una sequenza reale del processo). Palette e font invariati rispetto al resto dell'app. Animazioni con framer-motion (fade/stagger in hero, reveal on-scroll nelle sezioni), `useReducedMotion` rispettato ovunque.
   - Le card delle mete gettonate sono cliccabili (aggiunto 2026-08-18): portano a `/crea?destination=<nome, paese>`, `app/crea/page.tsx` legge i query param `destination`, `from`, `to`, `budget` e `p` (server component async, Next.js 15+/16 `searchParams` è una Promise) tramite `decodeCreaPrefill` (`lib/crea-query-params.ts`) e passa il risultato come prop `prefill` (`CreaPrefill`) a `<ItineraryForm>`, che lo usa per precompilare destinazione, date, budget e partecipanti.
@@ -83,7 +92,7 @@
   - Decisione (2026-08-11): l'autocompletamento della Destinazione (suggerimenti città mentre l'utente scrive) è rimandato alla Fase 2, da introdurre insieme al backend per la generazione AI — richiede una API route (es. proxy verso OpenStreetMap Nominatim) e quindi rompe la regola "niente backend" della Fase 1, meglio farlo in un colpo solo con l'altro backend.
   - Pattern "Date del viaggio" e "Chi viaggia": bottone compatto con icona + testo auto-esplicativo che apre un Popover (stile Booking.com), senza etichetta separata sopra (evita la ridondanza label+testo). "Chi viaggia" apre un Popover con le righe tipo+età per persona (età individuale mantenuta, non un contatore aggregato come Booking) e un bottone "Fatto" per chiudere. **Riconfermato il 2026-08-18**: questi due restano gli unici campi senza etichetta sopra, mentre Destinazione, Budget, Stile e "Cosa non vuoi perderti" ce l'hanno. L'asimmetria è consapevole, non una dimenticanza — non "correggerla" aggiungendo le etichette senza chiedere. Nota per chi rivaluterà la scelta: la motivazione originale (evitare la ridondanza etichetta+testo) di fatto non vale più, perché gli altri campi hanno già etichetta sopra e placeholder dentro; l'utente ha comunque scelto di tenere l'asimmetria.
   - Il design crema/smeraldo della prima versione è stato abbandonato il 2026-08-17 in favore del sistema descritto sopra: la landing è passata a Canvas bianco + Bosco + Sole. La pagina `/crea` eredita i nuovi token (card del form ora `shadow-none border-border`, niente più gradiente/ombra).
-  - Ricerca inversa (aggiunta 2026-08-18): `/scopri` chiede budget, viaggiatori, date e città di partenza — **mai la destinazione**, che è ciò che la funzionalità deve scoprire — e restituisce 5 proposte con stime AI di volo/alloggio/spese in loco. I totali sono ricalcolati e filtrati lato server (`verify-proposal-budget.ts`): il campo `total` restituito dal modello non è considerato attendibile. Ogni proposta rimanda a `/crea` precompilata. Le cifre sono stime dichiarate come tali nell'interfaccia, non prezzi prenotabili.
+  - Ricerca inversa (aggiunta 2026-08-18): `/scopri` chiede budget (slider fino a 20.000€), viaggiatori, date e città di partenza — **mai la destinazione**, che è ciò che la funzionalità deve scoprire — e restituisce 5 proposte con stime AI di trasporto/alloggio/spese in loco. Il costo di trasporto è mode-agnostic (`travelPerPerson`/`travelTotal`, etichetta "Viaggio A/R"): le proposte arrivano anche prezzate come treno o traghetto, non solo aereo, quindi non si assume un mezzo. I totali sono ricalcolati lato server (`verify-proposal-budget.ts`): il campo `total` restituito dal modello non è considerato attendibile. Oltre al tetto di budget, un filtro di plausibilità scarta le proposte sotto 25€ a persona a notte di alloggio+spese in loco, perché il modello reverse-ingegnerizza i prezzi per obbedire a qualsiasi budget — un controllo puramente aritmetico non farebbe mai scattare lo stato vuoto onesto. Le cifre mostrate sono arrotondate voce per voce (cinquina sotto i 100€, cinquantina sopra) e il totale della card deriva dalla somma delle voci già arrotondate, non da un arrotondamento proprio, così le righe tornano sempre col totale. Ogni card mostra anche notti, budget residuo ("Ti restano ~X€"), totale a persona (se i viaggiatori sono più di uno) e un link "Verifica i prezzi reali" a una ricerca Google generica (non un comparatore voli). Le proposte restano in `sessionStorage`, così scegliere una proposta e tornare indietro non le perde, e "Modifica la ricerca" le ripristina. La proposta scelta passa a `/crea` il suo `onSiteTotal` come budget, non il totale del viaggio. Date: modalità "esatte" (date range picker) o "flessibili" (un mese fra i 12 successivi + un numero di notti, `vacationType` incluso come testo libero fino a 100 caratteri, sei chip come scorciatoia); in modalità flessibile è il modello a scegliere la finestra migliore dentro il mese per ogni proposta (`suggestedFrom`/`suggestedTo` + motivazione in `whyItFits`, mostrata come "Consigliato 5 ott - 12 ott") — le date non sono mai calcolate localmente, perché sarebbe una finestra inventata invece che scelta dal modello; il server scarta le proposte la cui finestra esce dal mese richiesto o non dura il numero di notti richiesto, e in modalità esatte i campi `suggestedFrom`/`suggestedTo` vengono rimossi del tutto dalla risposta. Le cifre sono stime dichiarate come tali nell'interfaccia, non prezzi prenotabili.
 - **Required Environment Variables:**
   - `GEMINI_API_KEY` — Google Gemini API (generazione itinerario)
   - `GEMINI_API_KEY_BACKUP` — chiave Gemini di riserva opzionale, usata automaticamente solo quando la chiave primaria va in rate limit (429)
