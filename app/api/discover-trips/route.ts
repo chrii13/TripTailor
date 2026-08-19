@@ -12,6 +12,15 @@ import { getGeminiApiKeys } from "@/lib/gemini-api-keys";
 
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"];
 
+// Ceiling di Vercel Hobby (e ben sotto quello Pro): la funzione viene comunque
+// terminata dalla piattaforma a questo limite, qualunque valore dichiariamo qui.
+export const maxDuration = 60;
+
+// Deve stare sotto maxDuration, altrimenti la piattaforma uccide la funzione
+// prima che il nostro codice possa gestire l'errore. Lascia margine per il
+// parsing/validazione della risposta dopo la chiamata a Gemini.
+const GEMINI_CALL_TIMEOUT_MS = 50_000;
+
 export async function POST(request: Request) {
   const contentType = request.headers.get("content-type");
   if (!contentType || !contentType.includes("application/json")) {
@@ -68,7 +77,7 @@ export async function POST(request: Request) {
             maxOutputTokens: 20000,
             thinkingConfig: { thinkingBudget: 1024 },
             httpOptions: {
-              timeout: 120_000,
+              timeout: GEMINI_CALL_TIMEOUT_MS,
               retryOptions: { attempts: 2, httpStatusCodes: [408, 500, 502, 503, 504] },
             },
           },

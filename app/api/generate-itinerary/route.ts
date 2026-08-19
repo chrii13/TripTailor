@@ -10,6 +10,16 @@ import { getClimateAverages } from "@/lib/climate-forecast";
 import { getGeminiApiKeys } from "@/lib/gemini-api-keys";
 import { getCountryInfo } from "@/lib/country-info";
 
+// Ceiling di Vercel Hobby (e ben sotto quello Pro): la funzione viene comunque
+// terminata dalla piattaforma a questo limite, qualunque valore dichiariamo qui.
+export const maxDuration = 60;
+
+// Deve stare sotto maxDuration. Prima della chiamata a Gemini la route fa già
+// geocodifica (fino a 2.5s) ed eventualmente il meteo storico (fino a 8s), quindi
+// il margine per la chiamata AI è più stretto che nelle altre route: lasciamo
+// spazio anche per il parsing/validazione della risposta dopo la chiamata.
+const GEMINI_CALL_TIMEOUT_MS = 45_000;
+
 export async function POST(request: Request) {
   const contentType = request.headers.get("content-type");
   if (!contentType || !contentType.includes("application/json")) {
@@ -81,7 +91,7 @@ export async function POST(request: Request) {
             maxOutputTokens: 50000,
             thinkingConfig: { thinkingBudget: 1024 },
             httpOptions: {
-              timeout: 180_000,
+              timeout: GEMINI_CALL_TIMEOUT_MS,
               retryOptions: { attempts: 2, httpStatusCodes: [408, 500, 502, 503, 504] },
             },
           },

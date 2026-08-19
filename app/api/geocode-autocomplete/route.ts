@@ -5,6 +5,9 @@ const MAX_QUERY_LENGTH = 100;
 const FETCH_LIMIT = 20;
 const DISPLAY_LIMIT = 6;
 
+// La route abortisce già la propria fetch a 5s; questo è solo un tetto di sicurezza.
+export const maxDuration = 10;
+
 interface LocationIqResult {
   place_id: string;
   display_name: string;
