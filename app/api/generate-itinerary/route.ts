@@ -4,23 +4,43 @@ import { z } from "zod";
 import { generateItineraryRequestSchema } from "@/lib/generate-itinerary-request";
 import { itineraryResponseSchema } from "@/lib/itinerary-schema";
 import { buildItineraryPrompt } from "@/lib/itinerary-prompt";
-import { classifyGenerationError } from "@/lib/generate-itinerary-errors";
+import { classifyGenerationError, isTimeoutError } from "@/lib/generate-itinerary-errors";
 import { geocodeDestination } from "@/lib/geocode-destination";
 import { getClimateAverages } from "@/lib/climate-forecast";
 import { getGeminiApiKeys } from "@/lib/gemini-api-keys";
 import { getCountryInfo } from "@/lib/country-info";
+import { computeDeadline, getCallAttemptBudget } from "@/lib/gemini-call-budget";
 
 // Ceiling di Vercel Hobby (e ben sotto quello Pro): la funzione viene comunque
 // terminata dalla piattaforma a questo limite, qualunque valore dichiariamo qui.
 export const maxDuration = 60;
 
-// Deve stare sotto maxDuration. Prima della chiamata a Gemini la route fa già
-// geocodifica (fino a 2.5s) ed eventualmente il meteo storico (fino a 8s), quindi
-// il margine per la chiamata AI è più stretto che nelle altre route: lasciamo
-// spazio anche per il parsing/validazione della risposta dopo la chiamata.
-const GEMINI_CALL_TIMEOUT_MS = 45_000;
+// Quanto della finestra di maxDuration riserviamo al lavoro DOPO l'ultima chiamata
+// a Gemini: JSON.parse della risposta, validazione zod dello schema itinerario
+// (più grande di quello di /discover-trips) e serializzazione della risposta
+// (itinerario + meteo + info paese), più overhead generico della piattaforma.
+// Il tempo di geocodifica (fino a 2.5s) e meteo storico (fino a 8s) NON è in
+// questo margine: è già "prima" della deadline, quindi la consuma naturalmente
+// riducendo il tempo restante quando il ciclo su modelli/chiavi parte.
+const RESPONSE_HEADROOM_MS = 5_000;
+const USABLE_BUDGET_MS = maxDuration * 1_000 - RESPONSE_HEADROOM_MS;
+
+// Tetto massimo per un singolo tentativo: nella pratica ogni tentativo riceve il
+// minimo tra questo valore e il tempo davvero rimasto (vedi getCallAttemptBudget),
+// quindi la somma di tutti i tentativi non può mai superare il tempo rimasto
+// quando il ciclo di generazione inizia (USABLE_BUDGET_MS meno geocodifica/meteo).
+const PER_CALL_CAP_MS = 45_000;
+
+// Sotto questa soglia un nuovo tentativo non ha una possibilità realistica di
+// completare un giro di andata e ritorno (rete + generazione + risposta) prima
+// della scadenza: meglio rinunciare subito con il nostro messaggio in italiano
+// che iniziare una chiamata condannata a finire con un 504 grezzo.
+const MIN_CALL_TIMEOUT_MS = 10_000;
 
 export async function POST(request: Request) {
+  const startTime = Date.now();
+  const deadline = computeDeadline(startTime, USABLE_BUDGET_MS);
+
   const contentType = request.headers.get("content-type");
   if (!contentType || !contentType.includes("application/json")) {
     console.error(`Generazione itinerario: Content-Type non valido (${contentType ?? "assente"})`);
@@ -76,10 +96,21 @@ export async function POST(request: Request) {
   let finishReason: string | undefined;
   let firstCode: ReturnType<typeof classifyGenerationError> | undefined;
 
+  let budgetExhausted = false;
+
   modelLoop:
   for (let m = 0; m < GEMINI_MODELS.length; m++) {
     const model = GEMINI_MODELS[m];
     for (let i = 0; i < apiKeys.length; i++) {
+      const { callTimeoutMs } = getCallAttemptBudget(deadline, Date.now(), PER_CALL_CAP_MS, MIN_CALL_TIMEOUT_MS);
+      if (callTimeoutMs === null) {
+        console.error(
+          "Generazione itinerario: tempo insufficiente per un altro tentativo, rinuncio prima della scadenza"
+        );
+        budgetExhausted = true;
+        break modelLoop;
+      }
+
       const client = new GoogleGenAI({ apiKey: apiKeys[i] });
       try {
         const response = await client.models.generateContent({
@@ -91,8 +122,12 @@ export async function POST(request: Request) {
             maxOutputTokens: 50000,
             thinkingConfig: { thinkingBudget: 1024 },
             httpOptions: {
-              timeout: GEMINI_CALL_TIMEOUT_MS,
-              retryOptions: { attempts: 2, httpStatusCodes: [408, 500, 502, 503, 504] },
+              timeout: callTimeoutMs,
+              // Un solo tentativo per chiamata: il giro di retry è la nostra
+              // stessa iterazione su modelli/chiavi, che rispetta il budget di
+              // tempo residuo. Lasciare la libreria ritentare internamente
+              // moltiplicherebbe il timeout per il numero di retry.
+              retryOptions: { attempts: 1 },
             },
           },
         });
@@ -104,6 +139,17 @@ export async function POST(request: Request) {
         firstCode ??= code;
         const hasNextKey = i < apiKeys.length - 1;
         const hasNextModel = m < GEMINI_MODELS.length - 1;
+
+        // Un timeout non è un problema specifico del modello o della chiave: è il
+        // budget di tempo che sta per finire. Ritentare altrove spenderebbe il
+        // tempo residuo su un sintomo, non sulla causa, quindi non si passa né
+        // alla chiave né al modello successivo.
+        if (isTimeoutError(error)) {
+          console.error(
+            `Generazione itinerario: timeout sul modello ${model} (chiave #${i + 1}), rinuncio senza fallback`
+          );
+          break modelLoop;
+        }
 
         if (code === "rate_limit" && hasNextKey) {
           console.error(
@@ -125,6 +171,13 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: finalCode }, { status });
       }
     }
+  }
+
+  if (!responseText && (budgetExhausted || firstCode)) {
+    const finalCode = firstCode ?? "network";
+    console.error(`Generazione itinerario fallita (${finalCode}), tempo scaduto prima di un tentativo riuscito`);
+    const status = finalCode === "rate_limit" ? 429 : 502;
+    return NextResponse.json({ error: finalCode }, { status });
   }
 
   if (!responseText) {

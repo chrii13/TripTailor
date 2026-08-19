@@ -102,7 +102,7 @@ describe("buildDiscoverTripsPrompt", () => {
     expect(prompt).toContain("travelTotal");
     expect(prompt).toContain("lodgingTotal");
     expect(prompt).toContain("onSiteTotal");
-    expect(prompt).toContain("total");
+    expect(prompt).toContain("total:");
   });
 
   it("lega la stima del viaggio alla stagionalità e alla città di partenza", () => {

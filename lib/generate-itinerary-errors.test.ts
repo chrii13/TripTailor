@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ApiError } from "@google/genai";
-import { classifyGenerationError } from "./generate-itinerary-errors";
+import { classifyGenerationError, isTimeoutError } from "./generate-itinerary-errors";
 
 describe("classifyGenerationError", () => {
   it("classifica un errore di autenticazione (401) come 'config'", () => {
@@ -34,5 +34,30 @@ describe("classifyGenerationError", () => {
 
   it("classifica un errore generico non riconosciuto come 'network'", () => {
     expect(classifyGenerationError(new Error("qualcosa di inatteso"))).toBe("network");
+  });
+
+  it("classifica anche un timeout (AbortError) come 'network'", () => {
+    const error = new DOMException("This operation was aborted", "AbortError");
+    expect(classifyGenerationError(error)).toBe("network");
+  });
+});
+
+describe("isTimeoutError", () => {
+  it("riconosce un AbortError come timeout", () => {
+    const error = new DOMException("This operation was aborted", "AbortError");
+    expect(isTimeoutError(error)).toBe(true);
+  });
+
+  it("non considera un errore di rete generico come timeout", () => {
+    expect(isTimeoutError(new TypeError("fetch failed"))).toBe(false);
+  });
+
+  it("non considera un ApiError come timeout", () => {
+    const error = new ApiError({ message: "Server error", status: 500 });
+    expect(isTimeoutError(error)).toBe(false);
+  });
+
+  it("non considera un valore non Error come timeout", () => {
+    expect(isTimeoutError("boom")).toBe(false);
   });
 });
