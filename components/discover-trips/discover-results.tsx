@@ -43,7 +43,7 @@ export function DiscoverResults({
                 destination: `${proposal.destination}, ${proposal.country}`,
                 from: dateRange.from,
                 to: dateRange.to,
-                budget: proposal.costs.total,
+                budget: proposal.costs.onSiteTotal,
                 participants,
               })}
             />

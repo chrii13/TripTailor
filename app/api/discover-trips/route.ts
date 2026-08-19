@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import { differenceInCalendarDays } from "date-fns";
 import { z } from "zod";
 import { discoverTripsRequestSchema } from "@/lib/discover-trips-request";
 import { discoverTripsResponseSchema } from "@/lib/discover-trips-schema";
@@ -126,9 +127,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_response" }, { status: 502 });
   }
 
+  const nights = differenceInCalendarDays(
+    parsedRequest.data.dateRange.to,
+    parsedRequest.data.dateRange.from
+  );
   const proposals = verifyProposalsAgainstBudget(
     parsedResult.data.proposals,
-    parsedRequest.data.budget
+    parsedRequest.data.budget,
+    parsedRequest.data.participants.length,
+    nights
   );
 
   return NextResponse.json({ proposals });
