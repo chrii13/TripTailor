@@ -95,6 +95,27 @@ describe("buildDiscoverTripsPrompt", () => {
     expect(prompt).not.toContain("suggestedFrom");
     expect(prompt).not.toContain("suggestedTo");
   });
+
+  it("chiede tutti i campi della ripartizione dei costi", () => {
+    const prompt = buildDiscoverTripsPrompt(baseRequest);
+    expect(prompt).toContain("travelPerPerson");
+    expect(prompt).toContain("travelTotal");
+    expect(prompt).toContain("lodgingTotal");
+    expect(prompt).toContain("onSiteTotal");
+    expect(prompt).toContain("total:");
+  });
+
+  it("lega la stima del viaggio alla stagionalità e alla città di partenza", () => {
+    const prompt = buildDiscoverTripsPrompt(baseRequest);
+    expect(prompt).toContain("Tieni conto della stagionalità");
+    expect(prompt).toContain(`da ${baseRequest.departureCity}`);
+  });
+
+  it("chiede che le proposte siano diverse tra loro, non varianti della stessa idea", () => {
+    const prompt = buildDiscoverTripsPrompt(baseRequest);
+    expect(prompt).toContain("devono essere diverse tra loro");
+    expect(prompt).toContain("non varianti della stessa idea");
+  });
 });
 
 describe("buildDiscoverTripsPrompt con periodo flessibile", () => {

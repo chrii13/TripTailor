@@ -7,12 +7,39 @@ import { buildDiscoverTripsPrompt } from "@/lib/discover-trips-prompt";
 import { verifyProposalsAgainstBudget } from "@/lib/verify-proposal-budget";
 import { verifyProposalsAgainstSuggestedWindow } from "@/lib/verify-suggested-window";
 import { stripSuggestedWindowIfExact } from "@/lib/strip-suggested-window";
-import { classifyGenerationError } from "@/lib/generate-itinerary-errors";
+import { classifyGenerationError, isTimeoutError } from "@/lib/generate-itinerary-errors";
 import { getGeminiApiKeys } from "@/lib/gemini-api-keys";
+import { computeDeadline, getCallAttemptBudget } from "@/lib/gemini-call-budget";
 
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"];
 
+// Ceiling di Vercel Hobby (e ben sotto quello Pro): la funzione viene comunque
+// terminata dalla piattaforma a questo limite, qualunque valore dichiariamo qui.
+export const maxDuration = 60;
+
+// Quanto della finestra di maxDuration riserviamo al lavoro DOPO l'ultima chiamata
+// a Gemini: JSON.parse della risposta, validazione zod, verifica budget/finestra
+// suggerita, serializzazione della risposta e overhead generico della piattaforma.
+// Tutto questo lavoro è in memoria e dura tipicamente pochi millisecondi: 5s è un
+// margine ampio, non una stima stretta.
+const RESPONSE_HEADROOM_MS = 5_000;
+const USABLE_BUDGET_MS = maxDuration * 1_000 - RESPONSE_HEADROOM_MS;
+
+// Tetto massimo per un singolo tentativo: nella pratica ogni tentativo riceve il
+// minimo tra questo valore e il tempo davvero rimasto (vedi getCallAttemptBudget),
+// quindi la somma di tutti i tentativi non può mai superare USABLE_BUDGET_MS.
+const PER_CALL_CAP_MS = 50_000;
+
+// Sotto questa soglia un nuovo tentativo non ha una possibilità realistica di
+// completare un giro di andata e ritorno (rete + generazione + risposta) prima
+// della scadenza: meglio rinunciare subito con il nostro messaggio in italiano
+// che iniziare una chiamata condannata a finire con un 504 grezzo.
+const MIN_CALL_TIMEOUT_MS = 10_000;
+
 export async function POST(request: Request) {
+  const startTime = Date.now();
+  const deadline = computeDeadline(startTime, USABLE_BUDGET_MS);
+
   const contentType = request.headers.get("content-type");
   if (!contentType || !contentType.includes("application/json")) {
     console.error(`Ricerca inversa: Content-Type non valido (${contentType ?? "assente"})`);
@@ -53,10 +80,19 @@ export async function POST(request: Request) {
   let finishReason: string | undefined;
   let firstCode: ReturnType<typeof classifyGenerationError> | undefined;
 
+  let budgetExhausted = false;
+
   modelLoop:
   for (let m = 0; m < GEMINI_MODELS.length; m++) {
     const model = GEMINI_MODELS[m];
     for (let i = 0; i < apiKeys.length; i++) {
+      const { callTimeoutMs } = getCallAttemptBudget(deadline, Date.now(), PER_CALL_CAP_MS, MIN_CALL_TIMEOUT_MS);
+      if (callTimeoutMs === null) {
+        console.error("Ricerca inversa: tempo insufficiente per un altro tentativo, rinuncio prima della scadenza");
+        budgetExhausted = true;
+        break modelLoop;
+      }
+
       const client = new GoogleGenAI({ apiKey: apiKeys[i] });
       try {
         const response = await client.models.generateContent({
@@ -68,8 +104,12 @@ export async function POST(request: Request) {
             maxOutputTokens: 20000,
             thinkingConfig: { thinkingBudget: 1024 },
             httpOptions: {
-              timeout: 120_000,
-              retryOptions: { attempts: 2, httpStatusCodes: [408, 500, 502, 503, 504] },
+              timeout: callTimeoutMs,
+              // Un solo tentativo per chiamata: il giro di retry è la nostra
+              // stessa iterazione su modelli/chiavi, che rispetta il budget di
+              // tempo residuo. Lasciare la libreria ritentare internamente
+              // moltiplicherebbe il timeout per il numero di retry.
+              retryOptions: { attempts: 1 },
             },
           },
         });
@@ -81,6 +121,17 @@ export async function POST(request: Request) {
         firstCode ??= code;
         const hasNextKey = i < apiKeys.length - 1;
         const hasNextModel = m < GEMINI_MODELS.length - 1;
+
+        // Un timeout non è un problema specifico del modello o della chiave: è il
+        // budget di tempo che sta per finire. Ritentare altrove spenderebbe il
+        // tempo residuo su un sintomo, non sulla causa, quindi non si passa né
+        // alla chiave né al modello successivo.
+        if (isTimeoutError(error)) {
+          console.error(
+            `Ricerca inversa: timeout sul modello ${model} (chiave #${i + 1}), rinuncio senza fallback`
+          );
+          break modelLoop;
+        }
 
         if (code === "rate_limit" && hasNextKey) {
           console.error(
@@ -102,6 +153,13 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: finalCode }, { status });
       }
     }
+  }
+
+  if (!responseText && (budgetExhausted || firstCode)) {
+    const finalCode = firstCode ?? "network";
+    console.error(`Ricerca inversa fallita (${finalCode}), tempo scaduto prima di un tentativo riuscito`);
+    const status = finalCode === "rate_limit" ? 429 : 502;
+    return NextResponse.json({ error: finalCode }, { status });
   }
 
   if (!responseText) {
