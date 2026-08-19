@@ -70,4 +70,15 @@ describe("buildDiscoverTripsPrompt", () => {
     const prompt = buildDiscoverTripsPrompt(baseRequest);
     expect(prompt).not.toContain("giorno per giorno");
   });
+
+  it("chiede il mezzo più sensato, non solo l'aereo", () => {
+    const prompt = buildDiscoverTripsPrompt(baseRequest);
+    expect(prompt).toContain("treno");
+    expect(prompt).toContain("traghetto");
+  });
+
+  it("chiede coerenza tra il mezzo fatturato e whyItFits", () => {
+    const prompt = buildDiscoverTripsPrompt(baseRequest);
+    expect(prompt).toContain("coerente con quanto scritto in whyItFits");
+  });
 });

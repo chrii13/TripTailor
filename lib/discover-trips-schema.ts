@@ -3,8 +3,8 @@ import { z } from "zod";
 const euros = z.number().int().min(0);
 
 export const proposalCostsSchema = z.object({
-  flightsPerPerson: euros,
-  flightsTotal: euros,
+  travelPerPerson: euros,
+  travelTotal: euros,
   lodgingTotal: euros,
   onSiteTotal: euros,
   total: euros,

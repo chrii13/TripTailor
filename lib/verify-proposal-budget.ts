@@ -5,8 +5,8 @@ import type { TripProposal } from "./discover-trips-schema";
 const MIN_PER_PERSON_PER_NIGHT = 25;
 
 export function computeProposalTotal(proposal: TripProposal): number {
-  const { flightsTotal, lodgingTotal, onSiteTotal } = proposal.costs;
-  return flightsTotal + lodgingTotal + onSiteTotal;
+  const { travelTotal, lodgingTotal, onSiteTotal } = proposal.costs;
+  return travelTotal + lodgingTotal + onSiteTotal;
 }
 
 export function verifyProposalsAgainstBudget(

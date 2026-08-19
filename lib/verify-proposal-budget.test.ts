@@ -2,18 +2,18 @@ import { describe, it, expect } from "vitest";
 import { computeProposalTotal, verifyProposalsAgainstBudget } from "./verify-proposal-budget";
 import type { TripProposal } from "./discover-trips-schema";
 
-function proposal(destination: string, flights: number, lodging: number, onSite: number, declaredTotal?: number): TripProposal {
+function proposal(destination: string, travel: number, lodging: number, onSite: number, declaredTotal?: number): TripProposal {
   return {
     destination,
     country: "Paese",
     whyItFits: "Motivo",
     highlights: ["a", "b", "c"],
     costs: {
-      flightsPerPerson: Math.round(flights / 2),
-      flightsTotal: flights,
+      travelPerPerson: Math.round(travel / 2),
+      travelTotal: travel,
       lodgingTotal: lodging,
       onSiteTotal: onSite,
-      total: declaredTotal ?? flights + lodging + onSite,
+      total: declaredTotal ?? travel + lodging + onSite,
     },
   };
 }

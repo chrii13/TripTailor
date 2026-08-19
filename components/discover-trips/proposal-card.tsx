@@ -47,9 +47,9 @@ export function ProposalCard({ proposal, href }: ProposalCardProps) {
           <div className="flex items-center justify-between gap-2">
             <dt className="flex items-center gap-2 text-muted-foreground">
               <Plane className="size-4" />
-              Volo ({euro.format(costs.flightsPerPerson)} a persona)
+              Viaggio A/R ({euro.format(costs.travelPerPerson)} a persona)
             </dt>
-            <dd className="font-medium text-primary">{euro.format(costs.flightsTotal)}</dd>
+            <dd className="font-medium text-primary">{euro.format(costs.travelTotal)}</dd>
           </div>
           <div className="flex items-center justify-between gap-2">
             <dt className="flex items-center gap-2 text-muted-foreground">

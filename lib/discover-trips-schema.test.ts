@@ -7,8 +7,8 @@ const validProposal = {
   whyItFits: "Voli brevi e costo della vita contenuto per il periodo scelto.",
   highlights: ["Quartiere dell'Alfama", "Pastéis de Belém", "Gita a Sintra"],
   costs: {
-    flightsPerPerson: 120,
-    flightsTotal: 240,
+    travelPerPerson: 120,
+    travelTotal: 240,
     lodgingTotal: 400,
     onSiteTotal: 300,
     total: 940,
