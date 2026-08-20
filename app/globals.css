@@ -200,5 +200,32 @@
     width: min(calc(100vw - 2rem), 24rem) !important;
     max-height: min(80dvh, 600px) !important;
     overflow-y: auto !important;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Sfondo attenuato dietro al pannello centrato: senza, i contenuti della
+     pagina restano visibili intorno al pannello e sembra un layout rotto
+     invece che un overlay deliberato. `::before` sul wrapper (non su
+     [data-calendar-popover]) perché deve coprire l'intero viewport, non solo
+     il riquadro del pannello; per farlo si sfrutta il fatto che il wrapper è
+     centrato via `transform`, quindi un pseudo-elemento enorme (`200vmax`)
+     centrato allo stesso modo nello spazio locale del wrapper finisce, dopo
+     la trasformazione condivisa, centrato sul viewport a sua volta — a
+     prescindere dalle dimensioni reali del wrapper, che sono dinamiche. Lo
+     z-index sul pannello (sopra) lo mantiene sempre sopra lo sfondo, così lo
+     sfondo non intercetta i click sul pannello; chiudere il popover smonta
+     l'intero wrapper (pannello + pseudo-elemento) e quindi rimuove anche lo
+     sfondo. */
+  [data-radix-popper-content-wrapper]:has([data-calendar-popover])::before {
+    content: "";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 200vmax;
+    height: 200vmax;
+    transform: translate(-50%, -50%);
+    background: color-mix(in srgb, var(--foreground) 45%, transparent);
+    z-index: 0;
   }
 }
