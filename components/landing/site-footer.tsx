@@ -17,7 +17,7 @@ const FONTI = [
 
 function ColonnaTitolo({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="mb-3 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+    <h3 className="mb-3 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
       {children}
     </h3>
   );

@@ -79,7 +79,7 @@ function TripPanel({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-xl bg-primary px-5 py-4 text-primary-foreground sm:px-6 sm:py-5">
       <span className="block h-[3px] w-7 bg-voltage" />
-      <p className="mt-3 text-[10px] font-semibold tracking-[0.18em] text-primary-foreground/60 uppercase">
+      <p className="mt-3 text-xs font-semibold tracking-[0.18em] text-primary-foreground/60 uppercase">
         Il tuo viaggio
       </p>
       <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">{children}</dl>
@@ -90,7 +90,7 @@ function TripPanel({ children }: { children: React.ReactNode }) {
 function TripStat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[10px] font-medium tracking-[0.14em] text-primary-foreground/60 uppercase">
+      <dt className="text-xs font-medium tracking-[0.14em] text-primary-foreground/60 uppercase">
         {label}
       </dt>
       <dd className="mt-1.5 text-[17px] leading-snug font-medium tabular-nums">
@@ -119,7 +119,7 @@ function CountryPanel({
           {code}
         </span>
         <div>
-          <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             Paese di destinazione
           </p>
           <p className="font-display text-base leading-tight font-[725] tracking-[-0.005em] text-primary uppercase">
@@ -145,7 +145,7 @@ function CountryStat({
 }) {
   return (
     <div className="px-5 py-3.5 sm:px-6">
-      <dt className="flex items-center gap-1.5 text-[10px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
+      <dt className="flex items-center gap-1.5 text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
         <Icon className="size-3 shrink-0" />
         {label}
       </dt>
@@ -280,7 +280,7 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                         />
                       </span>
                     </span>
-                    <span className="ml-auto text-[11px] text-muted-foreground">
+                    <span className="ml-auto text-xs text-muted-foreground">
                       media degli ultimi 5 anni
                     </span>
                   </div>
@@ -382,7 +382,7 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
 
               <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border">
                 <div className="bg-card px-4 py-3">
-                  <dt className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                  <dt className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
                     Orario
                   </dt>
                   <dd className="mt-1 font-display text-lg font-[725] tabular-nums text-primary">
@@ -390,7 +390,7 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                   </dd>
                 </div>
                 <div className="bg-card px-4 py-3">
-                  <dt className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                  <dt className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
                     Costo
                   </dt>
                   <dd className="mt-1 font-display text-lg font-[725] text-primary">
@@ -399,7 +399,7 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                 </div>
                 {selectedActivity.openingHours && (
                   <div className="col-span-2 bg-card px-4 py-3">
-                    <dt className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                    <dt className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
                       Apertura
                     </dt>
                     <dd className="mt-1 text-sm font-medium text-primary">
@@ -411,19 +411,19 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
 
               <div className="space-y-4 text-sm">
                 <div>
-                  <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                  <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                     Cosa è
                   </p>
                   <p className="mt-1.5">{selectedActivity.details.about}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                  <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                     Come arrivarci
                   </p>
                   <p className="mt-1.5">{selectedActivity.details.gettingThere}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                  <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                     Consigli
                   </p>
                   <p className="mt-1.5">{selectedActivity.details.tips}</p>

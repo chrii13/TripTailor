@@ -192,7 +192,7 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           <div className={cn("space-y-8", mode === "loading" && "pointer-events-none opacity-60")}>
             <div role="group" aria-labelledby="gruppo-viaggio" className="space-y-5">
-              <p id="gruppo-viaggio" className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+              <p id="gruppo-viaggio" className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
                 Il viaggio
               </p>
               <DestinationAutocomplete
@@ -323,7 +323,7 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
             </div>
 
             <div role="group" aria-labelledby="gruppo-preferenze" className="space-y-5 border-t border-border pt-6">
-              <p id="gruppo-preferenze" className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+              <p id="gruppo-preferenze" className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
                 Le preferenze
               </p>
             <div className="space-y-2">
