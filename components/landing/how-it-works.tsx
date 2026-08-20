@@ -40,7 +40,7 @@ export function HowItWorks() {
   return (
     <section
       id="come-funziona"
-      className="scroll-mt-20 bg-secondary px-6 py-16 sm:px-8 sm:py-24"
+      className="scroll-mt-20 bg-secondary px-4 py-16 sm:px-8 sm:py-24"
     >
       <div className="mx-auto max-w-5xl">
         <motion.div
@@ -58,7 +58,7 @@ export function HowItWorks() {
             meta ce l&apos;hai già in mente: se non ce l&apos;hai, si parte dal budget.
           </p>
         </motion.div>
-        <ol className="relative max-w-2xl border-l border-border pl-8">
+        <ol className="relative ml-2 max-w-2xl border-l border-border pl-8 sm:ml-0">
           {STEPS.map((step, i) => (
             <motion.li
               key={step.n}
