@@ -178,6 +178,25 @@
   -webkit-box-decoration-break: clone;
 }
 
+/* Campi ora (Arrivo/Partenza dentro il pannello del calendario): su iOS
+   `input[type="time"]` è un controllo nativo con una larghezza intrinseca
+   propria, che non si restringe per stare nel contenitore — nel pannello del
+   calendario (326px su un telefono da 375) sfonda il bordo destro. Su Chrome
+   desktop il problema non si presenta, quindi non è riproducibile qui: la
+   segnalazione arriva da uno screenshot su iPhone.
+
+   `appearance: none` toglie il dimensionamento nativo e fa valere la casella
+   CSS come per gli altri campi (il selettore a rotella di iOS continua ad
+   aprirsi al tocco, cambia solo la resa del campo chiuso). `max-width` è la
+   cintura di sicurezza: anche se un browser ignorasse quanto sopra, non può
+   comunque superare il contenitore. */
+input[type="time"] {
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 0;
+  max-width: 100%;
+}
+
 /* Popover del calendario (date del viaggio) su schermi stretti: ancorarlo al
    trigger dipende dal calcolo dello spazio disponibile che Radix fa alla
    propria apertura, calcolo che su viewport corte (es. iPhone SE) può
