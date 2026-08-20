@@ -201,31 +201,31 @@
     max-height: min(80dvh, 600px) !important;
     overflow-y: auto !important;
     position: relative;
-    z-index: 1;
+    /* sopra lo sfondo attenuato (z-index 40 su body::before) */
+    z-index: 41;
   }
 
   /* Sfondo attenuato dietro al pannello centrato: senza, i contenuti della
      pagina restano visibili intorno al pannello e sembra un layout rotto
-     invece che un overlay deliberato. `::before` sul wrapper (non su
-     [data-calendar-popover]) perché deve coprire l'intero viewport, non solo
-     il riquadro del pannello; per farlo si sfrutta il fatto che il wrapper è
-     centrato via `transform`, quindi un pseudo-elemento enorme (`200vmax`)
-     centrato allo stesso modo nello spazio locale del wrapper finisce, dopo
-     la trasformazione condivisa, centrato sul viewport a sua volta — a
-     prescindere dalle dimensioni reali del wrapper, che sono dinamiche. Lo
-     z-index sul pannello (sopra) lo mantiene sempre sopra lo sfondo, così lo
-     sfondo non intercetta i click sul pannello; chiudere il popover smonta
-     l'intero wrapper (pannello + pseudo-elemento) e quindi rimuove anche lo
-     sfondo. */
-  [data-radix-popper-content-wrapper]:has([data-calendar-popover])::before {
+     invece che un overlay deliberato.
+
+     Sta su `body` e NON sul wrapper del popper: il wrapper è centrato con una
+     `transform`, e un elemento trasformato diventa il blocco contenitore dei
+     propri discendenti `position: fixed`. Uno sfondo dentro il wrapper si
+     ancora quindi al wrapper invece che al viewport, e copre solo una parte
+     dello schermo — misurato: angoli in basso coperti, angoli in alto no.
+     `body` non è trasformato, quindi qui `fixed` si comporta come atteso.
+
+     Effetto collaterale utile: non essendo dentro il popover, un tocco sullo
+     sfondo è un click "fuori" e Radix chiude il pannello, che è ciò che ci si
+     aspetta da un riquadro centrato. Il pannello resta sopra grazie allo
+     z-index, e chiudendo il popover il selettore `:has()` smette di applicarsi
+     e lo sfondo sparisce da solo. */
+  body:has([data-calendar-popover])::before {
     content: "";
     position: fixed;
-    top: 50%;
-    left: 50%;
-    width: 200vmax;
-    height: 200vmax;
-    transform: translate(-50%, -50%);
+    inset: 0;
     background: color-mix(in srgb, var(--foreground) 45%, transparent);
-    z-index: 0;
+    z-index: 40;
   }
 }
