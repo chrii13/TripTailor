@@ -15,6 +15,7 @@ import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/compone
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { tripFormSchema, type TripFormValues } from "@/lib/schema";
 import type { CreaPrefill } from "@/lib/crea-query-params";
 import type { ErrorCode } from "@/lib/generate-itinerary-errors";
@@ -77,6 +78,7 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
   const [apiError, setApiError] = useState<string | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [participantsPopoverOpen, setParticipantsPopoverOpen] = useState(false);
+  const isDesktop = useMediaQuery("(min-width: 640px)");
 
   const initialValues: TripFormValues = {
     ...defaultValues,
@@ -222,7 +224,11 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
                       : "Seleziona le date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent
+                  className="w-auto p-0"
+                  align="start"
+                  data-calendar-popover=""
+                >
                   <Calendar
                     mode="range"
                     selected={dateRange as DateRange | undefined}
@@ -233,7 +239,7 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
                         { shouldValidate: true }
                       );
                     }}
-                    numberOfMonths={2}
+                    numberOfMonths={isDesktop ? 2 : 1}
                   />
                   <div className="grid grid-cols-2 gap-3 border-t p-3">
                     <div className="space-y-1">

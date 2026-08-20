@@ -177,3 +177,28 @@
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
+
+/* Popover del calendario (date del viaggio) su schermi stretti: ancorarlo al
+   trigger dipende dal calcolo dello spazio disponibile che Radix fa alla
+   propria apertura, calcolo che su viewport corte (es. iPhone SE) può
+   sbagliare e far uscire il pannello dallo schermo (vedi commit successivo a
+   c761189). Sotto `sm` lo si sgancia dal trigger e lo si centra rispetto al
+   viewport reale (`dvh`), cosa che non può mai traboccare per costruzione,
+   indipendentemente da quanto Radix creda di avere sotto o sopra il trigger.
+   `!important` perché sovrascrive lo style inline (non-important) che Radix
+   applica al wrapper del popper; `:has()` lo scopre solo per il calendario
+   (non il popover "Chi viaggia", che resta ancorato al trigger). */
+@media (max-width: 639.98px) {
+  [data-radix-popper-content-wrapper]:has([data-calendar-popover]) {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+  }
+
+  [data-calendar-popover] {
+    width: min(calc(100vw - 2rem), 24rem) !important;
+    max-height: min(80dvh, 600px) !important;
+    overflow-y: auto !important;
+  }
+}
