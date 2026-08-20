@@ -58,7 +58,7 @@ export function HowItWorks() {
             meta ce l&apos;hai già in mente: se non ce l&apos;hai, si parte dal budget.
           </p>
         </motion.div>
-        <ol className="relative max-w-2xl border-l border-border pl-8">
+        <ol className="relative ml-2 max-w-2xl border-l border-border pl-8 sm:ml-0">
           {STEPS.map((step, i) => (
             <motion.li
               key={step.n}
