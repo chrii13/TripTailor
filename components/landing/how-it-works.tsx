@@ -40,11 +40,11 @@ export function HowItWorks() {
   return (
     <section
       id="come-funziona"
-      className="scroll-mt-20 bg-secondary px-4 py-16 sm:px-8 sm:py-24"
+      className="scroll-mt-20 bg-secondary px-4 py-24 sm:px-8 sm:py-36"
     >
       <div className="mx-auto max-w-5xl">
         <motion.div
-          className="mb-10"
+          className="mb-12"
           initial={reduceMotion ? undefined : { opacity: 0, y: 12 }}
           whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.6 }}
@@ -62,7 +62,7 @@ export function HowItWorks() {
           {STEPS.map((step, i) => (
             <motion.li
               key={step.n}
-              className="relative pb-10 last:pb-0"
+              className="relative pb-12 last:pb-0"
               initial={reduceMotion ? undefined : "hidden"}
               whileInView={reduceMotion ? undefined : "visible"}
               viewport={{ once: true, amount: 0.5 }}

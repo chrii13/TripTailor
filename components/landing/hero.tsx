@@ -23,7 +23,7 @@ export function Hero() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <section className="px-4 pt-12 pb-16 sm:px-8 sm:pt-16 sm:pb-24">
+    <section className="px-4 pt-14 pb-20 sm:px-8 sm:pt-20 sm:pb-32">
       <motion.div
         className="mx-auto grid max-w-5xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16"
         variants={reduceMotion ? undefined : container}

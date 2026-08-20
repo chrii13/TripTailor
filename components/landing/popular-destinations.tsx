@@ -45,10 +45,10 @@ export function PopularDestinations() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <section id="destinazioni" className="scroll-mt-20 px-4 py-16 sm:px-8 sm:py-24">
+    <section id="destinazioni" className="scroll-mt-20 px-4 py-24 sm:px-8 sm:py-36">
       <div className="mx-auto max-w-5xl">
         <motion.div
-          className="mb-10"
+          className="mb-12"
           initial={reduceMotion ? undefined : { opacity: 0, y: 12 }}
           whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.6 }}

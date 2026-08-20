@@ -10,7 +10,7 @@ export function FinalCta() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <section className="bg-primary px-4 py-20 text-primary-foreground sm:px-8 sm:py-28">
+    <section className="bg-primary px-4 py-28 text-primary-foreground sm:px-8 sm:py-40">
       <motion.div
         className="mx-auto flex max-w-5xl flex-col items-start gap-6"
         initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
