@@ -12,7 +12,10 @@ export function ReverseSearch() {
   const chips = [...REVERSE_SEARCH_DESTINATIONS, ...REVERSE_SEARCH_DESTINATIONS];
 
   return (
-    <section id="scopri" className="scroll-mt-20 bg-accent px-4 py-16 sm:px-8 sm:py-24">
+    <section
+      id="scopri"
+      className="scroll-mt-20 border-t border-border bg-accent px-4 py-32 sm:px-8 sm:py-44"
+    >
       <motion.div
         className="mx-auto max-w-5xl"
         initial={reduceMotion ? undefined : { opacity: 0, y: 12 }}
@@ -68,3 +71,4 @@ export function ReverseSearch() {
     </section>
   );
 }
+
