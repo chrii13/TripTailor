@@ -241,18 +241,18 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
                     }}
                     numberOfMonths={isDesktop ? 2 : 1}
                   />
-                  <div className="grid grid-cols-2 gap-3 border-t p-3">
-                    <div className="space-y-1">
+                  <div className="grid grid-cols-1 gap-3 border-t p-3 sm:grid-cols-2">
+                    <div className="min-w-0 space-y-1">
                       <Label htmlFor="arrival-time" className="text-xs text-muted-foreground">
                         Arrivo (opzionale)
                       </Label>
-                      <Input id="arrival-time" type="time" {...register("arrivalTime")} />
+                      <Input id="arrival-time" type="time" className="w-full" {...register("arrivalTime")} />
                     </div>
-                    <div className="space-y-1">
+                    <div className="min-w-0 space-y-1">
                       <Label htmlFor="departure-time" className="text-xs text-muted-foreground">
                         Partenza (opzionale)
                       </Label>
-                      <Input id="departure-time" type="time" {...register("departureTime")} />
+                      <Input id="departure-time" type="time" className="w-full" {...register("departureTime")} />
                     </div>
                   </div>
                 </PopoverContent>
