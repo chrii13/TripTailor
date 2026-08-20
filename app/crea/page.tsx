@@ -25,7 +25,7 @@ export default async function Crea({ searchParams }: CreaPageProps) {
           </Link>
           <Link
             href="/"
-            className="group inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-primary transition-colors hover:border-primary hover:bg-accent"
+            className="group inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-3 text-sm font-medium text-primary sm:py-2 transition-colors hover:border-primary hover:bg-accent"
           >
             <ArrowLeft className="size-4 motion-safe:transition-transform motion-safe:group-hover:-translate-x-0.5" />
             Home
