@@ -358,8 +358,9 @@ export function DiscoverForm() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
-                      className="max-h-[min(var(--radix-popper-available-height,600px),600px)] w-auto overflow-y-auto p-0"
+                      className="w-auto p-0"
                       align="start"
+                      data-calendar-popover=""
                     >
                       <Calendar
                         mode="range"
