@@ -69,7 +69,7 @@ export function HowItWorks() {
               variants={reduceMotion ? undefined : item}
               transition={{ delay: i * 0.1 }}
             >
-              <span className="absolute -left-[37px] top-1.5 size-3 rounded-full border-2 border-secondary bg-voltage" />
+              <span className="absolute -left-6 top-1.5 size-3 rounded-full border-2 border-secondary bg-voltage sm:-left-[37px]" />
               <span className="font-display text-sm font-[725] text-primary">
                 {step.n}
               </span>
