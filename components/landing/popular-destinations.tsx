@@ -45,7 +45,7 @@ export function PopularDestinations() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <section id="destinazioni" className="scroll-mt-20 px-4 py-24 sm:px-8 sm:py-36">
+    <section id="destinazioni" className="scroll-mt-20 px-4 py-16 sm:px-8 sm:py-24">
       <div className="mx-auto max-w-5xl">
         <motion.div
           className="mb-12"

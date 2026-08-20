@@ -14,7 +14,7 @@ export function ReverseSearch() {
   return (
     <section
       id="scopri"
-      className="scroll-mt-20 border-t border-border bg-accent px-4 py-32 sm:px-8 sm:py-44"
+      className="scroll-mt-20 border-t border-border bg-accent px-4 py-16 sm:px-8 sm:py-24"
     >
       <motion.div
         className="mx-auto max-w-5xl"
@@ -24,19 +24,19 @@ export function ReverseSearch() {
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
         <span aria-hidden className="block h-[3px] w-7 rounded-full bg-voltage" />
-        <span className="mt-3 block text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+        <span className="mt-4 block text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
           E se non sai dove andare
         </span>
-        <h2 className="mt-3 font-display text-3xl font-[725] tracking-[-0.01em] text-primary uppercase sm:text-5xl">
+        <h2 className="mt-4 font-display text-4xl font-[725] tracking-[-0.01em] text-primary uppercase sm:text-6xl">
           Parti dal <span className="emphasis-mark-display">budget</span>, non dalla meta.
         </h2>
-        <p className="mt-4 max-w-xl text-balance text-foreground">
+        <p className="mt-5 max-w-xl text-balance text-foreground">
           Dicci quanto puoi spendere, quando vorresti partire e con chi. Ti mostriamo 5 possibili
           proposte di viaggio, ognuna con quanto costa arrivarci, dormirci e viverci. Scegli, e
           all&apos;itinerario ci pensiamo noi.
         </p>
 
-        <div aria-hidden className="scopri-marquee relative mt-8 overflow-hidden">
+        <div aria-hidden className="scopri-marquee relative mt-10 overflow-hidden">
           <div className="scopri-marquee-track flex w-max items-center gap-3">
             {chips.map((dest, i) => (
               <span
@@ -59,7 +59,7 @@ export function ReverseSearch() {
           asChild
           variant="outline"
           size="lg"
-          className="mt-8 gap-2 border-primary px-8 shadow-none has-[>svg]:px-8"
+          className="mt-10 gap-2 border-primary px-8 shadow-none has-[>svg]:px-8"
         >
           <Link href="/scopri">
             <Compass className="size-4" />

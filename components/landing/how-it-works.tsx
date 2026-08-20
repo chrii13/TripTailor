@@ -40,7 +40,7 @@ export function HowItWorks() {
   return (
     <section
       id="come-funziona"
-      className="scroll-mt-20 bg-secondary px-4 py-24 sm:px-8 sm:py-36"
+      className="scroll-mt-20 bg-secondary px-4 py-16 sm:px-8 sm:py-24"
     >
       <div className="mx-auto max-w-5xl">
         <motion.div

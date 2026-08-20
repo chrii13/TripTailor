@@ -10,15 +10,15 @@ export function FinalCta() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <section className="bg-primary px-4 py-28 text-primary-foreground sm:px-8 sm:py-40">
+    <section className="bg-primary px-4 py-14 text-primary-foreground sm:px-8 sm:py-20">
       <motion.div
-        className="mx-auto flex max-w-5xl flex-col items-start gap-6"
+        className="mx-auto flex max-w-5xl flex-col items-start gap-12"
         initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
         whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.6 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
-        <h2 className="font-display text-4xl leading-[0.9] font-[725] tracking-[-0.015em] text-balance uppercase sm:text-6xl">
+        <h2 className="font-display text-6xl leading-[0.9] font-[725] tracking-[-0.015em] text-balance uppercase sm:text-8xl">
           Pronto a partire?
         </h2>
         <p className="text-primary-foreground/75 sm:text-lg">
