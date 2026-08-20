@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { participantSchema, MAX_TRIP_DAYS } from "@/lib/schema";
 import {
   VACATION_TYPES,
@@ -188,6 +189,7 @@ export function DiscoverForm() {
   const [submitted, setSubmitted] = useState<DiscoverFormValues | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const isDesktop = useMediaQuery("(min-width: 640px)");
 
   const {
     handleSubmit,
@@ -355,7 +357,10 @@ export function DiscoverForm() {
                           : "Seleziona date"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent
+                      className="max-h-[min(var(--radix-popper-available-height,600px),600px)] w-auto overflow-y-auto p-0"
+                      align="start"
+                    >
                       <Calendar
                         mode="range"
                         selected={dateRange as DateRange | undefined}
@@ -366,7 +371,7 @@ export function DiscoverForm() {
                             { shouldValidate: true }
                           );
                         }}
-                        numberOfMonths={2}
+                        numberOfMonths={isDesktop ? 2 : 1}
                       />
                     </PopoverContent>
                   </Popover>
