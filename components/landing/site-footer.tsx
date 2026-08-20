@@ -40,7 +40,7 @@ export function SiteFooter() {
                 <li key={voce.href}>
                   <Link
                     href={voce.href}
-                    className="text-primary underline-offset-4 hover:underline"
+                    className="inline-block py-3 text-primary underline-offset-4 sm:py-0 hover:underline"
                   >
                     {voce.label}
                   </Link>
@@ -79,7 +79,7 @@ export function SiteFooter() {
                   href={`${REPO}/issues`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary underline-offset-4 hover:underline"
+                  className="inline-block py-3 text-primary underline-offset-4 sm:py-0 hover:underline"
                 >
                   Segnala un problema
                 </a>
@@ -89,7 +89,7 @@ export function SiteFooter() {
                   href={REPO}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary underline-offset-4 hover:underline"
+                  className="inline-block py-3 text-primary underline-offset-4 sm:py-0 hover:underline"
                 >
                   Codice sorgente
                 </a>

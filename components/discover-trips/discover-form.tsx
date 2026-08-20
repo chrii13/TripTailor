@@ -325,7 +325,7 @@ export function DiscoverForm() {
                     aria-pressed={dateMode === option}
                     onClick={() => setValue("dateMode", option, { shouldValidate: true })}
                     className={cn(
-                      "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+                      "flex h-11 items-center justify-center rounded-full px-4 text-sm font-medium transition-colors sm:h-auto sm:py-1.5",
                       dateMode === option
                         ? "bg-primary text-primary-foreground"
                         : "text-primary hover:bg-accent"
@@ -533,7 +533,7 @@ export function DiscoverForm() {
                         })
                       }
                       className={cn(
-                        "rounded-full px-4 py-2 text-sm font-medium transition-colors",
+                        "flex h-11 items-center justify-center rounded-full px-4 text-sm font-medium transition-colors sm:h-auto sm:py-2",
                         isActive
                           ? "bg-primary text-primary-foreground"
                           : "border border-border text-primary hover:bg-accent"

@@ -111,7 +111,7 @@ export function SiteNav() {
               size="icon-sm"
               variant="outline"
               aria-label="Sezioni della pagina"
-              className="border-primary shadow-none lg:hidden"
+              className="size-11 border-primary shadow-none sm:size-8 lg:hidden"
             >
               <Menu />
             </Button>
