@@ -32,7 +32,7 @@ export function SiteFooter() {
           TripTailor
         </p>
 
-        <div className="mt-7 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-7 grid grid-cols-2 gap-x-6 gap-y-8 sm:gap-8 lg:grid-cols-4">
           <div>
             <ColonnaTitolo>Naviga</ColonnaTitolo>
             <ul className="flex flex-col gap-1.5 text-sm">
