@@ -11,6 +11,8 @@ import {
   getDefaultClassNames,
   type DayButton,
 } from "react-day-picker"
+import { format } from "date-fns"
+import { it } from "date-fns/locale"
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -23,6 +25,8 @@ function Calendar({
   buttonVariant = "ghost",
   formatters,
   components,
+  locale = it,
+  labels,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
@@ -39,9 +43,23 @@ function Calendar({
         className
       )}
       captionLayout={captionLayout}
+      locale={locale}
+      labels={{
+        labelNext: () => "Vai al mese successivo",
+        labelPrevious: () => "Vai al mese precedente",
+        labelMonthDropdown: () => "Scegli il mese",
+        labelYearDropdown: () => "Scegli l'anno",
+        labelDayButton: (date, modifiers) => {
+          let label = format(date, "PPPP", { locale: it })
+          if (modifiers?.today) label = `Oggi, ${label}`
+          if (modifiers?.selected) label = `${label}, selezionato`
+          return label
+        },
+        ...labels,
+      }}
       formatters={{
         formatMonthDropdown: (date) =>
-          date.toLocaleString("default", { month: "short" }),
+          date.toLocaleString("it-IT", { month: "short" }),
         ...formatters,
       }}
       classNames={{
