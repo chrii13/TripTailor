@@ -1,3 +1,4 @@
+import { toCalendarDate } from "./calendar-date";
 import type { Participant } from "./schema";
 
 export type DiscoverFormDateValues = {
@@ -16,6 +17,8 @@ export type DiscoverFormDateValues = {
  * inseriti quando l'utente cambia modalità), ma l'API accetta esattamente uno dei due: qui
  * si sceglie in base a dateMode e si omette del tutto il campo non pertinente, non lo si
  * manda vuoto/undefined.
+ *
+ * Le date partono come stringhe "yyyy-MM-dd" e non come oggetti Date: vedi calendar-date.ts.
  */
 export function buildDiscoverTripsRequestBody(values: DiscoverFormDateValues) {
   const base = {
@@ -38,8 +41,8 @@ export function buildDiscoverTripsRequestBody(values: DiscoverFormDateValues) {
   return {
     ...base,
     dateRange: {
-      from: values.dateRange.from,
-      to: values.dateRange.to,
+      from: values.dateRange.from && toCalendarDate(values.dateRange.from),
+      to: values.dateRange.to && toCalendarDate(values.dateRange.to),
     },
   };
 }

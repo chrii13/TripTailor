@@ -100,7 +100,7 @@ describe("getClimateAverages", () => {
     expect(maxInFlight).toBe(1);
   });
 
-  it("riprova una volta quando Open-Meteo risponde 429", async () => {
+  it("scarta l'anno che riceve 429 e usa comunque gli altri", async () => {
     let call = 0;
     const fetchMock = vi.fn(async () => {
       call += 1;
@@ -115,9 +115,58 @@ describe("getClimateAverages", () => {
       new Date("2026-09-12")
     );
 
-    // 5 anni + 1 ritentativo per il primo
-    expect(fetchMock).toHaveBeenCalledTimes(6);
+    // 5 anni, una chiamata ciascuno: nessun ritentativo
+    expect(fetchMock).toHaveBeenCalledTimes(5);
     expect(result).not.toBeNull();
+  });
+
+  it("si ferma agli anni già raccolti quando il tempo residuo si esaurisce", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    // Ogni chiamata consuma 4s di orologio: con un tetto di fase di 10s
+    // c'è spazio per tre anni, non per cinque.
+    const fetchMock = vi.fn(async () => {
+      vi.advanceTimersByTime(4_000);
+      return ok();
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getClimateAverages(
+      38.7,
+      -9.1,
+      new Date("2026-09-12"),
+      new Date("2026-09-12"),
+      10_000
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    // Una media su tre anni è comunque utile: meglio parziale che assente.
+    expect(result).not.toBeNull();
+  });
+
+  it("non supera il tetto di fase nemmeno se ogni anno è lento", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        vi.advanceTimersByTime(3_000);
+        return ok();
+      })
+    );
+
+    await getClimateAverages(38.7, -9.1, new Date("2026-09-12"), new Date("2026-09-12"), 12_000);
+
+    expect(Date.now()).toBeLessThanOrEqual(12_000);
+  });
+
+  it("non ritenta l'anno fallito: un anno perso non compromette la media", async () => {
+    const fetchMock = vi.fn(async () => new Response("", { status: 429 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getClimateAverages(38.7, -9.1, new Date("2026-09-12"), new Date("2026-09-12"));
+
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
   it("restituisce comunque una media se solo alcuni anni falliscono", async () => {
@@ -126,7 +175,7 @@ describe("getClimateAverages", () => {
       "fetch",
       vi.fn(async () => {
         call += 1;
-        // il primo anno fallisce sia al primo tentativo che al retry
+        // i primi due anni falliscono, gli altri tre rispondono
         if (call <= 2) return new Response("", { status: 400 });
         return ok();
       })

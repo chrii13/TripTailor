@@ -25,7 +25,9 @@ export function buildItineraryIcs(tripData: TripFormValues, itinerary: Itinerary
   for (const day of itinerary.days) {
     for (const slot of SLOTS) {
       for (const activity of day[slot]) {
-        const [startTime, endTime] = activity.suggestedTime.split("–");
+        // Stesse varianti che accetta lo schema: i tre trattini (ASCII, en dash, em dash),
+        // con o senza spazi attorno o ai bordi della stringa.
+        const [startTime, endTime] = activity.suggestedTime.trim().split(/\s*[-–—]\s*/);
 
         events.push({
           start: toDateArray(day.date, startTime),

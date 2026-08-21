@@ -3,20 +3,36 @@ import { generateItineraryRequestSchema } from "./generate-itinerary-request";
 
 const baseValidBody = {
   destination: "Roma",
-  dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-05T00:00:00.000Z" },
+  dateRange: { from: "2026-09-01", to: "2026-09-05" },
   participants: [{ type: "adulto", age: 35 }],
   budget: 1000,
   styleNotes: "",
 };
 
 describe("generateItineraryRequestSchema", () => {
-  it("accetta un corpo valido con date come stringhe ISO e le converte in Date", () => {
+  it("accetta un corpo valido con date yyyy-MM-dd e le converte in mezzanotte locale", () => {
     const result = generateItineraryRequestSchema.safeParse(baseValidBody);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.dateRange.from).toBeInstanceOf(Date);
-      expect(result.data.dateRange.to).toBeInstanceOf(Date);
+      expect(result.data.dateRange.from).toEqual(new Date(2026, 8, 1));
+      expect(result.data.dateRange.to).toEqual(new Date(2026, 8, 5));
     }
+  });
+
+  it("rifiuta una data con ora e fuso, che farebbe slittare il giorno", () => {
+    const result = generateItineraryRequestSchema.safeParse({
+      ...baseValidBody,
+      dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-05T00:00:00.000Z" },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rifiuta una data inesistente invece di farla scivolare al mese dopo", () => {
+    const result = generateItineraryRequestSchema.safeParse({
+      ...baseValidBody,
+      dateRange: { from: "2026-02-31", to: "2026-03-02" },
+    });
+    expect(result.success).toBe(false);
   });
 
   it("rifiuta una destinazione vuota", () => {
@@ -32,7 +48,7 @@ describe("generateItineraryRequestSchema", () => {
   it("rifiuta un viaggio di più di 14 giorni", () => {
     const result = generateItineraryRequestSchema.safeParse({
       ...baseValidBody,
-      dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-16T00:00:00.000Z" },
+      dateRange: { from: "2026-09-01", to: "2026-09-16" },
     });
     expect(result.success).toBe(false);
   });
@@ -40,7 +56,7 @@ describe("generateItineraryRequestSchema", () => {
   it("accetta un viaggio di esattamente 14 giorni", () => {
     const result = generateItineraryRequestSchema.safeParse({
       ...baseValidBody,
-      dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-14T00:00:00.000Z" },
+      dateRange: { from: "2026-09-01", to: "2026-09-14" },
     });
     expect(result.success).toBe(true);
   });
@@ -48,7 +64,7 @@ describe("generateItineraryRequestSchema", () => {
   it("rifiuta una data di fine precedente alla data di inizio", () => {
     const result = generateItineraryRequestSchema.safeParse({
       ...baseValidBody,
-      dateRange: { from: "2026-09-05T00:00:00.000Z", to: "2026-09-01T00:00:00.000Z" },
+      dateRange: { from: "2026-09-05", to: "2026-09-01" },
     });
     expect(result.success).toBe(false);
   });

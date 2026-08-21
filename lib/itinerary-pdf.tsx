@@ -1,6 +1,7 @@
 import { Document, Font, Link, Page, StyleSheet, Text, View, pdf } from "@react-pdf/renderer";
 import { format } from "date-fns";
 
+import { formatCalendarDate } from "@/lib/calendar-date";
 import { PARTICIPANT_TYPE_LABELS, type TripFormValues } from "@/lib/schema";
 import type { Activity, ItineraryResponse } from "@/lib/itinerary-schema";
 import type { DailyClimateAverage } from "@/lib/climate-forecast";
@@ -190,8 +191,7 @@ function TripIndex({ itinerary }: { itinerary: ItineraryResponse }) {
     <View>
       <Text style={s.indexTitle}>Il viaggio in breve</Text>
       {itinerary.days.map((day, i) => {
-        const parsed = new Date(day.date);
-        const dayDate = Number.isNaN(parsed.getTime()) ? day.date : format(parsed, "dd/MM/yyyy");
+        const dayDate = formatCalendarDate(day.date);
         const tappe = [...day.mattina, ...day.pomeriggio, ...day.sera];
         return (
           <View key={i} wrap={false}>
@@ -299,8 +299,7 @@ export function ItineraryDocument({ tripData, itinerary, weather, countryInfo }:
         </Text>
 
         {itinerary.days.map((day, dayIndex) => {
-          const parsed = new Date(day.date);
-          const dayDate = Number.isNaN(parsed.getTime()) ? day.date : format(parsed, "dd/MM/yyyy");
+          const dayDate = formatCalendarDate(day.date);
           const dayWeather = weather?.find((entry) => entry.date === day.date);
 
           return (

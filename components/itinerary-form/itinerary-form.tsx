@@ -17,6 +17,7 @@ import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { tripFormSchema, type TripFormValues } from "@/lib/schema";
+import { buildGenerateItineraryRequestBody } from "@/lib/generate-itinerary-request-body";
 import type { CreaPrefill } from "@/lib/crea-query-params";
 import type { ErrorCode } from "@/lib/generate-itinerary-errors";
 import type { ItineraryResponse } from "@/lib/itinerary-schema";
@@ -145,7 +146,7 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
       const response = await fetch("/api/generate-itinerary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(buildGenerateItineraryRequestBody(data)),
       });
 
       const body = await response.json();

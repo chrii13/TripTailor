@@ -19,11 +19,18 @@ export const maxDuration = 60;
 // a Gemini: JSON.parse della risposta, validazione zod dello schema itinerario
 // (più grande di quello di /discover-trips) e serializzazione della risposta
 // (itinerario + meteo + info paese), più overhead generico della piattaforma.
-// Il tempo di geocodifica (fino a 2.5s) e meteo storico (fino a 8s) NON è in
-// questo margine: è già "prima" della deadline, quindi la consuma naturalmente
-// riducendo il tempo restante quando il ciclo su modelli/chiavi parte.
 const RESPONSE_HEADROOM_MS = 5_000;
 const USABLE_BUDGET_MS = maxDuration * 1_000 - RESPONSE_HEADROOM_MS;
+
+// Tetto complessivo della fase che precede l'AI: geocodifica (LocationIQ, max
+// 2.5s per costruzione) più meteo storico (cinque anni sequenziali su Open-Meteo,
+// max 3s l'uno). Senza questo tetto la sola fase meteo poteva arrivare a 15s nel
+// caso lento, e i due sono comunque tempo sottratto alla generazione: scaduto il
+// tetto si prosegue con il clima parziale o assente (il prompt gestisce già il
+// caso senza clima), perché l'itinerario vale più del meteo. La deadline è
+// condivisa fra geocodifica e meteo, quindi la fase intera resta dentro i 12s e
+// al ciclo su modelli/chiavi restano ~43s dei 55 utilizzabili.
+const PRE_AI_PHASE_MS = 12_000;
 
 // Tetto massimo per un singolo tentativo: nella pratica ogni tentativo riceve il
 // minimo tra questo valore e il tempo davvero rimasto (vedi getCallAttemptBudget),
@@ -75,6 +82,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "config" }, { status: 502 });
   }
 
+  const preAiDeadline = Math.min(deadline, startTime + PRE_AI_PHASE_MS);
+
   const coordinates = await geocodeDestination(parsedRequest.data.destination);
   const climate =
     coordinates?.lat != null && coordinates?.lon != null
@@ -82,7 +91,8 @@ export async function POST(request: Request) {
           coordinates.lat,
           coordinates.lon,
           parsedRequest.data.dateRange.from,
-          parsedRequest.data.dateRange.to
+          parsedRequest.data.dateRange.to,
+          preAiDeadline
         )
       : null;
 
