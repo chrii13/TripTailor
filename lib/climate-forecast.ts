@@ -1,4 +1,5 @@
 import { subYears, addDays, format } from "date-fns";
+import { getCallAttemptBudget } from "./gemini-call-budget";
 
 const HISTORY_YEARS = 5;
 
@@ -18,19 +19,24 @@ export interface OpenMeteoArchiveResponse {
   };
 }
 
-const REQUEST_TIMEOUT_MS = 8000;
-const RETRY_DELAY_MS = 500;
+// Tetto per singolo anno. Nessun ritentativo: con cinque anni la ridondanza è già
+// intrinseca (averageDailyClimate calcola la media su quanti anni riesce a
+// raccogliere), mentre un retry raddoppiava il caso peggiore di ogni anno dentro
+// una funzione che deve stare in un budget di tempo.
+const REQUEST_TIMEOUT_MS = 3000;
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// Sotto questo residuo non ha senso iniziare l'anno successivo: meglio chiudere
+// con gli anni già raccolti che spendere il tempo dell'itinerario in una chiamata
+// che verrebbe comunque abortita.
+const MIN_YEAR_TIMEOUT_MS = 1000;
 
-async function requestHistoricalYear(url: URL): Promise<OpenMeteoArchiveResponse | null> {
-  const response = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+async function requestHistoricalYear(
+  url: URL,
+  timeoutMs: number
+): Promise<OpenMeteoArchiveResponse | null> {
+  const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
 
   if (!response.ok) {
-    // 429 e 5xx sono transitori: li rilanciamo per far scattare il retry.
-    if (response.status === 429 || response.status >= 500) {
-      throw new Error(`Open-Meteo ha risposto ${response.status}`);
-    }
     console.error(`Clima storico: Open-Meteo ha risposto ${response.status}`);
     return null;
   }
@@ -53,7 +59,8 @@ async function fetchHistoricalYear(
   lat: number,
   lon: number,
   start: Date,
-  end: Date
+  end: Date,
+  timeoutMs: number
 ): Promise<OpenMeteoArchiveResponse | null> {
   const url = new URL("https://archive-api.open-meteo.com/v1/archive");
   url.searchParams.set("latitude", String(lat));
@@ -64,16 +71,10 @@ async function fetchHistoricalYear(
   url.searchParams.set("timezone", "auto");
 
   try {
-    return await requestHistoricalYear(url);
+    return await requestHistoricalYear(url, timeoutMs);
   } catch (error) {
-    console.error("Clima storico: primo tentativo fallito, riprovo", error);
-    await sleep(RETRY_DELAY_MS);
-    try {
-      return await requestHistoricalYear(url);
-    } catch (retryError) {
-      console.error("Clima storico: chiamata a Open-Meteo fallita", retryError);
-      return null;
-    }
+    console.error("Clima storico: chiamata a Open-Meteo fallita", error);
+    return null;
   }
 }
 
@@ -130,18 +131,37 @@ export async function getClimateAverages(
   lat: number,
   lon: number,
   tripStart: Date,
-  tripEnd: Date
+  tripEnd: Date,
+  /**
+   * Istante (epoch ms) oltre il quale non si inizia un altro anno: il meteo è un
+   * di più rispetto all'itinerario, quindi cede il passo quando il tempo stringe.
+   */
+  deadline: number = Number.POSITIVE_INFINITY
 ): Promise<DailyClimateAverage[] | null> {
   // Sequenziale, non in parallelo: cinque richieste simultanee alla stessa API
   // gratuita possono essere strozzate tutte insieme, lasciando l'itinerario senza meteo.
   const successfulResponses: OpenMeteoArchiveResponse[] = [];
 
   for (let yearsAgo = 1; yearsAgo <= HISTORY_YEARS; yearsAgo++) {
+    const { callTimeoutMs } = getCallAttemptBudget(
+      deadline,
+      Date.now(),
+      REQUEST_TIMEOUT_MS,
+      MIN_YEAR_TIMEOUT_MS
+    );
+    if (callTimeoutMs === null) {
+      console.error(
+        `Clima storico: tempo esaurito dopo ${successfulResponses.length} anni su ${HISTORY_YEARS}, procedo con la media parziale`
+      );
+      break;
+    }
+
     const response = await fetchHistoricalYear(
       lat,
       lon,
       subYears(tripStart, yearsAgo),
-      subYears(tripEnd, yearsAgo)
+      subYears(tripEnd, yearsAgo),
+      callTimeoutMs
     );
     if (response !== null) {
       successfulResponses.push(response);

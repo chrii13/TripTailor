@@ -42,7 +42,7 @@ describe("POST /api/generate-itinerary", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           destination: "Roma",
-          dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-05T00:00:00.000Z" },
+          dateRange: { from: "2026-09-01", to: "2026-09-05" },
           participants: [{ type: "adulto", age: 35 }],
           budget: 1000,
           styleNotes: "",
@@ -74,7 +74,7 @@ describe("POST /api/generate-itinerary", () => {
       headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({
         destination: "Roma",
-        dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-05T00:00:00.000Z" },
+        dateRange: { from: "2026-09-01", to: "2026-09-05" },
         participants: [{ type: "adulto", age: 35 }],
         budget: 1000,
         styleNotes: "",
@@ -93,7 +93,7 @@ describe("POST /api/generate-itinerary", () => {
       method: "POST",
       body: JSON.stringify({
         destination: "Roma",
-        dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-05T00:00:00.000Z" },
+        dateRange: { from: "2026-09-01", to: "2026-09-05" },
         participants: [{ type: "adulto", age: 35 }],
         budget: 1000,
         styleNotes: "",
@@ -112,7 +112,7 @@ describe("POST /api/generate-itinerary", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-05T00:00:00.000Z" },
+        dateRange: { from: "2026-09-01", to: "2026-09-05" },
         participants: [{ type: "adulto", age: 35 }],
         budget: 1000,
         styleNotes: "",

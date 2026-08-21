@@ -14,6 +14,7 @@ import {
   Thermometer,
   type LucideIcon,
 } from "lucide-react";
+import { formatCalendarDate } from "@/lib/calendar-date";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -158,13 +159,20 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
   const [open, setOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [pdfState, setPdfState] = useState<"idle" | "loading" | "error">("idle");
+  const [calendarError, setCalendarError] = useState(false);
   const reduceMotion = useReducedMotion();
 
   const handleExportCalendar = () => {
-    const blob = new Blob([buildItineraryIcs(tripData, itinerary)], {
-      type: "text/calendar;charset=utf-8",
-    });
-    triggerDownload(blob, `itinerario-${sanitizeFileName(tripData.destination)}.ics`);
+    try {
+      const blob = new Blob([buildItineraryIcs(tripData, itinerary)], {
+        type: "text/calendar;charset=utf-8",
+      });
+      triggerDownload(blob, `itinerario-${sanitizeFileName(tripData.destination)}.ics`);
+      setCalendarError(false);
+    } catch (error) {
+      console.error("Esportazione calendario fallita", error);
+      setCalendarError(true);
+    }
   };
 
   const handleDownloadPdf = async () => {
@@ -237,10 +245,7 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
           animate={reduceMotion ? undefined : "visible"}
         >
           {itinerary.days.map((day, dayIndex) => {
-            const parsedDate = new Date(day.date);
-            const formattedDate = Number.isNaN(parsedDate.getTime())
-              ? day.date
-              : format(parsedDate, "dd/MM/yyyy");
+            const formattedDate = formatCalendarDate(day.date);
             const dayWeather = weather?.find((entry) => entry.date === day.date);
             return (
               <motion.div
@@ -363,6 +368,12 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
         {pdfState === "error" && (
           <p className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             Non siamo riusciti a creare il PDF. Riprova, oppure esporta il calendario.
+          </p>
+        )}
+
+        {calendarError && (
+          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            Non siamo riusciti a creare il file del calendario. Riprova, oppure scarica il PDF.
           </p>
         )}
       </CardContent>

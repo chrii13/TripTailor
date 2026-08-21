@@ -3,7 +3,7 @@ import { POST } from "./route";
 
 const validBody = {
   departureCity: "Milano, Italia",
-  dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-05T00:00:00.000Z" },
+  dateRange: { from: "2026-09-01", to: "2026-09-05" },
   participants: [{ type: "adulto", age: 35 }],
   budget: 1500,
 };

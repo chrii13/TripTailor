@@ -74,6 +74,42 @@ describe("buildItineraryIcs", () => {
     expect(result).toContain("Arriva presto per evitare la folla");
   });
 
+  it("accetta anche il trattino ASCII e gli spazi attorno nel suggestedTime", () => {
+    const withPlainHyphen: ItineraryResponse = {
+      days: [
+        {
+          date: "2026-09-01",
+          mattina: [makeActivity({ suggestedTime: "10:00-12:30" })],
+          pomeriggio: [makeActivity({ title: "Museo", suggestedTime: "14:00 – 15:30" })],
+          sera: [],
+        },
+      ],
+    };
+    const result = buildItineraryIcs(tripData, withPlainHyphen);
+    expect(result).toContain("DTSTART:20260901T100000\r\n");
+    expect(result).toContain("DTEND:20260901T123000\r\n");
+    expect(result).toContain("DTSTART:20260901T140000\r\n");
+    expect(result).toContain("DTEND:20260901T153000\r\n");
+  });
+
+  it("spezza correttamente anche l'em dash e gli spazi in eccesso", () => {
+    const withEmDash: ItineraryResponse = {
+      days: [
+        {
+          date: "2026-09-01",
+          mattina: [makeActivity({ suggestedTime: "09:00—11:00" })],
+          pomeriggio: [makeActivity({ title: "Museo", suggestedTime: " 14:00 — 15:30 " })],
+          sera: [],
+        },
+      ],
+    };
+    const result = buildItineraryIcs(tripData, withEmDash);
+    expect(result).toContain("DTSTART:20260901T090000\r\n");
+    expect(result).toContain("DTEND:20260901T110000\r\n");
+    expect(result).toContain("DTSTART:20260901T140000\r\n");
+    expect(result).toContain("DTEND:20260901T153000\r\n");
+  });
+
   it("usa l'orario locale in forma \"floating\" (nessuna conversione UTC, nessun suffisso Z)", () => {
     const result = buildItineraryIcs(tripData, itinerary);
     // La prima attività ha suggestedTime "09:00–11:00" il 2026-09-01: deve comparire

@@ -98,6 +98,20 @@ describe("verifyProposalsAgainstBudget", () => {
     expect(result).toEqual([]);
   });
 
+  it("scarta una proposta il cui totale mostrato (arrotondato) supererebbe il budget", () => {
+    // Budget 1000€, 2 viaggiatori, 7 notti. Somma reale 375 + 325 + 275 = 975€: dentro
+    // il budget. Ma sulla card le voci si arrotondano a 400 + 350 + 300 = 1050€, cioè
+    // 50€ oltre il budget dichiarato nella striscia sopra le proposte.
+    const result = verifyProposalsAgainstBudget([proposal("Siviglia", 375, 325, 275)], 1000, 2, 7);
+    expect(result).toHaveLength(0);
+  });
+
+  it("tiene una proposta il cui totale reale sfiora il budget ma il cui totale mostrato ci rientra", () => {
+    // 300 + 300 + 380 = 980€ reali; arrotondati 300 + 300 + 400 = 1000€, esattamente il budget.
+    const result = verifyProposalsAgainstBudget([proposal("Valencia", 300, 300, 380)], 1000, 2, 7);
+    expect(result).toHaveLength(1);
+  });
+
   it("con un viaggio di un giorno (nights = 0) usa una notte per la soglia, senza dividere per zero né accettare tutto", () => {
     // 2 viaggiatori, nights = 0 → Math.max(0, 1) = 1 notte → soglia 25 * 2 * 1 = 50€.
     const sottoSoglia = verifyProposalsAgainstBudget([proposal("Gita", 20, 0, 40)], 1000, 2, 0);

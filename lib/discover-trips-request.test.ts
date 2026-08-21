@@ -3,14 +3,26 @@ import { discoverTripsRequestSchema, VACATION_TYPES, getRequestNights } from "./
 
 const validBody = {
   departureCity: "Milano, Italia",
-  dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-05T00:00:00.000Z" },
+  dateRange: { from: "2026-09-01", to: "2026-09-05" },
   participants: [{ type: "adulto", age: 35 }],
   budget: 1500,
 };
 
 describe("discoverTripsRequestSchema", () => {
   it("accetta una richiesta valida senza tipo di vacanza", () => {
-    expect(discoverTripsRequestSchema.safeParse(validBody).success).toBe(true);
+    const result = discoverTripsRequestSchema.safeParse(validBody);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.dateRange?.from).toEqual(new Date(2026, 8, 1));
+    }
+  });
+
+  it("rifiuta una data con ora e fuso, che farebbe slittare il giorno", () => {
+    const result = discoverTripsRequestSchema.safeParse({
+      ...validBody,
+      dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-05T00:00:00.000Z" },
+    });
+    expect(result.success).toBe(false);
   });
 
   it("accetta ogni tipo di vacanza previsto", () => {
@@ -45,7 +57,7 @@ describe("discoverTripsRequestSchema", () => {
   it("rifiuta un intervallo di date invertito", () => {
     const result = discoverTripsRequestSchema.safeParse({
       ...validBody,
-      dateRange: { from: "2026-09-05T00:00:00.000Z", to: "2026-09-01T00:00:00.000Z" },
+      dateRange: { from: "2026-09-05", to: "2026-09-01" },
     });
     expect(result.success).toBe(false);
   });
@@ -53,7 +65,7 @@ describe("discoverTripsRequestSchema", () => {
   it("rifiuta un viaggio più lungo del massimo consentito", () => {
     const result = discoverTripsRequestSchema.safeParse({
       ...validBody,
-      dateRange: { from: "2026-09-01T00:00:00.000Z", to: "2026-10-01T00:00:00.000Z" },
+      dateRange: { from: "2026-09-01", to: "2026-10-01" },
     });
     expect(result.success).toBe(false);
   });

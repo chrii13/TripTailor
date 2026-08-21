@@ -94,6 +94,52 @@ describe("itineraryResponseSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rifiuta un'attività con suggestedTime in formato libero (niente orari)", () => {
+    const invalid = {
+      days: [
+        {
+          ...validResponse.days[0],
+          mattina: [{ ...validActivity, suggestedTime: "verso mezzogiorno" }],
+        },
+      ],
+    };
+    const result = itineraryResponseSchema.safeParse(invalid);
+    expect(result.success).toBe(false);
+  });
+
+  it("rifiuta un'attività con suggestedTime senza orario di fine", () => {
+    const invalid = {
+      days: [{ ...validResponse.days[0], mattina: [{ ...validActivity, suggestedTime: "09:00" }] }],
+    };
+    const result = itineraryResponseSchema.safeParse(invalid);
+    expect(result.success).toBe(false);
+  });
+
+  it("accetta suggestedTime col trattino ASCII o con spazi attorno al trattino", () => {
+    for (const suggestedTime of ["10:00-12:30", "10:00 – 12:30", "9:00 - 11:00"]) {
+      const candidate = {
+        days: [{ ...validResponse.days[0], mattina: [{ ...validActivity, suggestedTime }] }],
+      };
+      expect(itineraryResponseSchema.safeParse(candidate).success).toBe(true);
+    }
+  });
+
+  // Una risposta è validata in blocco: una sola attività scartata butta via l'intera
+  // generazione (502, nessun ritentativo). Sui separatori plausibili si è tolleranti.
+  it("accetta suggestedTime con l'em dash e con spazi in testa o in coda", () => {
+    for (const suggestedTime of [
+      "09:00—11:00",
+      "09:00 — 11:00",
+      "09:00 – 11:00 ",
+      " 09:00-11:00",
+    ]) {
+      const candidate = {
+        days: [{ ...validResponse.days[0], mattina: [{ ...validActivity, suggestedTime }] }],
+      };
+      expect(itineraryResponseSchema.safeParse(candidate).success).toBe(true);
+    }
+  });
+
   it("rifiuta un'attività senza il campo details", () => {
     const { details, ...activityWithoutDetails } = validActivity;
     const invalid = { days: [{ ...validResponse.days[0], mattina: [activityWithoutDetails] }] };

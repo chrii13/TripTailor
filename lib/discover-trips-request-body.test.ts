@@ -17,7 +17,7 @@ describe("buildDiscoverTripsRequestBody", () => {
       flexiblePeriod: {},
     });
 
-    expect(body).toHaveProperty("dateRange");
+    expect(body).toHaveProperty("dateRange", { from: "2026-09-01", to: "2026-09-05" });
     expect(body).not.toHaveProperty("flexiblePeriod");
     expect(discoverTripsRequestSchema.safeParse(body).success).toBe(true);
   });

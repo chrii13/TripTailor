@@ -11,7 +11,14 @@ export const activitySchema = z.object({
   description: z.string(),
   estimatedCost: z.string(),
   openingHours: z.string().optional(),
-  suggestedTime: z.string(),
+  // Il prompt chiede "HH:MM–HH:MM", ma il modello alterna i tre trattini (ASCII, en dash,
+  // em dash) e a volte lascia spazi attorno o ai bordi: li accettiamo tutti (e l'ora a una
+  // cifra) e scartiamo il resto, perché l'export calendario spezza su questo formato.
+  // La risposta è validata in blocco e un fallimento è un 502 senza ritentativo: essere
+  // severi qui su un carattere costerebbe l'intera generazione.
+  suggestedTime: z
+    .string()
+    .regex(/^\s*([01]?\d|2[0-3]):[0-5]\d\s*[-–—]\s*([01]?\d|2[0-3]):[0-5]\d\s*$/),
   details: activityDetailsSchema,
 });
 

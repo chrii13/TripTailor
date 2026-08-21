@@ -1,5 +1,5 @@
-import { format } from "date-fns";
 import { z } from "zod";
+import { calendarDateSchema, toCalendarDate } from "./calendar-date";
 import { AGE_RANGES, type Participant } from "./schema";
 
 export type CreaPrefill = {
@@ -22,15 +22,7 @@ const PARTICIPANT_TYPES = ["bambino", "ragazzo", "adulto"] as const;
 
 const destinationSchema = z.string().trim().min(1).optional();
 
-const dateStringSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .transform((str) => {
-    const date = new Date(`${str}T00:00:00`);
-    return Number.isNaN(date.getTime()) ? undefined : date;
-  })
-  .pipe(z.date().optional())
-  .optional();
+const dateStringSchema = calendarDateSchema.optional();
 
 const budgetSchema = z
   .string()
@@ -70,8 +62,8 @@ export function buildCreaHref(prefill: CreaPrefill): string {
   const params = new URLSearchParams();
 
   if (prefill.destination?.trim()) params.set("destination", prefill.destination.trim());
-  if (prefill.from) params.set("from", format(prefill.from, "yyyy-MM-dd"));
-  if (prefill.to) params.set("to", format(prefill.to, "yyyy-MM-dd"));
+  if (prefill.from) params.set("from", toCalendarDate(prefill.from));
+  if (prefill.to) params.set("to", toCalendarDate(prefill.to));
   if (prefill.budget !== undefined) params.set("budget", String(prefill.budget));
   if (prefill.participants?.length) {
     params.set("p", prefill.participants.map((p) => `${p.type}:${p.age}`).join(","));
