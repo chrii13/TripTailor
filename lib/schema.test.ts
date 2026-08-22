@@ -1,5 +1,19 @@
-import { describe, it, expect } from "vitest";
-import { tripFormSchema, PARTICIPANT_TYPE_LABELS } from "./schema";
+import { afterAll, beforeAll, describe, it, expect, vi } from "vitest";
+import { tripFormSchema, PARTICIPANT_TYPE_LABELS, MAX_DESTINATION_LENGTH, MAX_STYLE_NOTES_LENGTH, MAX_MUST_SEE_LENGTH } from "./schema";
+
+/**
+ * Da quando lo schema rifiuta le date passate, le date fisse dei casi di prova
+ * hanno una scadenza: il 2 settembre 2026 diventerebbero passato e mezzo file
+ * fallirebbe da solo. L'orologio resta quindi fermo a prima di quelle date.
+ */
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-08-01T12:00:00.000Z"));
+});
+
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 const baseValid = {
   destination: "Roma",
@@ -133,6 +147,69 @@ describe("tripFormSchema", () => {
     const result = tripFormSchema.safeParse({
       ...baseValid,
       dateRange: { from: new Date("2026-09-01"), to: new Date("2026-09-14") },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rifiuta un viaggio che comincia ieri", () => {
+    const yesterday = new Date();
+    yesterday.setHours(0, 0, 0, 0);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      dateRange: { from: yesterday, to: new Date(2026, 7, 5) },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rifiuta un viaggio interamente nel passato", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      dateRange: { from: new Date(2020, 0, 10), to: new Date(2020, 0, 15) },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accetta un viaggio che comincia oggi", () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      dateRange: { from: today, to: new Date(2026, 7, 5) },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rifiuta una destinazione più lunga del limite accettato dal server", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      destination: "a".repeat(MAX_DESTINATION_LENGTH + 1),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rifiuta note di stile più lunghe del limite accettato dal server", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      styleNotes: "a".repeat(MAX_STYLE_NOTES_LENGTH + 1),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rifiuta un 'cosa non vuoi perderti' più lungo del limite accettato dal server", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      mustSee: "a".repeat(MAX_MUST_SEE_LENGTH + 1),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accetta i campi di testo esattamente al limite", () => {
+    const result = tripFormSchema.safeParse({
+      ...baseValid,
+      destination: "a".repeat(MAX_DESTINATION_LENGTH),
+      styleNotes: "a".repeat(MAX_STYLE_NOTES_LENGTH),
+      mustSee: "a".repeat(MAX_MUST_SEE_LENGTH),
     });
     expect(result.success).toBe(true);
   });

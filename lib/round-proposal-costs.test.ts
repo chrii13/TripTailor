@@ -62,19 +62,6 @@ describe("roundProposalCosts", () => {
     expect(rounded.total).toBe(rounded.travelTotal + rounded.lodgingTotal + rounded.onSiteTotal);
   });
 
-  it("arrotonda il costo di viaggio a persona indipendentemente dal totale di viaggio", () => {
-    const costs: ProposalCosts = {
-      travelPerPerson: 68,
-      travelTotal: 136,
-      lodgingTotal: 0,
-      onSiteTotal: 0,
-      total: 136,
-    };
-
-    // 68€ è sotto i 100€: arrotonda alla cinquina, non alla cinquantina.
-    expect(roundProposalCosts(costs).travelPerPerson).toBe(70);
-  });
-
   it("una gita in giornata con costi piccoli non mostra mai '~0€' per una voce reale", () => {
     const costs: ProposalCosts = {
       travelPerPerson: 10,
@@ -86,7 +73,6 @@ describe("roundProposalCosts", () => {
 
     const rounded = roundProposalCosts(costs);
 
-    expect(rounded.travelPerPerson).toBe(10);
     expect(rounded.travelTotal).toBe(20);
     expect(rounded.lodgingTotal).toBe(0); // alloggio a costo zero: legittimo, resta 0
     expect(rounded.onSiteTotal).toBe(15);

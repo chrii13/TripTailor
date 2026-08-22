@@ -2,7 +2,10 @@ import { differenceInCalendarDays, format } from "date-fns";
 import type { DiscoverTripsRequest } from "./discover-trips-request";
 import { PARTICIPANT_TYPE_LABELS } from "./schema";
 
-export const PROPOSALS_COUNT = 5;
+// Numero pari di proposte: la griglia dei risultati è a due colonne da `sm` in su,
+// quindi un numero dispari lascerebbe l'ultima card spaiata. Il filtro lato server
+// può comunque ridurne il numero, e la griglia sa gestire anche quel caso.
+export const PROPOSALS_COUNT = 6;
 
 export function buildDiscoverTripsPrompt(request: DiscoverTripsRequest): string {
   const { departureCity, dateRange, flexiblePeriod, participants, budget, vacationType } = request;

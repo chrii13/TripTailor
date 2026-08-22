@@ -1,6 +1,19 @@
-import { describe, it, expect } from "vitest";
+import { afterAll, beforeAll, describe, it, expect, vi } from "vitest";
 import { buildDiscoverTripsRequestBody, type DiscoverFormDateValues } from "./discover-trips-request-body";
 import { discoverTripsRequestSchema } from "./discover-trips-request";
+
+/**
+ * Da quando lo schema rifiuta le date passate, le date fisse dei casi di prova
+ * hanno una scadenza: l'orologio resta fermo a prima di quelle date.
+ */
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-08-01T12:00:00.000Z"));
+});
+
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 const base: Omit<DiscoverFormDateValues, "dateMode" | "dateRange" | "flexiblePeriod"> = {
   departureCity: "Milano, Italia",

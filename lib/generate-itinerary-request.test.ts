@@ -1,5 +1,18 @@
-import { describe, it, expect } from "vitest";
+import { afterAll, beforeAll, describe, it, expect, vi } from "vitest";
 import { generateItineraryRequestSchema } from "./generate-itinerary-request";
+
+/**
+ * Da quando lo schema rifiuta le date passate, le date fisse dei casi di prova
+ * hanno una scadenza: l'orologio resta fermo a prima di quelle date.
+ */
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-08-01T12:00:00.000Z"));
+});
+
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 const baseValidBody = {
   destination: "Roma",
@@ -75,6 +88,22 @@ describe("generateItineraryRequestSchema", () => {
       participants: Array.from({ length: 21 }, () => ({ type: "adulto", age: 35 })),
     });
     expect(result.success).toBe(false);
+  });
+
+  it("rifiuta un viaggio nel passato costruito a mano", () => {
+    const result = generateItineraryRequestSchema.safeParse({
+      ...baseValidBody,
+      dateRange: { from: "2020-01-10", to: "2020-01-15" },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accetta un viaggio che comincia oggi", () => {
+    const result = generateItineraryRequestSchema.safeParse({
+      ...baseValidBody,
+      dateRange: { from: "2026-08-01", to: "2026-08-05" },
+    });
+    expect(result.success).toBe(true);
   });
 
   it("accetta un corpo con orario di arrivo e partenza e li passa invariati", () => {

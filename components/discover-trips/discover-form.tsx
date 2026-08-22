@@ -25,7 +25,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/use-media-query";
-import { participantSchema, MAX_TRIP_DAYS } from "@/lib/schema";
+import { participantSchema, MAX_TRIP_DAYS, MAX_DESTINATION_LENGTH } from "@/lib/schema";
+import { startOfToday } from "@/lib/calendar-date";
 import {
   VACATION_TYPES,
   VACATION_TYPE_LABELS,
@@ -45,7 +46,11 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 export const discoverFormSchema = z
   .object({
-    departureCity: z.string().trim().min(1, "Inserisci la città da cui parti"),
+    departureCity: z
+      .string()
+      .trim()
+      .min(1, "Inserisci la città da cui parti")
+      .max(MAX_DESTINATION_LENGTH, `Massimo ${MAX_DESTINATION_LENGTH} caratteri`),
     dateMode: z.enum(["esatte", "flessibili"]),
     dateRange: z.object({ from: z.date().optional(), to: z.date().optional() }),
     flexiblePeriod: z.object({ month: z.string().optional(), nights: z.number().int().optional() }),
@@ -60,6 +65,14 @@ export const discoverFormSchema = z
           code: "custom",
           path: ["dateRange"],
           message: "Seleziona le date di inizio e fine",
+        });
+        return;
+      }
+      if (data.dateRange.from < startOfToday()) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["dateRange"],
+          message: "Le date del viaggio non possono essere nel passato",
         });
         return;
       }
@@ -364,6 +377,7 @@ export function DiscoverForm() {
                 id="departure-city"
                 label="Città di partenza"
                 placeholder="Es. Milano, Italia"
+                maxLength={MAX_DESTINATION_LENGTH}
                 error={errors.departureCity?.message}
               />
 
@@ -431,6 +445,8 @@ export function DiscoverForm() {
                             );
                           }}
                           numberOfMonths={isDesktop ? 2 : 1}
+                          disabled={{ before: startOfToday() }}
+                          startMonth={startOfToday()}
                         />
                       </PopoverContent>
                     </Popover>

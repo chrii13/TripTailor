@@ -1,6 +1,25 @@
-import { describe, it, expect } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, it, expect, vi } from "vitest";
 import { verifyProposalsAgainstSuggestedWindow } from "./verify-suggested-window";
 import type { TripProposal } from "./discover-trips-schema";
+
+/**
+ * Da quando il filtro scarta anche le finestre già trascorse, le date fisse dei
+ * casi di prova hanno una scadenza: l'orologio resta fermo a prima di quelle date.
+ */
+const FROZEN_NOW = new Date("2026-09-15T12:00:00.000Z");
+
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(FROZEN_NOW);
+});
+
+afterEach(() => {
+  vi.setSystemTime(FROZEN_NOW);
+});
+
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 function proposal(destination: string, suggestedFrom?: string, suggestedTo?: string): TripProposal {
   return {
@@ -58,5 +77,23 @@ describe("verifyProposalsAgainstSuggestedWindow", () => {
     ];
     const result = verifyProposalsAgainstSuggestedWindow(proposals, { month: "2026-10", nights: 7 });
     expect(result.map((p) => p.destination)).toEqual(["Valida"]);
+  });
+
+  /**
+   * Col mese corrente scelto a fine mese, tutte le finestre dentro il mese possono
+   * essere già trascorse: il filtro deve scartarle, non proporre un viaggio passato.
+   */
+  it("scarta una finestra dentro il mese richiesto ma già trascorsa", () => {
+    vi.setSystemTime(new Date("2026-10-28T12:00:00.000Z"));
+    const proposals = [proposal("Lisbona", "2026-10-05", "2026-10-12")];
+    const result = verifyProposalsAgainstSuggestedWindow(proposals, { month: "2026-10", nights: 7 });
+    expect(result).toHaveLength(0);
+  });
+
+  it("tiene una finestra che comincia oggi", () => {
+    vi.setSystemTime(new Date("2026-10-05T12:00:00.000Z"));
+    const proposals = [proposal("Lisbona", "2026-10-05", "2026-10-12")];
+    const result = verifyProposalsAgainstSuggestedWindow(proposals, { month: "2026-10", nights: 7 });
+    expect(result).toHaveLength(1);
   });
 });

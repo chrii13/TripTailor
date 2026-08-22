@@ -1,5 +1,18 @@
-import { describe, it, expect } from "vitest";
+import { afterAll, beforeAll, describe, it, expect, vi } from "vitest";
 import { discoverTripsRequestSchema, VACATION_TYPES, getRequestNights } from "./discover-trips-request";
+
+/**
+ * Da quando lo schema rifiuta le date passate, le date fisse dei casi di prova
+ * hanno una scadenza: l'orologio resta fermo a prima di quelle date.
+ */
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-08-01T12:00:00.000Z"));
+});
+
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 const validBody = {
   departureCity: "Milano, Italia",
@@ -70,6 +83,22 @@ describe("discoverTripsRequestSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rifiuta date esatte nel passato costruite a mano", () => {
+    const result = discoverTripsRequestSchema.safeParse({
+      ...validBody,
+      dateRange: { from: "2020-01-10", to: "2020-01-15" },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accetta date esatte che cominciano oggi", () => {
+    const result = discoverTripsRequestSchema.safeParse({
+      ...validBody,
+      dateRange: { from: "2026-08-01", to: "2026-08-05" },
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("rifiuta un partecipante con età fuori dalla fascia del suo tipo", () => {
     const result = discoverTripsRequestSchema.safeParse({
       ...validBody,
@@ -110,6 +139,22 @@ describe("discoverTripsRequestSchema", () => {
       };
       const result = discoverTripsRequestSchema.safeParse(withoutDates);
       expect(result.success).toBe(false);
+    });
+
+    it("rifiuta un mese già passato", () => {
+      const result = discoverTripsRequestSchema.safeParse({
+        ...flexibleBody,
+        flexiblePeriod: { month: "2020-01", nights: 7 },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("accetta il mese corrente", () => {
+      const result = discoverTripsRequestSchema.safeParse({
+        ...flexibleBody,
+        flexiblePeriod: { month: "2026-08", nights: 7 },
+      });
+      expect(result.success).toBe(true);
     });
 
     it("rifiuta un mese non nel formato YYYY-MM", () => {

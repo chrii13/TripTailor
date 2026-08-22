@@ -52,6 +52,10 @@ describe("buildDiscoverTripsPrompt", () => {
     expect(buildDiscoverTripsPrompt(baseRequest)).toContain(`${PROPOSALS_COUNT} proposte`);
   });
 
+  it("chiede un numero pari di proposte, perché la griglia dei risultati è a due colonne", () => {
+    expect(PROPOSALS_COUNT % 2).toBe(0);
+  });
+
   it("include il tipo di vacanza quando presente, testuale così com'è scritto", () => {
     const prompt = buildDiscoverTripsPrompt({ ...baseRequest, vacationType: "montagna" });
     expect(prompt).toContain("montagna");
