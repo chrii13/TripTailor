@@ -81,7 +81,8 @@ export function PopularDestinations() {
                 >
                   <Card className="h-full gap-3 border-border py-5 shadow-none transition-colors hover:border-primary hover:bg-accent">
                     <CardContent className="flex flex-col items-center gap-2 px-4 text-center">
-                      <Icon className="size-6 text-primary" />
+                      {/* decorativa: nome, paese e badge dicono già tutto */}
+                      <Icon aria-hidden="true" className="size-6 text-primary" />
                       <div>
                         <p className="font-medium">{destination.name}</p>
                         <p className="text-xs text-muted-foreground">

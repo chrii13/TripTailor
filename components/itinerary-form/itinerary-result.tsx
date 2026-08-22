@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import {
@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -161,6 +161,13 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
   const [pdfState, setPdfState] = useState<"idle" | "loading" | "error">("idle");
   const [calendarError, setCalendarError] = useState(false);
   const reduceMotion = useReducedMotion();
+  const titleRef = useRef<HTMLHeadingElement>(null);
+
+  // Il form viene sostituito da questa vista: senza spostare il focus resterebbe
+  // su <body> e lo screen reader non annuncerebbe l'esito della generazione.
+  useEffect(() => {
+    titleRef.current?.focus();
+  }, []);
 
   const handleExportCalendar = () => {
     try {
@@ -193,9 +200,18 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
   return (
     <Card className="mx-auto w-full max-w-2xl overflow-hidden border-border shadow-none">
       <CardHeader className="px-8 pt-10 pb-8">
-        <CardTitle className="font-display text-3xl leading-[0.95] font-[725] tracking-[-0.01em] text-balance text-primary uppercase sm:text-5xl">
+        {/* <h1> reale al posto di CardTitle, che è un <div>: stesse classi che
+            CardTitle già produceva, quindi la resa non cambia. `outline-none`
+            perché il focus programmatico (tabIndex -1) dopo un invio da tastiera
+            matcha :focus-visible e la regola globale disegnerebbe un rettangolo
+            Bosco attorno al titolone. Come in discover-results.tsx. */}
+        <h1
+          ref={titleRef}
+          tabIndex={-1}
+          className="font-display text-3xl leading-[0.95] font-[725] tracking-[-0.01em] text-balance text-primary uppercase outline-none sm:text-5xl"
+        >
           Si parte per {tripData.destination}
-        </CardTitle>
+        </h1>
       </CardHeader>
       <CardContent className="space-y-6 px-8 pb-8">
         <TripPanel>
@@ -366,13 +382,13 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
         </div>
 
         {pdfState === "error" && (
-          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             Non siamo riusciti a creare il PDF. Riprova, oppure esporta il calendario.
           </p>
         )}
 
         {calendarError && (
-          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             Non siamo riusciti a creare il file del calendario. Riprova, oppure scarica il PDF.
           </p>
         )}

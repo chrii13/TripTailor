@@ -37,7 +37,11 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn(
-        "group/calendar bg-background p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
+        // --cell-size 9 (36px) invece di 8 (32px): la cella è il bersaglio
+        // toccabile del giorno e su un calendario da telefono 32px porta a
+        // sbagliare giorno (WCAG 2.5.8 fissa il minimo a 24px). Il testo non
+        // cambia dimensione, cresce solo l'area.
+        "group/calendar bg-background p-3 [--cell-size:--spacing(9)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
         String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
         String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
         className

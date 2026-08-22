@@ -38,6 +38,6 @@ export function formatSearchPeriod(input: DiscoverRecapInput): string {
 
   if (!input.dateRange.from || !input.dateRange.to) return "date da confermare";
   const nights = getSearchNights(input);
-  if (nights === 0) return `${format(input.dateRange.from, "dd MMM")} (in giornata)`;
-  return `${format(input.dateRange.from, "dd MMM")} - ${format(input.dateRange.to, "dd MMM")}`;
+  if (nights === 0) return `${format(input.dateRange.from, "dd MMM", { locale: it })} (in giornata)`;
+  return `${format(input.dateRange.from, "dd MMM", { locale: it })} - ${format(input.dateRange.to, "dd MMM", { locale: it })}`;
 }

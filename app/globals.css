@@ -68,8 +68,14 @@
   --voltage: #f0b429;
   --voltage-foreground: #1a4d33;
   --destructive: #b3403a;
+  /* --border resta il filetto decorativo (divisori, perimetro delle card): non
+     è un componente di interfaccia, quindi 1.4.11 non gli chiede 3:1.
+     --input è il bordo dei controlli (input, select, bottoni outline): è
+     l'unico segno che il campo esiste, quindi deve stare sopra 3:1 su tutti
+     gli sfondi in uso — #7f8a7c dà 3.60:1 su Canvas, 3.10:1 su Nebbia,
+     3.07:1 su wash, 3.31:1 su muted (prima #d4dad1: 1.42 / 1.23 / 1.21 / 1.31). */
   --border: #d4dad1;
-  --input: #d4dad1;
+  --input: #7f8a7c;
   --ring: #1a4d33;
   --chart-1: #1a4d33;
   --chart-2: #2b5c3c;
@@ -105,7 +111,9 @@
   --voltage-foreground: #1a4d33;
   --destructive: #c2564a;
   --border: #2c5138;
-  --input: #2c5138;
+  /* come nel tema chiaro: #5f8a69 dà 4.35:1 sullo sfondo, 3.62:1 sulle card,
+     3.52:1 su muted e 3.05:1 su secondary (prima #2c5138: 1.91 / 1.59 / 1.55). */
+  --input: #5f8a69;
   --ring: #f0b429;
   --chart-1: #f0b429;
   --chart-2: #a9d6b6;
@@ -124,10 +132,20 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Indicatore di focus per i link nudi e per tutto ciò che non passa dai
+     componenti shadcn (che hanno già `focus-visible:border-ring` a contrasto
+     pieno). Prima l'outline UA era colorato `ring/50` ≈ #8da699: 2.61:1 su
+     Canvas, sotto la soglia 3:1 di 1.4.11. A colore pieno (--ring #1a4d33) è
+     9.75:1 su Canvas e 8.40:1 su Nebbia. Chi imposta `outline-none` (Button,
+     Input, Select) sovrascrive questa regola, essendo in un layer superiore. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
 }
 
@@ -143,10 +161,12 @@
   font-variation-settings: "opsz" 70;
 }
 
-/* Ribbon di destinazioni in reverse-search.tsx: scorrimento continuo in loop,
-   fermo solo se l'utente preferisce meno movimento. Non si mette in pausa al
-   passaggio del cursore: è un fregio decorativo (aria-hidden), non un elenco
-   da leggere, e fermarlo sotto il mouse spezzava il movimento della sezione. */
+/* Ribbon di destinazioni in reverse-search.tsx: scorrimento continuo in loop.
+   Non si mette in pausa al passaggio del cursore: è un fregio decorativo
+   (aria-hidden), non un elenco da leggere, e fermarlo sotto il mouse spezzava
+   il movimento della sezione. Il comando di pausa è invece un bottone vero
+   accanto al nastro (WCAG 2.2.2 chiede un meccanismo *nel contenuto*:
+   `prefers-reduced-motion` è una preferenza di sistema e non lo soddisfa). */
 @keyframes scopri-marquee {
   from {
     transform: translateX(0);
@@ -160,9 +180,37 @@
   animation: scopri-marquee 36s linear infinite;
 }
 
+.scopri-marquee-track[data-paused] {
+  animation-play-state: paused;
+}
+
+/* Con meno movimento l'animazione sparisce, ma il track resta a translateX(0)
+   dentro un `overflow-hidden`: si vedrebbero solo le prime 2-6 chip su 24 e le
+   altre sarebbero irraggiungibili. Qui il nastro cambia forma invece di
+   fermarsi soltanto: va a capo, mostra tutte e 12 le destinazioni una volta
+   sola (la seconda metà serve solo a chiudere il loop) e le sfumature laterali,
+   che senza scorrimento nasconderebbero del testo, si tolgono. */
 @media (prefers-reduced-motion: reduce) {
   .scopri-marquee-track {
     animation: none;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .scopri-marquee-track > [data-marquee-duplicate] {
+    display: none;
+  }
+
+  .scopri-marquee-fade {
+    display: none;
+  }
+
+  /* Il comando di pausa non ha più nulla da mettere in pausa: si toglie qui e
+     non in JavaScript, perché il valore di `useReducedMotion()` sul server è
+     sempre false e un rendering condizionale cambierebbe la struttura del DOM
+     durante l'idratazione. `display: none` lo toglie anche dal tab order. */
+  .scopri-marquee-pause {
+    display: none;
   }
 }
 

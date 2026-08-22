@@ -61,7 +61,14 @@ export function SiteNav() {
           condensed ? "h-[60px]" : "h-[88px]"
         )}
       >
-        <a href="#" className="relative shrink-0">
+        {/* `after:` estende l'area toccabile del logo (il testo da solo è alto
+            20px da condensato) a 36px, senza ingrandire il testo né spostare
+            nulla: intorno c'è solo spazio vuoto, quindi non si sovrappone ad
+            altri bersagli. */}
+        <a
+          href="#"
+          className="relative shrink-0 after:absolute after:-inset-x-2 after:-inset-y-2 after:rounded-full after:content-['']"
+        >
           <span
             className={cn(
               "font-display font-[725] tracking-[0.15em] whitespace-nowrap uppercase motion-safe:transition-[font-size] motion-safe:duration-200",
@@ -113,7 +120,7 @@ export function SiteNav() {
               aria-label="Sezioni della pagina"
               className="size-11 border-primary shadow-none sm:size-8 lg:hidden"
             >
-              <Menu />
+              <Menu aria-hidden="true" />
             </Button>
           </PopoverTrigger>
           <PopoverContent
@@ -142,6 +149,17 @@ export function SiteNav() {
                 );
               })}
             </nav>
+            {/* Sotto 640px il bottone "Crea itinerario" della barra è nascosto
+                (`hidden sm:inline-flex`): senza questa voce, da telefono la
+                barra non porta a /crea in nessun modo. Da `sm` in su il bottone
+                c'è già, quindi qui sparisce per non duplicarlo. */}
+            <div className="mt-1 border-t border-border pt-1 sm:hidden">
+              <Button asChild size="sm" className="w-full">
+                <Link href="/crea" onClick={() => setMenuOpen(false)}>
+                  Crea itinerario
+                </Link>
+              </Button>
+            </div>
           </PopoverContent>
         </Popover>
 

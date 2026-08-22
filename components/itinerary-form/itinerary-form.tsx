@@ -10,7 +10,7 @@ import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
@@ -187,17 +187,20 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
     <Card className="mx-auto w-full max-w-2xl overflow-hidden border-border pb-0 shadow-none">
       <CardHeader className="px-8 pt-8">
         <span aria-hidden className="mb-4 block h-[3px] w-7 bg-voltage" />
-        <CardTitle className="font-display text-3xl font-[725] tracking-[-0.01em] text-primary uppercase sm:text-4xl">
+        {/* <h1> reale al posto di CardTitle, che è un <div>: le classi sono le
+            stesse che CardTitle già produceva (cn() scarta leading-none e
+            font-semibold, sovrascritte da quelle qui sotto), resa identica. */}
+        <h1 className="font-display text-3xl font-[725] tracking-[-0.01em] text-primary uppercase sm:text-4xl">
           Pianifica il tuo viaggio
-        </CardTitle>
+        </h1>
       </CardHeader>
       <CardContent className="px-8 pb-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           <div className={cn("space-y-8", mode === "loading" && "pointer-events-none opacity-60")}>
             <div role="group" aria-labelledby="gruppo-viaggio" className="space-y-5">
-              <p id="gruppo-viaggio" className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+              <h2 id="gruppo-viaggio" className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
                 Il viaggio
-              </p>
+              </h2>
               <DestinationAutocomplete
                 control={control}
                 name="destination"
@@ -210,19 +213,28 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
             <div className="space-y-2">
               <Popover>
                 <PopoverTrigger asChild>
+                  {/* Niente aria-label: cancellerebbe il testo visibile dal nome
+                      accessibile (WCAG 2.5.3). L'etichetta sr-only lo precede. */}
                   <Button
                     type="button"
                     variant="outline"
-                    aria-label="Date del viaggio"
+                    aria-labelledby="date-label date-value"
+                    aria-invalid={errors.dateRange ? true : undefined}
+                    aria-describedby={errors.dateRange ? "date-error" : undefined}
                     className={cn(
                       "w-full justify-start rounded-md text-left font-normal",
                       !dateRange?.from && "text-muted-foreground"
                     )}
                   >
+                    <span id="date-label" className="sr-only">
+                      Date del viaggio
+                    </span>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange?.from && dateRange?.to
-                      ? `${format(dateRange.from, "dd/MM/yyyy")} - ${format(dateRange.to, "dd/MM/yyyy")}`
-                      : "Seleziona le date"}
+                    <span id="date-value">
+                      {dateRange?.from && dateRange?.to
+                        ? `${format(dateRange.from, "dd/MM/yyyy")} - ${format(dateRange.to, "dd/MM/yyyy")}`
+                        : "Seleziona le date"}
+                    </span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent
@@ -259,7 +271,9 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
                 </PopoverContent>
               </Popover>
               {errors.dateRange && (
-                <p className="text-sm text-destructive">{errors.dateRange.message}</p>
+                <p id="date-error" role="alert" className="text-sm text-destructive">
+                  {errors.dateRange.message}
+                </p>
               )}
             </div>
 
@@ -277,14 +291,19 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
                   <Button
                     type="button"
                     variant="outline"
-                    aria-label="Chi viaggia"
+                    aria-labelledby="travelers-label travelers-value"
+                    aria-invalid={participantsError ? true : undefined}
+                    aria-describedby={participantsError ? "travelers-error" : undefined}
                     className={cn(
                       "w-full justify-start rounded-md text-left font-normal",
                       participantsError && "border-destructive"
                     )}
                   >
+                    <span id="travelers-label" className="sr-only">
+                      Chi viaggia
+                    </span>
                     <Users className="mr-2 h-4 w-4" />
-                    {travelerSummary}
+                    <span id="travelers-value">{travelerSummary}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[calc(100vw-2rem)] max-w-sm" align="start">
@@ -324,15 +343,19 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
                   </div>
                 </PopoverContent>
               </Popover>
-              {participantsError && <p className="text-sm text-destructive">{participantsError}</p>}
+              {participantsError && (
+                <p id="travelers-error" role="alert" className="text-sm text-destructive">
+                  {participantsError}
+                </p>
+              )}
             </div>
 
             </div>
 
             <div role="group" aria-labelledby="gruppo-preferenze" className="space-y-5 border-t border-border pt-6">
-              <p id="gruppo-preferenze" className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+              <h2 id="gruppo-preferenze" className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
                 Le preferenze
-              </p>
+              </h2>
             <div className="space-y-2">
               <Label htmlFor="budget-amount">
                 <Euro className="h-4 w-4 text-muted-foreground" />
@@ -400,13 +423,25 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
           </div>
 
           {apiError && (
-            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <p
+              role="alert"
+              className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
               {apiError}
             </p>
           )}
 
           <div className="-mx-8 -mb-8 border-t border-border bg-secondary px-8 pt-6 pb-6">
-            <Button type="submit" className="w-full" disabled={mode === "loading"}>
+            {/* aria-disabled invece di disabled: `disabled` toglierebbe il focus
+                al bottone appena parte il caricamento (finirebbe su <body>). Il
+                secondo invio è già ignorato dalla guardia in onSubmit; le due
+                classi replicano esattamente `disabled:pointer-events-none
+                disabled:opacity-50` del Button, quindi l'aspetto non cambia. */}
+            <Button
+              type="submit"
+              aria-disabled={mode === "loading" ? true : undefined}
+              className={cn("w-full", mode === "loading" && "pointer-events-none opacity-50")}
+            >
               {mode === "loading" ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -416,6 +451,11 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
                 "Genera itinerario"
               )}
             </Button>
+            {/* Testo stabile: i LOADING_MESSAGES ruotano ogni 4,5s e annunciarli
+                sarebbe uno spam continuo. */}
+            <p role="status" className="sr-only">
+              {mode === "loading" ? "Sto generando il tuo itinerario, attendi." : ""}
+            </p>
             <p className="mt-3 text-center text-xs text-muted-foreground">
               Ci vuole meno di un minuto. Potrai modificare tutto in seguito.
             </p>

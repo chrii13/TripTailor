@@ -1,14 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Compass } from "lucide-react";
+import { ArrowRight, Compass, Pause, Play } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { formatCost, REVERSE_SEARCH_DESTINATIONS } from "./reverse-search-destinations";
 
 export function ReverseSearch() {
   const reduceMotion = useReducedMotion();
+  const [paused, setPaused] = useState(false);
   const chips = [...REVERSE_SEARCH_DESTINATIONS, ...REVERSE_SEARCH_DESTINATIONS];
 
   return (
@@ -34,10 +36,16 @@ export function ReverseSearch() {
         </p>
 
         <div aria-hidden className="scopri-marquee relative mt-8 overflow-hidden">
-          <div className="scopri-marquee-track flex w-max items-center gap-3">
+          <div
+            className="scopri-marquee-track flex w-max items-center gap-3"
+            data-paused={paused ? "" : undefined}
+          >
             {chips.map((dest, i) => (
               <span
                 key={`${dest.id}-${i}`}
+                data-marquee-duplicate={
+                  i >= REVERSE_SEARCH_DESTINATIONS.length ? "" : undefined
+                }
                 className="flex shrink-0 items-center gap-2 rounded-full border border-border bg-background py-1.5 pr-4 pl-1.5"
               >
                 <dest.Flag className="h-4 w-6 shrink-0 rounded-[2px]" />
@@ -48,9 +56,28 @@ export function ReverseSearch() {
               </span>
             ))}
           </div>
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-accent to-transparent" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-accent to-transparent" />
+          <div className="scopri-marquee-fade pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-accent to-transparent" />
+          <div className="scopri-marquee-fade pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-accent to-transparent" />
         </div>
+
+        {/* Comando di pausa richiesto da WCAG 2.2.2: il nastro dura più di 5s,
+            parte da solo e si ripete. Con `prefers-reduced-motion` non serve (il
+            nastro è già fermo e disposto su più righe) e sparisce via CSS, non
+            via JavaScript: `useReducedMotion()` vale sempre false sul server,
+            quindi renderlo condizionalmente cambierebbe la struttura del DOM
+            fra HTML servito e prima render client — un errore di idratazione. */}
+        <button
+          type="button"
+          onClick={() => setPaused((p) => !p)}
+          className="scopri-marquee-pause mt-3 inline-flex items-center gap-1.5 rounded-full px-2 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
+        >
+          {paused ? (
+            <Play aria-hidden="true" className="size-3.5" />
+          ) : (
+            <Pause aria-hidden="true" className="size-3.5" />
+          )}
+          {paused ? "Riprendi lo scorrimento" : "Metti in pausa lo scorrimento"}
+        </button>
 
         <Button
           asChild
@@ -59,9 +86,9 @@ export function ReverseSearch() {
           className="mt-8 gap-2 border-primary px-8 shadow-none has-[>svg]:px-8"
         >
           <Link href="/scopri">
-            <Compass className="size-4" />
+            <Compass aria-hidden="true" className="size-4" />
             Scopri dove puoi andare
-            <ArrowRight className="size-4" />
+            <ArrowRight aria-hidden="true" className="size-4" />
           </Link>
         </Button>
       </motion.div>
