@@ -162,11 +162,13 @@
 }
 
 /* Ribbon di destinazioni in reverse-search.tsx: scorrimento continuo in loop.
-   Non si mette in pausa al passaggio del cursore: è un fregio decorativo
-   (aria-hidden), non un elenco da leggere, e fermarlo sotto il mouse spezzava
-   il movimento della sezione. Il comando di pausa è invece un bottone vero
-   accanto al nastro (WCAG 2.2.2 chiede un meccanismo *nel contenuto*:
-   `prefers-reduced-motion` è una preferenza di sistema e non lo soddisfa). */
+   Tre modi per fermarlo, tutti e tre necessari (WCAG 2.2.2 chiede un
+   meccanismo *nel contenuto*: `prefers-reduced-motion` è una preferenza di
+   sistema e non lo soddisfa): il passaggio del cursore, il focus da tastiera
+   dentro la regione e il bottone di pausa, che è `sr-only` e diventa visibile
+   solo quando riceve il focus (schema dei link "salta al contenuto"). La leva
+   è sempre `animation-play-state: paused`, mai `animation: none`, che
+   riporterebbe il nastro alla posizione iniziale invece di fermarlo dov'è. */
 @keyframes scopri-marquee {
   from {
     transform: translateX(0);
@@ -182,6 +184,36 @@
 
 .scopri-marquee-track[data-paused] {
   animation-play-state: paused;
+}
+
+/* Cursore sopra la regione o focus da tastiera al suo interno: il nastro si
+   ferma dov'è. La regione racchiude nastro + bottone, così anche mettere a
+   fuoco il bottone (che sta fuori dal contenitore `aria-hidden`) mette in
+   pausa prima ancora di premerlo. */
+.scopri-marquee-region:hover .scopri-marquee-track,
+.scopri-marquee-region:focus-within .scopri-marquee-track {
+  animation-play-state: paused;
+}
+
+/* Il bottone è `sr-only`: a schermo non si vede nulla finché non arriva il
+   focus. Le proprietà di aspetto stanno qui e non fra le utility Tailwind
+   perché `not-sr-only` azzera padding e margin e l'ordine fra utility in
+   conflitto non è garantito; questo file è fuori da `@layer`, quindi vince. */
+.scopri-marquee-pause:focus {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--input);
+  border-radius: 9999px;
+  background-color: var(--background);
+  color: var(--primary);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 /* Con meno movimento l'animazione sparisce, ma il track resta a translateX(0)
@@ -208,8 +240,11 @@
   /* Il comando di pausa non ha più nulla da mettere in pausa: si toglie qui e
      non in JavaScript, perché il valore di `useReducedMotion()` sul server è
      sempre false e un rendering condizionale cambierebbe la struttura del DOM
-     durante l'idratazione. `display: none` lo toglie anche dal tab order. */
-  .scopri-marquee-pause {
+     durante l'idratazione. `display: none` lo toglie anche dal tab order.
+     Va ripetuto sul `:focus`, che ha specificità maggiore della regola qui
+     sopra e altrimenti lo rimetterebbe in vista. */
+  .scopri-marquee-pause,
+  .scopri-marquee-pause:focus {
     display: none;
   }
 }

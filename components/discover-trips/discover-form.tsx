@@ -624,7 +624,7 @@ export function DiscoverForm() {
                 <Label htmlFor="vacation-type">
                   <Compass className="h-4 w-4 text-muted-foreground" />
                   Che tipo di vacanza cerchi?{" "}
-                  <span className="font-normal text-muted-foreground">(facoltativo)</span>
+                  <span className="font-normal text-muted-foreground">(opzionale)</span>
                 </Label>
                 <div className="flex flex-wrap gap-2">
                   {VACATION_TYPES.map((type) => {

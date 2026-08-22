@@ -396,7 +396,8 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
             <div className="space-y-2">
               <Label htmlFor="styleNotes">
                 <Sparkles className="h-4 w-4 text-muted-foreground" />
-                Stile di viaggio
+                Stile di viaggio{" "}
+                <span className="font-normal text-muted-foreground">(opzionale)</span>
               </Label>
               <Input
                 id="styleNotes"
@@ -408,7 +409,8 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
             <div className="space-y-2">
               <Label htmlFor="mustSee">
                 <Star className="h-4 w-4 text-muted-foreground" />
-                Cosa non vuoi perderti
+                Cosa non vuoi perderti{" "}
+                <span className="font-normal text-muted-foreground">(opzionale)</span>
               </Label>
               <Input
                 id="mustSee"
