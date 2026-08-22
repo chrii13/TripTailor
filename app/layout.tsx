@@ -20,9 +20,32 @@ const fraunces = Fraunces({
   axes: ["opsz"],
 });
 
+const SITE_URL = "https://trip-tailor-ten.vercel.app";
+const SITE_TITLE = "TripTailor — Itinerari di viaggio su misura";
+const SITE_DESCRIPTION =
+  "Racconta dove, quando e con chi parti: l'AI disegna il tuo itinerario giorno per giorno, sul tuo budget e sul meteo del periodo.";
+
 export const metadata: Metadata = {
-  title: "TripTailor — Pianifica il tuo viaggio",
-  description: "Crea itinerari di viaggio personalizzati in pochi passi.",
+  // Senza metadataBase Next emette URL relativi, che i social non risolvono.
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: "%s — TripTailor",
+  },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    siteName: "TripTailor",
+    locale: "it_IT",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

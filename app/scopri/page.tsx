@@ -1,7 +1,37 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { DiscoverForm } from "@/components/discover-trips/discover-form";
+import { OG_IMAGE } from "@/lib/site-metadata";
+
+const TITLE = "Parti dal budget, non dalla meta";
+const DESCRIPTION =
+  "Non sai dove andare? Dicci quanto puoi spendere, quando e con chi parti: ti mostriamo 5 proposte di viaggio, ognuna con i costi stimati di viaggio, alloggio e spese in loco.";
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/scopri" },
+  // openGraph/twitter definiti qui sostituiscono in blocco quelli del layout,
+  // e insieme disattivano la convenzione file `app/opengraph-image.tsx`:
+  // vanno ripetuti tutti i campi comuni, immagine completa compresa.
+  openGraph: {
+    title: `${TITLE} — TripTailor`,
+    description: DESCRIPTION,
+    url: "/scopri",
+    siteName: "TripTailor",
+    locale: "it_IT",
+    type: "website",
+    images: [OG_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${TITLE} — TripTailor`,
+    description: DESCRIPTION,
+    images: [OG_IMAGE],
+  },
+};
 
 export default function Scopri() {
   return (
