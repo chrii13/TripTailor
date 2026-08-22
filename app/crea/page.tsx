@@ -1,8 +1,38 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { ItineraryForm } from "@/components/itinerary-form/itinerary-form";
 import { decodeCreaPrefill, type CreaSearchParams } from "@/lib/crea-query-params";
+import { OG_IMAGE } from "@/lib/site-metadata";
+
+const TITLE = "Crea il tuo itinerario";
+const DESCRIPTION =
+  "Destinazione, date, chi viaggia e budget: ricevi un itinerario giorno per giorno, con orari, costi e attività scelte su di te.";
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/crea" },
+  // openGraph/twitter definiti qui sostituiscono in blocco quelli del layout,
+  // e insieme disattivano la convenzione file `app/opengraph-image.tsx`:
+  // vanno ripetuti tutti i campi comuni, immagine completa compresa.
+  openGraph: {
+    title: `${TITLE} — TripTailor`,
+    description: DESCRIPTION,
+    url: "/crea",
+    siteName: "TripTailor",
+    locale: "it_IT",
+    type: "website",
+    images: [OG_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${TITLE} — TripTailor`,
+    description: DESCRIPTION,
+    images: [OG_IMAGE],
+  },
+};
 
 type CreaPageProps = {
   searchParams: Promise<CreaSearchParams>;
