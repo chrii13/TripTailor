@@ -31,7 +31,7 @@ export function FinalCta() {
         >
           <Link href="/crea">
             Crea il tuo itinerario
-            <ArrowRight className="size-4" />
+            <ArrowRight aria-hidden="true" className="size-4" />
           </Link>
         </Button>
       </motion.div>

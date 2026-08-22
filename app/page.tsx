@@ -18,15 +18,21 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col">
+    // SiteNav (<header>) e SiteFooter (<footer>) stanno FUORI da <main>: i ruoli
+    // impliciti banner/contentinfo esistono solo se non sono discendenti di
+    // main/article/section/aside, altrimenti degradano a generic e la pagina
+    // resta senza landmark di intestazione e piè di pagina.
+    <>
       <SiteNav />
-      <Hero />
-      <PopularDestinations />
-      <SiteIdentity />
-      <HowItWorks />
-      <ReverseSearch />
-      <FinalCta />
+      <main className="flex min-h-screen flex-col">
+        <Hero />
+        <PopularDestinations />
+        <SiteIdentity />
+        <HowItWorks />
+        <ReverseSearch />
+        <FinalCta />
+      </main>
       <SiteFooter />
-    </main>
+    </>
   );
 }

@@ -100,6 +100,8 @@ export function DestinationAutocomplete<T extends FieldValues>({
               aria-expanded={isOpen}
               aria-controls={`${id}-suggestions`}
               aria-autocomplete="list"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? `${id}-error` : undefined}
               aria-activedescendant={highlightedIndex >= 0 ? `${id}-option-${highlightedIndex}` : undefined}
               ref={field.ref}
               value={field.value ?? ""}
@@ -158,7 +160,11 @@ export function DestinationAutocomplete<T extends FieldValues>({
           </div>
         )}
       />
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

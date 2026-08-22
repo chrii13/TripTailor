@@ -58,7 +58,7 @@ export function Hero() {
             <Button asChild size="lg" className="gap-2 px-8 has-[>svg]:px-8">
               <Link href="/crea">
                 Crea il tuo itinerario
-                <ArrowRight className="size-4" />
+                <ArrowRight aria-hidden="true" className="size-4" />
               </Link>
             </Button>
             <Button
@@ -69,9 +69,12 @@ export function Hero() {
             >
               <Link href="/scopri">Non so dove andare</Link>
             </Button>
+            {/* `after:` estende l'area toccabile: il testo da solo è alto 20px,
+                sotto il minimo di 24px richiesto da WCAG 2.5.8. Non è un link
+                dentro una frase, quindi l'eccezione per i link in linea non vale. */}
             <Link
               href="#come-funziona"
-              className="text-sm font-medium text-primary underline underline-offset-4"
+              className="relative text-sm font-medium text-primary underline underline-offset-4 after:absolute after:-inset-x-1 after:-inset-y-2 after:rounded-full after:content-['']"
             >
               Guarda come funziona
             </Link>

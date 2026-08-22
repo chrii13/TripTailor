@@ -13,7 +13,11 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          // border-input e non il `border` nudo (che eredita --border, il
+          // filetto decorativo a 1.42:1): il perimetro è l'unico segno che il
+          // bottone esiste, quindi vale la soglia 3:1 di WCAG 1.4.11. I bottoni
+          // che passano `border-primary` restano invariati.
+          "border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost:

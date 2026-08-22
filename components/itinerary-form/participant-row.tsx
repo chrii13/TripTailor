@@ -98,7 +98,12 @@ export function ParticipantRow<T extends FieldValues>({
                 )
               }
             >
-              <SelectTrigger id={ageName} className="w-full">
+              <SelectTrigger
+                id={ageName}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? `${ageName}-error` : undefined}
+                className="w-full"
+              >
                 <SelectValue placeholder="–" />
               </SelectTrigger>
               <SelectContent className="max-h-64">
@@ -111,7 +116,11 @@ export function ParticipantRow<T extends FieldValues>({
             </Select>
           )}
         />
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <p id={`${ageName}-error`} role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
       </div>
       <div className="space-y-1.5">
         {/*

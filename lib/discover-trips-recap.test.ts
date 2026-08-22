@@ -34,7 +34,7 @@ describe("formatSearchPeriod", () => {
       dateRange: { from: new Date(2026, 8, 1), to: new Date(2026, 8, 5) },
       flexiblePeriod: {},
     });
-    expect(label).toBe("01 Sep - 05 Sep");
+    expect(label).toBe("01 set - 05 set");
   });
 
   it("segnala il viaggio in giornata in modalità esatte", () => {
@@ -43,7 +43,7 @@ describe("formatSearchPeriod", () => {
       dateRange: { from: new Date(2026, 8, 1), to: new Date(2026, 8, 1) },
       flexiblePeriod: {},
     });
-    expect(label).toBe("01 Sep (in giornata)");
+    expect(label).toBe("01 set (in giornata)");
   });
 
   it("non mostra mai un intervallo di date in modalità flessibile", () => {

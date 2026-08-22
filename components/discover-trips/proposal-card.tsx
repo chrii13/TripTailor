@@ -50,9 +50,9 @@ export function ProposalCard({
     <Card className="flex h-full flex-col border-border shadow-none">
       <CardContent className="flex flex-1 flex-col gap-4 pt-6">
         <div>
-          <h3 className="font-display text-xl font-[725] tracking-[-0.01em] text-primary uppercase">
+          <h2 className="font-display text-xl font-[725] tracking-[-0.01em] text-primary uppercase">
             {proposal.destination}
-          </h3>
+          </h2>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <MapPin className="size-3.5" />

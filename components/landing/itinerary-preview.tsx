@@ -23,7 +23,13 @@ const DAYS = [
   },
 ];
 
-const WEATHER_ICONS = { sun: Sun, cloud: CloudSun };
+// L'icona del meteo è l'unico posto in cui la condizione è indicata: accanto
+// c'è solo la temperatura. Quindi non è decorativa e porta un nome accessibile,
+// a differenza delle altre icone di questa anteprima.
+const WEATHER_ICONS = {
+  sun: { Icon: Sun, label: "Sereno" },
+  cloud: { Icon: CloudSun, label: "Poco nuvoloso" },
+};
 
 const list: Variants = {
   hidden: {},
@@ -50,7 +56,7 @@ export function ItineraryPreview() {
           </p>
         </div>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground">
-          <Users className="size-3.5" />2 adulti
+          <Users aria-hidden="true" className="size-3.5" />2 adulti
         </span>
       </div>
 
@@ -61,7 +67,8 @@ export function ItineraryPreview() {
         animate={reduceMotion ? undefined : "visible"}
       >
         {DAYS.map((day) => {
-          const WeatherIcon = WEATHER_ICONS[day.weather.icon];
+          const { Icon: WeatherIcon, label: weatherLabel } =
+            WEATHER_ICONS[day.weather.icon];
           return (
             <div key={day.label} className="px-5 py-4">
               <motion.div
@@ -72,7 +79,7 @@ export function ItineraryPreview() {
                   {day.label}
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <WeatherIcon className="size-4" />
+                  <WeatherIcon role="img" aria-label={weatherLabel} className="size-4" />
                   {day.weather.temp}
                 </span>
               </motion.div>

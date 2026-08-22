@@ -45,11 +45,14 @@ export default async function Crea({ searchParams }: CreaPageProps) {
     <div className="min-h-screen bg-secondary">
       {/* Non è una barra: è il fondo della pagina che resta fermo. Niente bordo,
           niente superficie propria, il contenuto ci scorre sotto. */}
-      <div className="sticky top-0 z-20 bg-secondary">
+      <header className="sticky top-0 z-20 bg-secondary">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-4 px-4 py-5 sm:px-0">
+          {/* `after:` estende l'area toccabile del logo: il testo da solo è alto
+              20px, sotto il minimo di 24px richiesto da WCAG 2.5.8. Stessa
+              soluzione già usata in components/landing/site-nav.tsx. */}
           <Link
             href="/"
-            className="font-display text-sm font-[725] tracking-[0.15em] whitespace-nowrap text-primary uppercase transition-opacity hover:opacity-70"
+            className="relative font-display text-sm font-[725] tracking-[0.15em] whitespace-nowrap text-primary uppercase transition-opacity after:absolute after:-inset-x-2 after:-inset-y-2 after:rounded-full after:content-[''] hover:opacity-70"
           >
             TripTailor
           </Link>
@@ -61,7 +64,7 @@ export default async function Crea({ searchParams }: CreaPageProps) {
             Home
           </Link>
         </div>
-      </div>
+      </header>
 
       <main className="mx-auto w-full max-w-2xl px-4 pb-16 sm:px-0">
         <ItineraryForm prefill={prefill} />

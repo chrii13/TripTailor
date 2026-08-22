@@ -11,6 +11,12 @@ function Slider({
   value,
   min = 0,
   max = 100,
+  // Radix mette role="slider" sul Thumb, non sulla Root: un aria-label passato
+  // al componente finirebbe sull'elemento sbagliato e lo screen reader
+  // annuncerebbe "cursore, 1000" senza dire di che cosa. Va estratto qui e
+  // inoltrato al Thumb a mano.
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Root>) {
   const _values = React.useMemo(
@@ -53,6 +59,8 @@ function Slider({
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
           key={index}
+          aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledBy}
           className="block size-4 shrink-0 rounded-full border border-primary bg-white shadow-sm ring-ring/50 transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
         />
       ))}

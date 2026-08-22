@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
 import { Button } from "@/components/ui/button";
 import { buildCreaHref } from "@/lib/crea-query-params";
 import { formatSearchPeriod, getSearchNights } from "@/lib/discover-trips-recap";
@@ -20,6 +24,8 @@ interface DiscoverResultsProps {
   participants: Participant[];
   budget: number;
   departureCity: string;
+  /** true solo quando i risultati arrivano da una ricerca appena inviata. */
+  focusHeading?: boolean;
   onEdit: () => void;
 }
 
@@ -31,8 +37,19 @@ export function DiscoverResults({
   participants,
   budget,
   departureCity,
+  focusHeading = false,
   onEdit,
 }: DiscoverResultsProps) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  // Il form sparisce e al suo posto compaiono le proposte: senza spostare il focus,
+  // chi naviga da tastiera o con screen reader resta su un punto della pagina che
+  // non esiste più. È la convenzione dei risultati di ricerca — si porta il focus
+  // sull'intestazione (non sul primo risultato) così l'esito si sente per intero.
+  useEffect(() => {
+    if (focusHeading) headingRef.current?.focus();
+  }, [focusHeading]);
+
   const nights = getSearchNights({ dateMode, dateRange, flexiblePeriod });
   const periodLabel = formatSearchPeriod({ dateMode, dateRange, flexiblePeriod });
   const travelerCount = participants.length;
@@ -40,9 +57,13 @@ export function DiscoverResults({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-2xl font-[725] tracking-[-0.01em] text-primary uppercase">
+        <h1
+          ref={headingRef}
+          tabIndex={-1}
+          className="font-display text-2xl font-[725] tracking-[-0.01em] text-primary uppercase outline-none"
+        >
           {proposals.length > 0 ? "Dove puoi andare" : "Nessuna proposta"}
-        </h2>
+        </h1>
         <Button variant="outline" onClick={onEdit} className="border-primary shadow-none">
           Modifica la ricerca
         </Button>
