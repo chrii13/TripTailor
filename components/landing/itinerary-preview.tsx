@@ -33,7 +33,7 @@ const WEATHER_ICONS = {
 
 const list: Variants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.13, delayChildren: 0.75 } },
+  visible: { transition: { staggerChildren: 0.13 } },
 };
 
 const stop: Variants = {
@@ -45,10 +45,10 @@ export function ItineraryPreview() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border bg-secondary px-5 py-4">
         <div>
-          <p className="font-display text-lg font-[725] tracking-[-0.005em] text-primary">
+          <p className="font-display text-lg font-[725] tracking-[-0.015em] text-primary">
             Lisbona
           </p>
           <p className="text-xs text-muted-foreground">
@@ -60,11 +60,23 @@ export function ItineraryPreview() {
         </span>
       </div>
 
+      {/* `whileInView` e non `animate`: su telefono la card sta sotto la piega
+          (l'hero è a colonna singola sotto `lg`), quindi con `animate` la
+          sequenza — che è l'elemento firma della landing — finiva in ~2s prima
+          che l'utente ci arrivasse. `amount: 0.5` e non meno: con 0.35 la
+          soglia su 375×812 (iPhone X–13) cadeva a 0px di scroll e la sequenza
+          ripartiva al caricamento come prima; con 0.5 serve una scrollata su
+          tutti i formati di telefono. `once` la lascia poi ferma. Su desktop
+          la card è già in viewport al caricamento, quindi non cambia nulla.
+          Nessun `delayChildren`: serviva ad aspettare lo stagger dell'hero
+          quando l'innesco era il caricamento, ora sarebbero solo secondi di
+          card vuota dopo che l'utente ci è arrivato. */}
       <motion.div
         className="divide-y divide-border"
         variants={reduceMotion ? undefined : list}
         initial={reduceMotion ? undefined : "hidden"}
-        animate={reduceMotion ? undefined : "visible"}
+        whileInView={reduceMotion ? undefined : "visible"}
+        viewport={{ once: true, amount: 0.5 }}
       >
         {DAYS.map((day) => {
           const { Icon: WeatherIcon, label: weatherLabel } =
@@ -75,7 +87,7 @@ export function ItineraryPreview() {
                 className="mb-3 flex items-center justify-between"
                 variants={reduceMotion ? undefined : stop}
               >
-                <span className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                <span className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
                   {day.label}
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -93,7 +105,10 @@ export function ItineraryPreview() {
                     <span className="w-11 shrink-0 pt-0.5 text-xs font-medium tabular-nums text-muted-foreground">
                       {s.time}
                     </span>
-                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-voltage" />
+                    {/* Bosco e non Sole: cinque pallini elenco gialli qui più
+                        quattro nella timeline facevano nove usi decorativi del
+                        colore-voltaggio, che così smetteva di segnalare. */}
+                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
                     <span>
                       <span className="block text-sm font-medium text-primary">
                         {s.title}

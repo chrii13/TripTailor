@@ -18,12 +18,22 @@ export function FinalCta() {
         viewport={{ once: true, amount: 0.6 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
-        <h2 className="font-display text-4xl leading-[0.9] font-[725] tracking-[-0.015em] text-balance uppercase sm:text-6xl">
+        {/* Resta il più grande fra gli h2, ma fluido e sempre sotto l'h1
+            dell'hero: con `text-4xl sm:text-6xl` valeva 60px a 700px, contro
+            un h1 da 40. */}
+        <h2 className="font-display text-[clamp(2.375rem,5.2vw,3.75rem)] leading-[0.9] font-[725] tracking-[-0.015em] text-balance uppercase">
           Pronto a partire?
         </h2>
         <p className="text-primary-foreground/75 sm:text-lg">
           Bastano pochi minuti per avere il tuo piano di viaggio.
         </p>
+        {/* Sole, benché l'hero usi Bosco per la stessa azione. Non è una svista:
+            qui il fondo è Bosco, quindi un bottone Bosco non esiste e l'unica
+            alternativa sarebbe l'inversione su Canvas, che spegne l'ultimo
+            richiamo della pagina. Un tentativo di uniformarlo è stato fatto il
+            2026-08-23 e respinto dall'utente per questo motivo: la coerenza qui
+            costa più di quanto renda. Il divieto di CLAUDE.md riguarda il Sole
+            *accanto* a una CTA Sole, non la CTA stessa. */}
         <Button
           asChild
           size="lg"

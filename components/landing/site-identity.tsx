@@ -20,7 +20,7 @@ export function SiteIdentity() {
         {/* h2 e non <p>: la voce di menu "Perché TripTailor" punta a questa
             sezione, che era l'unica della landing senza intestazione. Le classi
             sono invariate, la resa visiva è identica. */}
-        <h2 className="max-w-3xl font-display text-3xl leading-[1.15] font-[725] tracking-[-0.01em] text-balance text-voltage sm:text-5xl">
+        <h2 className="max-w-3xl font-display text-[clamp(2rem,4.6vw,3rem)] leading-[1.15] font-[725] tracking-[-0.015em] text-balance text-voltage">
           Niente più tab aperte tra mappe, meteo e fogli di calcolo.
         </h2>
         <p className="mt-8 max-w-xl text-primary-foreground/75 sm:text-lg">

@@ -71,7 +71,7 @@ export function SiteNav() {
         >
           <span
             className={cn(
-              "font-display font-[725] tracking-[0.15em] whitespace-nowrap uppercase motion-safe:transition-[font-size] motion-safe:duration-200",
+              "font-display font-[725] tracking-[0.16em] whitespace-nowrap uppercase motion-safe:transition-[font-size] motion-safe:duration-200",
               condensed ? "text-sm" : "text-lg"
             )}
           >

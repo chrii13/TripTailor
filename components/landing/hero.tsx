@@ -35,7 +35,7 @@ export function Hero() {
             variants={reduceMotion ? undefined : item}
             className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase"
           >
-            Itinerari su misura, generati dall&apos;AI
+            Itinerari generati dall&apos;AI
           </motion.span>
           <motion.h1
             variants={reduceMotion ? undefined : item}
