@@ -76,6 +76,41 @@ const dayCard: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" } },
 };
 
+/**
+ * Un tratto di testo che contiene almeno una cifra, insieme ai caratteri che fanno
+ * parte del numero e gli stanno attaccati. La classe è chiusa apposta: tutto ciò che
+ * non è cifra, separatore numerico o simbolo di valuta resta al testo.
+ */
+const NUMERALS_RUN = /([\d.,:%€$£~–—\s-]*\d[\d.,:%€$£~–—\s-]*)/;
+
+/**
+ * Cifre nel carattere di testo dentro un titolo Fraunces (vedi
+ * `.display-numerals` in globals.css). Orario e costo dell'attività arrivano dal
+ * modello come testo libero — "09:00 - 11:00", ma anche "Gratuito" — quindi non
+ * si può marcare l'intero elemento: si avvolgono solo i gruppi di cifre.
+ *
+ * La cattura comprende i separatori attaccati alle cifre (due punti, virgola e punto
+ * decimali, trattini di intervallo, simbolo di valuta e percentuale): sono parte del
+ * numero, e lasciarli in Fraunces in mezzo a cifre Geist significa rendere lo stesso
+ * orario o lo stesso prezzo con due caratteri — i due punti di "09:00" restano più
+ * bassi delle cifre, e il "€" del dialog non è quello della card di /scopri.
+ */
+function Numerals({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(NUMERALS_RUN).map((part, i) =>
+        i % 2 === 1 ? (
+          <span key={i} className="display-numerals">
+            {part}
+          </span>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
 function TripPanel({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-xl bg-primary px-5 py-4 text-primary-foreground sm:px-6 sm:py-5">
@@ -271,7 +306,7 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
               >
                 <div className="flex items-baseline justify-between gap-3 bg-primary px-4 py-3.5 text-primary-foreground">
                   <p className="font-display text-xl font-[725] tracking-[-0.005em] uppercase">
-                    Giorno {dayIndex + 1}
+                    Giorno <span className="display-numerals">{dayIndex + 1}</span>
                   </p>
                   <p className="text-sm tabular-nums opacity-75">{formattedDate}</p>
                 </div>
@@ -413,7 +448,7 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                     Orario
                   </dt>
                   <dd className="mt-1 font-display text-lg font-[725] tabular-nums text-primary">
-                    {selectedActivity.suggestedTime}
+                    <Numerals text={selectedActivity.suggestedTime} />
                   </dd>
                 </div>
                 <div className="bg-card px-4 py-3">
@@ -421,7 +456,7 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                     Costo
                   </dt>
                   <dd className="mt-1 font-display text-lg font-[725] text-primary">
-                    {selectedActivity.estimatedCost}
+                    <Numerals text={selectedActivity.estimatedCost} />
                   </dd>
                 </div>
                 {selectedActivity.openingHours && (

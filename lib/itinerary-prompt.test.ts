@@ -11,6 +11,15 @@ const baseRequest: GenerateItineraryRequest = {
   styleNotes: "",
 };
 
+/**
+ * Le date del viaggio sono date di *calendario*: vanno costruite come mezzanotte locale,
+ * come fa `calendarDateSchema`, non con `new Date("2026-09-01")` che interpreta in UTC.
+ */
+const isoRequest: GenerateItineraryRequest = {
+  ...baseRequest,
+  dateRange: { from: new Date(2026, 8, 1), to: new Date(2026, 8, 5) },
+};
+
 describe("buildItineraryPrompt", () => {
   it("include la destinazione", () => {
     expect(buildItineraryPrompt(baseRequest, null)).toContain("Kyoto");
@@ -18,6 +27,34 @@ describe("buildItineraryPrompt", () => {
 
   it("include il numero di giorni calcolato dall'intervallo di date", () => {
     expect(buildItineraryPrompt(baseRequest, null)).toContain("5 giorni");
+  });
+
+  // `verifyItineraryDays` scarta l'intera risposta se una sola data non corrisponde,
+  // e il fallimento è terminale (502, nessun ritentativo). Dare al modello le date già
+  // nel formato che deve restituire toglie di mezzo l'unica conversione che poteva
+  // sbagliare: dd/MM/yyyy è ambiguo con il formato americano.
+  it("dà le date del viaggio in formato ISO, mai in dd/MM/yyyy", () => {
+    const prompt = buildItineraryPrompt(isoRequest, null);
+    expect(prompt).toContain("2026-09-01");
+    expect(prompt).toContain("2026-09-05");
+    expect(prompt).not.toMatch(/\d{2}\/\d{2}\/\d{4}/);
+  });
+
+  it("elenca una per una le date attese, in ordine, così che non vada dedotta nessuna", () => {
+    const prompt = buildItineraryPrompt(isoRequest, null);
+    expect(prompt).toContain(
+      "2026-09-01, 2026-09-02, 2026-09-03, 2026-09-04, 2026-09-05"
+    );
+  });
+
+  it("usa il formato ISO anche nelle righe di arrivo e partenza", () => {
+    const prompt = buildItineraryPrompt(
+      { ...isoRequest, arrivalTime: "14:30", departureTime: "09:00" },
+      null
+    );
+    expect(prompt).toContain("il primo giorno (2026-09-01)");
+    expect(prompt).toContain("l'ultimo giorno (2026-09-05)");
+    expect(prompt).not.toMatch(/\d{2}\/\d{2}\/\d{4}/);
   });
 
   it("include tipo (in forma inclusiva) ed età esatta di ogni partecipante", () => {
@@ -136,5 +173,34 @@ describe("buildItineraryPrompt", () => {
     expect(prompt).toContain("11:45");
     expect(prompt).toContain("riparte l'ultimo giorno");
     expect(prompt).toContain("20:00");
+  });
+
+  // Il prompt è scritto in italiano e il modello di solito segue la lingua dell'istruzione,
+  // ma "di solito" non basta: con destinazioni anglofone tornavano descrizioni in inglese
+  // dentro un itinerario per il resto italiano. Il test verifica la sostanza della regola
+  // (lingua richiesta + tutti i campi testuali coperti + nomi propri salvi), non la
+  // formulazione esatta, che può essere riscritta senza rompere nulla.
+  it("chiede esplicitamente di scrivere in italiano tutti i campi testuali", () => {
+    const prompt = buildItineraryPrompt(baseRequest, null);
+    const rule = prompt.split("\n").find((line) => /in italiano/i.test(line));
+    expect(rule).toBeDefined();
+    for (const field of [
+      "title",
+      "description",
+      "estimatedCost",
+      "openingHours",
+      "about",
+      "gettingThere",
+      "tips",
+    ]) {
+      expect(rule).toContain(field);
+    }
+  });
+
+  it("esclude i nomi propri dalla traduzione, con un esempio concreto", () => {
+    const prompt = buildItineraryPrompt(baseRequest, null);
+    expect(prompt).toMatch(/nomi propri/i);
+    expect(prompt).toMatch(/non vanno tradotti|non si traducono/i);
+    expect(prompt).toMatch(/"[^"]+", non "[^"]+"/);
   });
 });

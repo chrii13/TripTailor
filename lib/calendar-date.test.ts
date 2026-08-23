@@ -84,7 +84,7 @@ describe("date di calendario fra client e server (fusi diversi)", () => {
       return buildItineraryPrompt(parsed, null);
     });
 
-    expect(prompt).toContain("dal 10/10/2026 al 12/10/2026");
+    expect(prompt).toContain("dal 2026-10-10 al 2026-10-12");
     expect(prompt).toContain("(3 giorni)");
   });
 
@@ -107,7 +107,7 @@ describe("date di calendario fra client e server (fusi diversi)", () => {
       return buildDiscoverTripsPrompt(parsed);
     });
 
-    expect(prompt).toContain("dal 10/10/2026 al 12/10/2026");
+    expect(prompt).toContain("dal 2026-10-10 al 2026-10-12");
   });
 
   it("la finestra suggerita passa da /scopri a /crea senza slittare di un giorno", () => {
@@ -144,7 +144,7 @@ describe("date di calendario fra client e server (fusi diversi)", () => {
       buildItineraryPrompt(generateItineraryRequestSchema.parse(body), null)
     );
 
-    expect(prompt).toContain("dal 10/10/2026 al 12/10/2026");
+    expect(prompt).toContain("dal 2026-10-10 al 2026-10-12");
   });
 
   it("regge anche fra i due fusi più distanti fra loro", () => {
@@ -163,7 +163,7 @@ describe("date di calendario fra client e server (fusi diversi)", () => {
       buildItineraryPrompt(generateItineraryRequestSchema.parse(body), null)
     );
 
-    expect(prompt).toContain("dal 10/10/2026 al 12/10/2026");
+    expect(prompt).toContain("dal 2026-10-10 al 2026-10-12");
   });
 });
 

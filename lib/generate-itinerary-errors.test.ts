@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ApiError } from "@google/genai";
-import { classifyGenerationError, isTimeoutError } from "./generate-itinerary-errors";
+import { classifyFinishReason, classifyGenerationError, isTimeoutError } from "./generate-itinerary-errors";
 
 describe("classifyGenerationError", () => {
   it("classifica un errore di autenticazione (401) come 'config'", () => {
@@ -39,6 +39,31 @@ describe("classifyGenerationError", () => {
   it("classifica anche un timeout (AbortError) come 'network'", () => {
     const error = new DOMException("This operation was aborted", "AbortError");
     expect(classifyGenerationError(error)).toBe("network");
+  });
+});
+
+describe("classifyFinishReason", () => {
+  it("considera completa una generazione terminata con STOP", () => {
+    expect(classifyFinishReason("STOP")).toBe("complete");
+  });
+
+  it("considera completa una risposta senza finishReason (campo assente)", () => {
+    expect(classifyFinishReason(undefined)).toBe("complete");
+  });
+
+  it("chiede un altro tentativo quando la risposta è stata troncata dai token", () => {
+    expect(classifyFinishReason("MAX_TOKENS")).toBe("retry");
+  });
+
+  it("chiede un altro tentativo su un'interruzione sconosciuta", () => {
+    expect(classifyFinishReason("OTHER")).toBe("retry");
+    expect(classifyFinishReason("RECITATION")).toBe("retry");
+  });
+
+  it("riconosce come blocco di contenuto i motivi dei filtri di sicurezza", () => {
+    for (const reason of ["SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "IMAGE_SAFETY"]) {
+      expect(classifyFinishReason(reason)).toBe("blocked");
+    }
   });
 });
 

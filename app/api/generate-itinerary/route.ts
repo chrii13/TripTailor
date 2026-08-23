@@ -4,7 +4,13 @@ import { z } from "zod";
 import { generateItineraryRequestSchema } from "@/lib/generate-itinerary-request";
 import { itineraryResponseSchema } from "@/lib/itinerary-schema";
 import { buildItineraryPrompt } from "@/lib/itinerary-prompt";
-import { classifyGenerationError, isTimeoutError } from "@/lib/generate-itinerary-errors";
+import {
+  classifyFinishReason,
+  classifyGenerationError,
+  isTimeoutError,
+} from "@/lib/generate-itinerary-errors";
+import { verifyItineraryDays } from "@/lib/verify-itinerary-days";
+import { toCalendarDate } from "@/lib/calendar-date";
 import { geocodeDestination } from "@/lib/geocode-destination";
 import { getClimateAverages } from "@/lib/climate-forecast";
 import { getGeminiApiKeys } from "@/lib/gemini-api-keys";
@@ -107,6 +113,7 @@ export async function POST(request: Request) {
   let firstCode: ReturnType<typeof classifyGenerationError> | undefined;
 
   let budgetExhausted = false;
+  let truncated = false;
 
   modelLoop:
   for (let m = 0; m < GEMINI_MODELS.length; m++) {
@@ -141,8 +148,37 @@ export async function POST(request: Request) {
             },
           },
         });
+        const reason = response.candidates?.[0]?.finishReason;
+        const outcome = classifyFinishReason(reason);
+
+        // Un blocco di contenuto dipende dalla richiesta, non dal modello: ritentare
+        // altrove darebbe lo stesso esito spendendo altri token. Meglio dirlo subito, e
+        // con un codice distinto da "risposta vuota", che ha tutt'altra causa.
+        if (outcome === "blocked") {
+          console.error(
+            `Generazione itinerario: contenuto bloccato dal modello ${model} (finishReason: ${reason})`
+          );
+          return NextResponse.json({ error: "content_blocked" }, { status: 400 });
+        }
+
+        // Generazione interrotta a metà (tipicamente MAX_TOKENS): il JSON è troncato e
+        // il parse fallirebbe comunque. Vale come tentativo fallito, non come successo.
+        // Si passa al modello successivo, non alla chiave successiva: un troncamento
+        // dipende da quanto è prolisso il modello, non dalla chiave API, quindi ripetere
+        // lo stesso modello altrove spende un tentativo intero per lo stesso esito.
+        if (outcome === "retry") {
+          truncated = true;
+          console.error(
+            `Generazione itinerario: risposta interrotta dal modello ${model} (finishReason: ${reason}, chiave #${i + 1}), tentativo con il modello successivo`
+          );
+          continue modelLoop;
+        }
+
+        console.log(
+          `Generazione itinerario: risposta completa dal modello ${model} (finishReason: ${reason ?? "assente"})`
+        );
         responseText = response.text;
-        finishReason = response.candidates?.[0]?.finishReason;
+        finishReason = reason;
         break modelLoop;
       } catch (error) {
         const code = classifyGenerationError(error);
@@ -190,6 +226,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: finalCode }, { status });
   }
 
+  if (!responseText && truncated) {
+    console.error("Generazione itinerario: ogni tentativo è stato interrotto prima della fine della risposta");
+    return NextResponse.json({ error: "invalid_response" }, { status: 502 });
+  }
+
   if (!responseText) {
     console.error("Generazione itinerario: risposta vuota da Gemini");
     return NextResponse.json({ error: "invalid_response" }, { status: 502 });
@@ -211,6 +252,17 @@ export async function POST(request: Request) {
 
   if (!parsedResult.success) {
     console.error("Generazione itinerario: risposta non conforme allo schema atteso", parsedResult.error);
+    return NextResponse.json({ error: "invalid_response" }, { status: 502 });
+  }
+
+  // Lo schema garantisce solo che le date siano ben formate: qui si controlla che siano
+  // *quelle richieste*. Un itinerario di tre giorni per un viaggio di dieci è una risposta
+  // sbagliata, non una risposta parziale — meglio l'errore già gestito dal client.
+  const { from, to } = parsedRequest.data.dateRange;
+  if (!verifyItineraryDays(parsedResult.data.days, from, to)) {
+    console.error(
+      `Generazione itinerario: i giorni restituiti non coprono l'intervallo richiesto (${parsedResult.data.days.length} giorni per ${toCalendarDate(from)} - ${toCalendarDate(to)})`
+    );
     return NextResponse.json({ error: "invalid_response" }, { status: 502 });
   }
 

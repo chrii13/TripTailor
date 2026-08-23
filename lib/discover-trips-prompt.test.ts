@@ -14,11 +14,18 @@ describe("buildDiscoverTripsPrompt", () => {
     expect(buildDiscoverTripsPrompt(baseRequest)).toContain("Milano, Italia");
   });
 
-  it("include le date e il numero di giorni", () => {
-    const prompt = buildDiscoverTripsPrompt(baseRequest);
-    expect(prompt).toContain("01/09/2026");
-    expect(prompt).toContain("05/09/2026");
+  // Stesso motivo di `itinerary-prompt`: il resto del prompt chiede già le date in ISO
+  // (suggestedFrom/suggestedTo), quindi mescolare dd/MM/yyyy lascia al modello una
+  // conversione ambigua con il formato americano — qui pagata in stagionalità sbagliata.
+  it("include le date in formato ISO e il numero di giorni", () => {
+    const prompt = buildDiscoverTripsPrompt({
+      ...baseRequest,
+      dateRange: { from: new Date(2026, 8, 1), to: new Date(2026, 8, 5) },
+    });
+    expect(prompt).toContain("2026-09-01");
+    expect(prompt).toContain("2026-09-05");
     expect(prompt).toContain("5 giorni");
+    expect(prompt).not.toMatch(/\d{2}\/\d{2}\/\d{4}/);
   });
 
   it("include il budget totale", () => {
@@ -119,6 +126,24 @@ describe("buildDiscoverTripsPrompt", () => {
     const prompt = buildDiscoverTripsPrompt(baseRequest);
     expect(prompt).toContain("devono essere diverse tra loro");
     expect(prompt).toContain("non varianti della stessa idea");
+  });
+
+  // Vedi il gemello in itinerary-prompt.test.ts: senza istruzione esplicita il modello
+  // scivola in inglese sulle mete anglofone. Verifichiamo la sostanza, non la formulazione.
+  it("chiede esplicitamente di scrivere in italiano i campi testuali della proposta", () => {
+    const prompt = buildDiscoverTripsPrompt(baseRequest);
+    const rule = prompt.split("\n").find((line) => /in italiano/i.test(line));
+    expect(rule).toBeDefined();
+    for (const field of ["whyItFits", "highlights", "destination", "country"]) {
+      expect(rule).toContain(field);
+    }
+  });
+
+  it("esclude i nomi propri dalla traduzione, con un esempio concreto", () => {
+    const prompt = buildDiscoverTripsPrompt(baseRequest);
+    expect(prompt).toMatch(/nomi propri/i);
+    expect(prompt).toMatch(/non vanno tradotti|non si traducono/i);
+    expect(prompt).toMatch(/"[^"]+", non "[^"]+"/);
   });
 });
 

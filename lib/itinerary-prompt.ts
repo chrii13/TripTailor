@@ -1,4 +1,5 @@
-import { differenceInCalendarDays, format } from "date-fns";
+import { addDays, differenceInCalendarDays } from "date-fns";
+import { toCalendarDate } from "./calendar-date";
 import type { GenerateItineraryRequest } from "./generate-itinerary-request";
 import { PARTICIPANT_TYPE_LABELS } from "./schema";
 import type { DailyClimateAverage } from "./climate-forecast";
@@ -10,6 +11,15 @@ export function buildItineraryPrompt(
   const { destination, dateRange, participants, budget, styleNotes, mustSee, arrivalTime, departureTime } =
     request;
   const dayCount = differenceInCalendarDays(dateRange.to, dateRange.from) + 1;
+  // Le date arrivano al modello già nel formato che deve restituire ("yyyy-MM-dd"), e
+  // una per una: `verifyItineraryDays` scarta l'intera risposta se una sola non torna,
+  // e il fallimento è terminale. Dare l'intervallo in dd/MM/yyyy lasciava al modello una
+  // conversione da un formato ambiguo con quello americano (10/09 → 2026-10-09).
+  const expectedDates = Array.from({ length: dayCount }, (_, index) =>
+    toCalendarDate(addDays(dateRange.from, index))
+  );
+  const firstDate = expectedDates[0];
+  const lastDate = expectedDates[expectedDates.length - 1];
   const participantsList = participants
     .map((p) => `- ${PARTICIPANT_TYPE_LABELS[p.type]}, ${p.age} anni`)
     .join("\n");
@@ -17,12 +27,12 @@ export function buildItineraryPrompt(
   const arrivalDepartureLines: string[] = [];
   if (arrivalTime) {
     arrivalDepartureLines.push(
-      `Il viaggiatore arriva a destinazione il primo giorno (${format(dateRange.from, "dd/MM/yyyy")}) alle ${arrivalTime}: non pianificare attività prima di quell'orario, lasciando un margine ragionevole per il trasferimento e il check-in in alloggio.`
+      `Il viaggiatore arriva a destinazione il primo giorno (${firstDate}) alle ${arrivalTime}: non pianificare attività prima di quell'orario, lasciando un margine ragionevole per il trasferimento e il check-in in alloggio.`
     );
   }
   if (departureTime) {
     arrivalDepartureLines.push(
-      `Il viaggiatore riparte l'ultimo giorno (${format(dateRange.to, "dd/MM/yyyy")}) alle ${departureTime}: concludi le attività con un margine ragionevole prima di quell'orario, per il rientro verso aeroporto/stazione.`
+      `Il viaggiatore riparte l'ultimo giorno (${lastDate}) alle ${departureTime}: concludi le attività con un margine ragionevole prima di quell'orario, per il rientro verso aeroporto/stazione.`
     );
   }
   const arrivalDepartureSection =
@@ -48,14 +58,15 @@ Inseriscila come attività vera e propria in uno dei giorni, con orario e costo 
   return `Genera un itinerario di viaggio dettagliato per il seguente viaggio.
 
 Destinazione: ${destination}
-Date: dal ${format(dateRange.from, "dd/MM/yyyy")} al ${format(dateRange.to, "dd/MM/yyyy")} (${dayCount} giorni)
+Date: dal ${firstDate} al ${lastDate} (${dayCount} giorni)
 Budget indicativo totale: ${budget}€
 Viaggiatori:
 ${participantsList}
 ${styleNotes ? `Note sullo stile di viaggio: ${styleNotes}` : ""}
 ${arrivalDepartureSection}${mustSeeSection}
 ${climateSection}
-Genera un piano giorno per giorno, con una data (formato YYYY-MM-DD) per ogni giorno del viaggio, diviso in tre fasce orarie (mattina, pomeriggio, sera). Per ogni fascia, elenca una o più attività. Adatta il numero di attività alla situazione: se un'attività è sostanziosa e occupa ragionevolmente l'intera fascia (es. un grande museo, un'escursione fuori porta), lasciala da sola; altrimenti proponi 2-3 attività più brevi con orari che si susseguono senza sovrapporsi. Non imporre un numero fisso di attività per fascia: valuta caso per caso, ed evita di ripetere lo stesso schema identico ogni giorno (es. sempre una sola attività a mattina e sera e due nel pomeriggio) — varia in base a cosa offre davvero la destinazione quel giorno. Se in una fascia hai più momenti distinti da proporre (es. cena e poi una passeggiata/bar/spettacolo serale), elencali come attività separate nell'elenco, ciascuna con il proprio orario, invece di descriverli insieme in un'unica voce.
+Genera un piano giorno per giorno: esattamente ${dayCount} giorni, uno per ciascuna di queste date e in quest'ordine, riportando nel campo date la stringa esatta così com'è scritta qui (formato YYYY-MM-DD): ${expectedDates.join(", ")}. Non aggiungere, togliere o riordinare giorni, e non convertire le date in un altro formato.
+Ogni giornata è divisa in tre fasce orarie (mattina, pomeriggio, sera). Per ogni fascia, elenca una o più attività. Adatta il numero di attività alla situazione: se un'attività è sostanziosa e occupa ragionevolmente l'intera fascia (es. un grande museo, un'escursione fuori porta), lasciala da sola; altrimenti proponi 2-3 attività più brevi con orari che si susseguono senza sovrapporsi. Non imporre un numero fisso di attività per fascia: valuta caso per caso, ed evita di ripetere lo stesso schema identico ogni giorno (es. sempre una sola attività a mattina e sera e due nel pomeriggio) — varia in base a cosa offre davvero la destinazione quel giorno. Se in una fascia hai più momenti distinti da proporre (es. cena e poi una passeggiata/bar/spettacolo serale), elencali come attività separate nell'elenco, ciascuna con il proprio orario, invece di descriverli insieme in un'unica voce.
 
 Per ogni attività fornisci:
 - title: nome del luogo o dell'attività, massimo 40 caratteri. Deve stare su una riga sola: solo il nome, senza congiunzioni che uniscono due momenti diversi (es. "Monastero dei Jerónimos", non "Cena panoramica nel Bairro Alto e brindisi al Miradouro"). Se hai due momenti distinti da proporre, sono due attività separate, non un titolo lungo.
@@ -67,6 +78,8 @@ Per ogni attività fornisci:
   - about: cosa è il posto o l'attività.
   - gettingThere: come raggiungerlo. Per la primissima attività di ogni giornata non è possibile sapere da dove parte il viaggiatore (potrebbe essere l'alloggio, un'altra zona, ecc.): indica quindi la posizione esatta del luogo (zona/quartiere, indirizzo indicativo) e come raggiungerlo in generale (es. fermata metro/bus più vicina, punto di riferimento), non partendo da un punto preciso presunto. Per le attività successive nella stessa giornata, indica invece come arrivarci dall'attività precedente nell'itinerario.
   - tips: consigli pratici utili (es. quando evitare la fila, cosa portare, aspetti da sapere in anticipo).
+
+Scrivi in italiano tutti i campi testuali della risposta — title, description, estimatedCost, openingHours e i tre campi di details (about, gettingThere, tips) — anche quando la destinazione è di lingua inglese o comunque straniera: chi legge è italiano. Fanno eccezione i nomi propri, che restano nella lingua originale e non vanno tradotti: nomi di luoghi, musei, monumenti, locali, quartieri e piatti tipici si scrivono come si chiamano davvero (es. "Mercado da Ribeira", non "Mercato della Ribeira"; "Museu Calouste Gulbenkian", non "Museo Calouste Gulbenkian"; "Temple Bar", non "Bar del Tempio"). In italiano va la prosa attorno al nome, non il nome.
 
 Adatta ritmo e tipo di attività alla composizione del gruppo:
 - Se sono presenti bambini/e (0-12 anni): ritmo rilassato, poche attività per fascia, pause frequenti, orari non troppo mattinieri, pasti a orari regolari. Preferisci parchi, zoo/acquari, musei interattivi/scientifici, attività family-friendly. Evita vita notturna, locali per adulti, trekking impegnativi o attività con lunghe attese in piedi/code.

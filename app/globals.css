@@ -161,6 +161,27 @@
   font-variation-settings: "opsz" 70;
 }
 
+/* Cifre dentro i titoli display (chiesta dall'utente il 2026-08-23): il "4" di
+   Fraunces ha il vertice aperto e un contrasto molto marcato, e non piace. Non
+   si cambia il carattere dei titoli — le lettere restano Fraunces — cambia solo
+   la resa dei numeri, che passano al carattere di testo. Si mette sull'elemento
+   quando contiene solo cifre e simboli ("01", "~1.250 €") e su uno <span> che
+   avvolge le sole cifre quando sono mescolate a lettere ("Giorno 4").
+   Nessun ritocco di peso o dimensione, e non è una dimenticanza: misurato in
+   produzione a parità di corpo e peso (725), l'altezza reale delle cifre è la
+   stessa nelle due famiglie (73 su 100px di ascendente d'inchiostro, quanto le
+   maiuscole), e Geist ha semmai una densità d'inchiostro più alta del ~18%
+   (43.96 contro 37.10 per unità di larghezza) — ingrossare o ingrandire le
+   cifre le farebbe sporgere dalla riga invece di allinearle.
+   `font-variation-settings` torna a `normal` perché .font-display fissa
+   "opsz" 70, un asse che Geist non ha; `tabular-nums` tiene ferme le cifre dove
+   il numero cambia (giorni, orari, costi). */
+.display-numerals {
+  font-family: var(--font-geist-sans);
+  font-variation-settings: normal;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Ribbon di destinazioni in reverse-search.tsx: scorrimento continuo in loop.
    Tre modi per fermarlo, tutti e tre necessari (WCAG 2.2.2 chiede un
    meccanismo *nel contenuto*: `prefers-reduced-motion` è una preferenza di
