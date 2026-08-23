@@ -7,7 +7,11 @@ import { buildDiscoverTripsPrompt } from "@/lib/discover-trips-prompt";
 import { verifyProposalsAgainstBudget } from "@/lib/verify-proposal-budget";
 import { verifyProposalsAgainstSuggestedWindow } from "@/lib/verify-suggested-window";
 import { stripSuggestedWindowIfExact } from "@/lib/strip-suggested-window";
-import { classifyGenerationError, isTimeoutError } from "@/lib/generate-itinerary-errors";
+import {
+  classifyFinishReason,
+  classifyGenerationError,
+  isTimeoutError,
+} from "@/lib/generate-itinerary-errors";
 import { getGeminiApiKeys } from "@/lib/gemini-api-keys";
 import { computeDeadline, getCallAttemptBudget } from "@/lib/gemini-call-budget";
 
@@ -81,6 +85,7 @@ export async function POST(request: Request) {
   let firstCode: ReturnType<typeof classifyGenerationError> | undefined;
 
   let budgetExhausted = false;
+  let truncated = false;
 
   modelLoop:
   for (let m = 0; m < GEMINI_MODELS.length; m++) {
@@ -113,8 +118,35 @@ export async function POST(request: Request) {
             },
           },
         });
+        const reason = response.candidates?.[0]?.finishReason;
+        const outcome = classifyFinishReason(reason);
+
+        // Un blocco di contenuto dipende dalla richiesta, non dal modello: ritentare
+        // altrove darebbe lo stesso esito spendendo altri token. Meglio dirlo subito, e
+        // con un codice distinto da "risposta vuota", che ha tutt'altra causa.
+        if (outcome === "blocked") {
+          console.error(`Ricerca inversa: contenuto bloccato dal modello ${model} (finishReason: ${reason})`);
+          return NextResponse.json({ error: "content_blocked" }, { status: 400 });
+        }
+
+        // Generazione interrotta a metà (tipicamente MAX_TOKENS): il JSON è troncato e
+        // il parse fallirebbe comunque. Vale come tentativo fallito, non come successo.
+        // Si passa al modello successivo, non alla chiave successiva: un troncamento
+        // dipende da quanto è prolisso il modello, non dalla chiave API, quindi ripetere
+        // lo stesso modello altrove spende un tentativo intero per lo stesso esito.
+        if (outcome === "retry") {
+          truncated = true;
+          console.error(
+            `Ricerca inversa: risposta interrotta dal modello ${model} (finishReason: ${reason}, chiave #${i + 1}), tentativo con il modello successivo`
+          );
+          continue modelLoop;
+        }
+
+        console.log(
+          `Ricerca inversa: risposta completa dal modello ${model} (finishReason: ${reason ?? "assente"})`
+        );
         responseText = response.text;
-        finishReason = response.candidates?.[0]?.finishReason;
+        finishReason = reason;
         break modelLoop;
       } catch (error) {
         const code = classifyGenerationError(error);
@@ -160,6 +192,11 @@ export async function POST(request: Request) {
     console.error(`Ricerca inversa fallita (${finalCode}), tempo scaduto prima di un tentativo riuscito`);
     const status = finalCode === "rate_limit" ? 429 : 502;
     return NextResponse.json({ error: finalCode }, { status });
+  }
+
+  if (!responseText && truncated) {
+    console.error("Ricerca inversa: ogni tentativo è stato interrotto prima della fine della risposta");
+    return NextResponse.json({ error: "invalid_response" }, { status: 502 });
   }
 
   if (!responseText) {

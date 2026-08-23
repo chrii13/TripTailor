@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { itineraryResponseSchema } from "./itinerary-schema";
+import { itineraryResponseSchema, MAX_ACTIVITY_TITLE_LENGTH } from "./itinerary-schema";
+import { MAX_TRIP_DAYS } from "./schema";
 
 const validActivity = {
   title: "Visita al museo civico",
@@ -138,6 +139,54 @@ describe("itineraryResponseSchema", () => {
       };
       expect(itineraryResponseSchema.safeParse(candidate).success).toBe(true);
     }
+  });
+
+  it("rifiuta una risposta con zero giorni", () => {
+    const result = itineraryResponseSchema.safeParse({ days: [] });
+    expect(result.success).toBe(false);
+  });
+
+  // Il tetto sul numero di giorni non sta più qui (maxItems fa rifiutare lo schema da
+  // Gemini, vedi itinerary-schema.ts): un itinerario troppo lungo passa lo schema e
+  // viene fermato da verifyItineraryDays, che ha il proprio test per questo caso.
+  it("accetta più giorni di quanti ne consenta il viaggio più lungo: il tetto lo impone verifyItineraryDays", () => {
+    const days = Array.from({ length: MAX_TRIP_DAYS + 1 }, (_, index) => ({
+      ...validResponse.days[0],
+      date: `2026-09-${String(index + 1).padStart(2, "0")}`,
+    }));
+    const result = itineraryResponseSchema.safeParse({ days });
+    expect(result.success).toBe(true);
+  });
+
+  it("accetta un titolo lungo quanto la tolleranza concessa sopra i 40 caratteri del prompt", () => {
+    const candidate = {
+      days: [
+        {
+          ...validResponse.days[0],
+          mattina: [{ ...validActivity, title: "a".repeat(MAX_ACTIVITY_TITLE_LENGTH) }],
+        },
+      ],
+    };
+    expect(itineraryResponseSchema.safeParse(candidate).success).toBe(true);
+  });
+
+  it("rifiuta un titolo oltre la tolleranza (il layout della card è tarato sui 40 caratteri)", () => {
+    const invalid = {
+      days: [
+        {
+          ...validResponse.days[0],
+          mattina: [{ ...validActivity, title: "a".repeat(MAX_ACTIVITY_TITLE_LENGTH + 1) }],
+        },
+      ],
+    };
+    expect(itineraryResponseSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it("rifiuta un titolo vuoto", () => {
+    const invalid = {
+      days: [{ ...validResponse.days[0], mattina: [{ ...validActivity, title: "" }] }],
+    };
+    expect(itineraryResponseSchema.safeParse(invalid).success).toBe(false);
   });
 
   it("rifiuta un'attività senza il campo details", () => {

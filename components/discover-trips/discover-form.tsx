@@ -133,6 +133,8 @@ const ERROR_MESSAGES: Record<ErrorCode, string> = {
   config: "Si è verificato un problema tecnico. Riprova tra poco.",
   rate_limit: "Troppe richieste in questo momento, riprova tra qualche secondo.",
   invalid_response: "Non siamo riusciti a trovare proposte. Riprova.",
+  content_blocked:
+    "La richiesta contiene indicazioni che non possiamo elaborare. Modifica il tipo di vacanza e riprova.",
 };
 
 const MAX_PARTICIPANTS = 20;
@@ -206,7 +208,8 @@ function isErrorCode(value: unknown): value is ErrorCode {
     value === "network" ||
     value === "config" ||
     value === "rate_limit" ||
-    value === "invalid_response"
+    value === "invalid_response" ||
+    value === "content_blocked"
   );
 }
 

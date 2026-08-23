@@ -1,5 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
+import { isValidElement, type ReactNode } from "react";
 import { describe, it, expect, beforeAll } from "vitest";
 import { renderToBuffer } from "@react-pdf/renderer";
 
@@ -7,6 +8,29 @@ import { ItineraryDocument, registerPdfFonts } from "./itinerary-pdf";
 import { PDF_FIXTURE } from "./itinerary-pdf.fixture";
 
 const FONT_DIR = path.join(process.cwd(), "public", "fonts");
+
+type Stile = { fontFamily?: string } | undefined;
+
+/**
+ * Percorre l'albero degli elementi (solo i `children`, senza eseguire i componenti
+ * annidati) e restituisce quelli il cui stile e testo diretto soddisfano il predicato.
+ */
+function findElements(
+  node: ReactNode,
+  match: (style: Stile, testoDiretto: string) => boolean
+): ReactNode[] {
+  if (Array.isArray(node)) return node.flatMap((child) => findElements(child, match));
+  if (!isValidElement(node)) return [];
+
+  const props = node.props as { style?: Stile; children?: ReactNode };
+  const figli = props.children;
+  const testoDiretto = (Array.isArray(figli) ? figli : [figli])
+    .filter((child) => typeof child === "string")
+    .join("");
+
+  const trovati = findElements(figli, match);
+  return match(props.style, testoDiretto) ? [node, ...trovati] : trovati;
+}
 
 let pdf: Buffer;
 let raw: string;
@@ -50,6 +74,26 @@ describe("PDF dell'itinerario", () => {
     // una per pagina: copertina + un giorno ciascuna
     expect(annotazioni.length).toBe(PDF_FIXTURE.itinerary.days.length + 1);
     expect(annotazioni.every((a) => a.includes("trip-tailor-ten.vercel.app"))).toBe(true);
+  });
+
+  /**
+   * Il PDF non è raggiunto da `.display-numerals`: `@react-pdf/renderer` ha i propri
+   * stili e i propri font registrati. La stessa richiesta ("le cifre nel carattere di
+   * testo, non in Fraunces") va quindi applicata con gli strumenti di quella libreria —
+   * un `<Text>` annidato per la sola cifra. Il testo dentro il PDF è compresso, quindi
+   * si controlla l'albero degli elementi, non i byte.
+   */
+  it("scrive il numero del giorno nel carattere di testo, non in Fraunces", () => {
+    const titoli = findElements(
+      ItineraryDocument(PDF_FIXTURE),
+      (style, testo) => style?.fontFamily === "Fraunces" && testo.includes("Giorno ")
+    );
+
+    expect(titoli.length).toBe(PDF_FIXTURE.itinerary.days.length);
+    for (const titolo of titoli) {
+      const cifre = findElements(titolo, (style) => style?.fontFamily === "Geist");
+      expect(cifre.length).toBe(1);
+    }
   });
 
   it("non lascia fuori nessuna attività", () => {

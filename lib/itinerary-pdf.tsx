@@ -83,6 +83,10 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
   },
   dayTitle: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 13, color: "#ffffff", textTransform: "uppercase" },
+  // Le cifre nel carattere di testo anche dentro un titolo Fraunces, come fa
+  // `.display-numerals` a schermo: quel foglio di stile non raggiunge il PDF, che ha
+  // font propri, quindi la stessa scelta si applica qui con un <Text> annidato.
+  dayTitleNumber: { fontFamily: "Geist", fontWeight: 500 },
   dayDate: { fontSize: 10, color: "#c3d3c7" },
   climate: {
     backgroundColor: NEBBIA,
@@ -305,7 +309,9 @@ export function ItineraryDocument({ tripData, itinerary, weather, countryInfo }:
           return (
             <View key={dayIndex} break>
               <View style={s.dayHeader}>
-                <Text style={s.dayTitle}>Giorno {dayIndex + 1}</Text>
+                <Text style={s.dayTitle}>
+                  Giorno <Text style={s.dayTitleNumber}>{dayIndex + 1}</Text>
+                </Text>
                 <Text style={s.dayDate}>{dayDate}</Text>
               </View>
               <Text style={s.climate}>

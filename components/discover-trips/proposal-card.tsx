@@ -127,7 +127,9 @@ export function ProposalCard({
           </div>
           <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
             <dt className="font-semibold text-primary">Totale</dt>
-            <dd className="font-display text-lg font-[725] text-primary">
+            {/* formatApprox dà solo cifre e simboli ("~1.250 €"): nessuna lettera
+                da tenere in Fraunces, la classe va sull'elemento. */}
+            <dd className="display-numerals text-lg font-[725] text-primary">
               {formatApprox(costs.total)}
             </dd>
           </div>

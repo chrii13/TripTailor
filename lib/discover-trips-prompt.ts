@@ -1,4 +1,5 @@
-import { differenceInCalendarDays, format } from "date-fns";
+import { differenceInCalendarDays } from "date-fns";
+import { toCalendarDate } from "./calendar-date";
 import type { DiscoverTripsRequest } from "./discover-trips-request";
 import { PARTICIPANT_TYPE_LABELS } from "./schema";
 
@@ -23,7 +24,10 @@ export function buildDiscoverTripsPrompt(request: DiscoverTripsRequest): string 
     : flexiblePeriod!.nights + 1;
 
   const dateSection = dateRange
-    ? `Date: dal ${format(dateRange.from, "dd/MM/yyyy")} al ${format(dateRange.to, "dd/MM/yyyy")} (${dayCount} giorni)`
+    ? // In ISO come le date che il prompt chiede indietro (suggestedFrom/suggestedTo):
+      // dd/MM/yyyy è ambiguo con il formato americano, e qui l'ambiguità si paga in
+      // stagionalità — un settembre letto come ottobre cambia i prezzi delle proposte.
+      `Date: dal ${toCalendarDate(dateRange.from)} al ${toCalendarDate(dateRange.to)} (${dayCount} giorni)`
     : `Periodo: mese di ${flexiblePeriod!.month}, soggiorno di ${flexiblePeriod!.nights} notti (${dayCount} giorni). Le date esatte non sono ancora state scelte: per ogni proposta scegli tu la finestra di ${flexiblePeriod!.nights} notti migliore dentro questo mese, e spiega la scelta in whyItFits in base a prezzi, meteo o eventi nel periodo. Restituisci la finestra scelta come suggestedFrom e suggestedTo, entrambe date in formato YYYY-MM-DD, entrambe dentro il mese ${flexiblePeriod!.month} e a distanza di esattamente ${flexiblePeriod!.nights} notti l'una dall'altra.`;
 
   const suggestedFieldsSection = flexiblePeriod
@@ -57,5 +61,6 @@ Vincoli da rispettare:
 - Le destinazioni devono essere raggiungibili dalla città di partenza indicata nell'arco di date indicato.
 - Adatta le mete alla composizione del gruppo: con bambini/e evita viaggi con voli molto lunghi o mete faticose.
 - Il mezzo di trasporto implicito in travelPerPerson deve essere coerente con quanto scritto in whyItFits: se whyItFits parla di treno, traghetto o "via terra", travelPerPerson deve rispecchiare il costo di quel mezzo, non quello di un volo.
+- Scrivi in italiano whyItFits e tutti e tre gli highlights, anche per destinazioni di lingua inglese o comunque straniera: chi legge è italiano. Anche destination e country vanno in italiano dove esiste la forma italiana consueta (Londra, non London; Regno Unito, non United Kingdom). Fanno eccezione i nomi propri di luoghi, musei, monumenti, locali e piatti tipici, che restano nella lingua originale e non vanno tradotti: "Mercado da Ribeira", non "Mercato della Ribeira"; "Temple Bar", non "Bar del Tempio". In italiano va la prosa attorno al nome, non il nome.
 - Le cifre sono stime indicative: restituisci numeri realistici e prudenti, senza mai spacciarli per prezzi verificati.`;
 }

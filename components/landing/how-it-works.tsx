@@ -70,7 +70,8 @@ export function HowItWorks() {
               transition={{ delay: i * 0.1 }}
             >
               <span className="absolute -left-[37px] top-1.5 size-3 rounded-full border-2 border-secondary bg-voltage" />
-              <span className="font-display text-sm font-[725] text-primary">
+              {/* Solo cifre: la classe va sull'elemento, non serve un wrapper. */}
+              <span className="display-numerals text-sm font-[725] text-primary">
                 {step.n}
               </span>
               <h3 className="mt-1 font-semibold text-primary">{step.title}</h3>

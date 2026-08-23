@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+// Il prompt chiede titoli da massimo 40 caratteri e la card è disegnata su quella misura,
+// ma un titolo di 45 caratteri è un difetto estetico, non una risposta da buttare: la
+// tolleranza lascia passare lo sforamento breve e ferma solo il paragrafo travestito da
+// titolo, che il layout non reggerebbe.
+export const MAX_ACTIVITY_TITLE_LENGTH = 60;
+
 export const activityDetailsSchema = z.object({
   about: z.string(),
   gettingThere: z.string(),
@@ -7,7 +13,7 @@ export const activityDetailsSchema = z.object({
 });
 
 export const activitySchema = z.object({
-  title: z.string(),
+  title: z.string().min(1).max(MAX_ACTIVITY_TITLE_LENGTH),
   description: z.string(),
   estimatedCost: z.string(),
   openingHours: z.string().optional(),
@@ -30,7 +36,18 @@ export const itineraryDaySchema = z.object({
 });
 
 export const itineraryResponseSchema = z.object({
-  days: z.array(itineraryDaySchema),
+  // Un itinerario senza giorni non è un itinerario: senza .min(1) il client riceverebbe
+  // 200 OK e una pagina vuota.
+  //
+  // Nessun .max() qui, e non è un indebolimento: questo schema viene inviato a Gemini
+  // come responseJsonSchema, che rifiuta con 400 INVALID_ARGUMENT il maxItems che
+  // .max() emette (min(1) e i limiti di lunghezza sui titoli passano invece senza
+  // problemi — vedi gemini-response-json-schema.test.ts). Il tetto sui giorni resta
+  // comunque garantito da una catena di controlli: lo schema di richiesta rifiuta
+  // intervalli oltre MAX_TRIP_DAYS giorni, e verifyItineraryDays impone che i giorni
+  // restituiti coprano *esattamente* quell'intervallo — quindi non possono essere di
+  // più. Il tetto è implicato dalla copertura esatta.
+  days: z.array(itineraryDaySchema).min(1),
 });
 
 export type ActivityDetails = z.infer<typeof activityDetailsSchema>;
