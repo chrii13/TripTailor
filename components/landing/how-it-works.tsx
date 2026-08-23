@@ -66,7 +66,15 @@ export function HowItWorks() {
           <h2 className="font-display text-[clamp(2rem,4.6vw,3rem)] font-[725] tracking-[-0.015em] text-primary uppercase">
             Come funziona
           </h2>
-          <p className="mt-3 text-muted-foreground">
+          {/* Unico paragrafo della landing senza limite di misura: senza il tetto
+              arrivava a 692px a 768, 758 a 834 e 948 (una riga sola, 146 caratteri)
+              da 1024 in su, cioè 100-146 caratteri per riga contro i 65-75 leggibili.
+              Il tetto è in `ch` perché segua la dimensione del testo, ma va tarato
+              sul carattere: lo zero di Geist è largo 0,66em, molto più del carattere
+              medio di un testo italiano, quindi 65ch qui varrebbe 690px e non
+              vincolerebbe nulla. 54ch = 573px, la stessa misura dei `max-w-xl` già
+              in uso nelle altre sezioni. */}
+          <p className="mt-3 max-w-[54ch] text-muted-foreground">
             Dal racconto del tuo viaggio all&apos;itinerario pronto, in quattro passi. Vale se la
             meta ce l&apos;hai già in mente: se non ce l&apos;hai, si parte dal budget.
           </p>
