@@ -33,7 +33,15 @@ import {
   MAX_TRIP_NIGHTS,
 } from "@/lib/discover-trips-request";
 import { tripProposalSchema, type TripProposal } from "@/lib/discover-trips-schema";
-import { buildFlexibleMonthOptions } from "@/lib/discover-trips-flexible-period";
+import {
+  buildFlexibleMonthOptions,
+  isFlexibleMonthPast,
+  isFlexibleMonthValue,
+} from "@/lib/discover-trips-flexible-period";
+import {
+  clearExpiredFlexibleMonth,
+  isDiscoverSearchExpired,
+} from "@/lib/discover-trips-expired-search";
 import { buildDiscoverTripsRequestBody } from "@/lib/discover-trips-request-body";
 import type { ErrorCode } from "@/lib/generate-itinerary-errors";
 import { DestinationAutocomplete } from "@/components/itinerary-form/destination-autocomplete";
@@ -95,6 +103,18 @@ export const discoverFormSchema = z
     } else {
       if (!data.flexiblePeriod.month) {
         ctx.addIssue({ code: "custom", path: ["flexiblePeriod", "month"], message: "Seleziona un mese" });
+      } else if (isFlexibleMonthPast(data.flexiblePeriod.month, startOfToday())) {
+        // L'elenco dei mesi è costruito una volta sola al montaggio: a cavallo
+        // della mezzanotte dell'ultimo giorno del mese può ancora offrire (o
+        // conservare già scelto) un mese finito. Il server lo accetterebbe, per
+        // la tolleranza di un giorno che copre i fusi, e si sprecherebbe una
+        // chiamata al modello per arrivare allo stato vuoto. startOfToday() va
+        // chiamata qui dentro, non catturata fuori, altrimenti "oggi" si congela.
+        ctx.addIssue({
+          code: "custom",
+          path: ["flexiblePeriod", "month"],
+          message: "Il mese scelto è già passato, scegline un altro",
+        });
       }
       if (
         data.flexiblePeriod.nights === undefined ||
@@ -156,7 +176,19 @@ const storedSubmittedSchema = z
     departureCity: z.string().trim().min(1),
     dateMode: z.enum(["esatte", "flessibili"]),
     dateRange: z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional() }),
-    flexiblePeriod: z.object({ month: z.string().optional(), nights: z.number().int().optional() }),
+    // Il mese va validato nella forma, non solo nel tipo: `sessionStorage` è
+    // scrivibile da chiunque e un "2026-99" o un "pippo" attraverserebbe indenne
+    // il confronto fra stringhe di isFlexibleMonthPast per poi far lanciare la
+    // formattazione del riepilogo, mandando /scopri in error boundary. Qui uno
+    // scarto vale "riparti dal form vuoto", che è il comportamento già garantito
+    // agli altri campi (le date non parsabili sono scartate da z.coerce.date()).
+    flexiblePeriod: z.object({
+      month: z.string().refine(isFlexibleMonthValue).optional(),
+      // Stesso motivo, un gradino più in basso: un numero di notti fuori scala
+      // non fa lanciare niente, ma non corrisponde a nessuna voce del menu e
+      // lascerebbe anche quel campo visivamente vuoto.
+      nights: z.number().int().min(1).max(MAX_TRIP_NIGHTS).optional(),
+    }),
     participants: z.array(participantSchema).min(1).max(20),
     budget: z.number().min(0),
     vacationType: z.string().trim().max(100).optional(),
@@ -226,7 +258,19 @@ export function DiscoverForm() {
   // non vanno annunciati né devono rubare il focus, che invece va spostato quando
   // arrivano in risposta a una ricerca appena inviata.
   const [resultsFromSearch, setResultsFromSearch] = useState(false);
-  const isDesktop = useMediaQuery("(min-width: 640px)");
+  // Una ricerca ripresa da sessionStorage può avere date ormai passate. Il fatto
+  // va detto qui, dove la striscia di riepilogo mostra proprio quel periodo, e
+  // non al reinvio: chi torna indietro da una proposta non ha toccato niente e
+  // non capirebbe da dove salta fuori l'errore.
+  const [restoredSearchExpired, setRestoredSearchExpired] = useState(false);
+  // 768px e non 640: la soglia deve coincidere con `md:flex-row` di
+  // components/ui/calendar.tsx, l'unica regola che affianca davvero i due mesi.
+  // Con 640 la fascia 640-767 chiedeva due mesi e li impilava — pannello alto
+  // 712px, che su un viewport da 1000 finiva sotto il bordo dello schermo.
+  // Spostando la soglia (invece di abbassare a `sm` la classe di shadcn) quella
+  // fascia vede un mese solo, compatto come da telefono, e la breakpoint CSS
+  // resta l'unica sorgente di verità. Cambiando l'una va cambiata l'altra.
+  const isTwoMonthsWide = useMediaQuery("(min-width: 768px)");
 
   const {
     handleSubmit,
@@ -261,14 +305,18 @@ export function DiscoverForm() {
     const stored = loadResultsFromSession();
     if (!stored) return;
 
+    const today = startOfToday();
     setSubmitted(stored.submitted);
     setProposals(stored.proposals);
+    setRestoredSearchExpired(isDiscoverSearchExpired(stored.submitted, today));
     setMode("results");
     // Il form sotto ai risultati deve corrispondere a ciò che è a schermo:
     // se l'utente preme "Modifica la ricerca" deve ritrovare la sua ricerca,
     // non il form vuoto. storedSubmittedSchema usa z.coerce.date(), quindi
-    // stored.submitted.dateRange.from/to sono già oggetti Date veri.
-    reset(stored.submitted);
+    // stored.submitted.dateRange.from/to sono già oggetti Date veri. Unica
+    // eccezione il mese scaduto, che non è fra le voci del menu e lascerebbe il
+    // campo vuoto a schermo: vedi clearExpiredFlexibleMonth.
+    reset(clearExpiredFlexibleMonth(stored.submitted, today));
   }, [reset]);
 
   useEffect(() => {
@@ -319,6 +367,7 @@ export function DiscoverForm() {
       setSubmitted(values);
       setStatusMessage(describeResults(receivedProposals.length));
       setResultsFromSearch(true);
+      setRestoredSearchExpired(false);
       setMode("results");
       saveResultsToSession(values, receivedProposals);
     } catch {
@@ -349,6 +398,7 @@ export function DiscoverForm() {
           budget={submitted.budget}
           departureCity={submitted.departureCity}
           focusHeading={resultsFromSearch}
+          datesExpired={restoredSearchExpired}
           onEdit={() => {
             setStatusMessage("");
             setMode("form");
@@ -447,7 +497,7 @@ export function DiscoverForm() {
                               { shouldValidate: true }
                             );
                           }}
-                          numberOfMonths={isDesktop ? 2 : 1}
+                          numberOfMonths={isTwoMonthsWide ? 2 : 1}
                           disabled={{ before: startOfToday() }}
                           startMonth={startOfToday()}
                         />

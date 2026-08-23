@@ -26,6 +26,8 @@ interface DiscoverResultsProps {
   departureCity: string;
   /** true solo quando i risultati arrivano da una ricerca appena inviata. */
   focusHeading?: boolean;
+  /** true quando la ricerca ripresa da sessionStorage ha date ormai passate. */
+  datesExpired?: boolean;
   onEdit: () => void;
 }
 
@@ -38,6 +40,7 @@ export function DiscoverResults({
   budget,
   departureCity,
   focusHeading = false,
+  datesExpired = false,
   onEdit,
 }: DiscoverResultsProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -73,6 +76,17 @@ export function DiscoverResults({
         Da {departureCity} · {periodLabel} · {travelerCount}{" "}
         {travelerCount === 1 ? "viaggiatore" : "viaggiatori"} · budget {euro.format(budget)}
       </p>
+
+      {/* Sta subito sotto la striscia che mostra proprio quel periodo, così si
+          legge accanto a ciò che commenta. Testo statico e senza role: compare
+          già al primo render dei risultati ripresi, quindi una regione live non
+          annuncerebbe comunque nulla, e niente qui deve prendersi il focus. */}
+      {datesExpired && (
+        <p className="rounded-md border border-voltage bg-voltage/15 px-4 py-3 text-sm text-foreground">
+          Le date di questa ricerca sono ormai passate. Le proposte qui sotto restano quelle di
+          allora: modifica la ricerca per averne di aggiornate.
+        </p>
+      )}
 
       {proposals.length === 0 ? (
         <p className="text-muted-foreground">
