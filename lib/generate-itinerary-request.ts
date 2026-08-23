@@ -1,6 +1,12 @@
 import { z } from "zod";
-import { calendarDateSchema } from "./calendar-date";
-import { participantSchema, MAX_TRIP_DAYS } from "./schema";
+import { calendarDateSchema, earliestRequestableDate } from "./calendar-date";
+import {
+  participantSchema,
+  MAX_TRIP_DAYS,
+  MAX_DESTINATION_LENGTH,
+  MAX_STYLE_NOTES_LENGTH,
+  MAX_MUST_SEE_LENGTH,
+} from "./schema";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -19,6 +25,9 @@ const dateRangeSchema = z
       .refine((range) => range.to >= range.from, {
         message: "La data di fine deve essere successiva o uguale alla data di inizio",
       })
+      .refine((range) => range.from >= earliestRequestableDate(), {
+        message: "Le date del viaggio non possono essere nel passato",
+      })
       .refine(
         (range) => {
           const days = Math.round((range.to.getTime() - range.from.getTime()) / MS_PER_DAY) + 1;
@@ -29,12 +38,12 @@ const dateRangeSchema = z
   );
 
 export const generateItineraryRequestSchema = z.object({
-  destination: z.string().trim().min(1).max(200),
+  destination: z.string().trim().min(1).max(MAX_DESTINATION_LENGTH),
   dateRange: dateRangeSchema,
   participants: z.array(participantSchema).min(1).max(20),
   budget: z.number().min(0).max(1_000_000),
-  styleNotes: z.string().max(1000).optional(),
-  mustSee: z.string().max(200).optional(),
+  styleNotes: z.string().max(MAX_STYLE_NOTES_LENGTH).optional(),
+  mustSee: z.string().max(MAX_MUST_SEE_LENGTH).optional(),
   arrivalTime: z.string().max(5).optional(),
   departureTime: z.string().max(5).optional(),
 });

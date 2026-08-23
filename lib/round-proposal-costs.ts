@@ -27,7 +27,6 @@ export function roundToNearestFifty(value: number): number {
 }
 
 export type RoundedProposalCosts = {
-  travelPerPerson: number;
   travelTotal: number;
   lodgingTotal: number;
   onSiteTotal: number;
@@ -46,7 +45,6 @@ export function roundProposalCosts(costs: ProposalCosts): RoundedProposalCosts {
   const onSiteTotal = roundToNearestFifty(costs.onSiteTotal);
 
   return {
-    travelPerPerson: roundToNearestFifty(costs.travelPerPerson),
     travelTotal,
     lodgingTotal,
     onSiteTotal,

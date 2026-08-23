@@ -1,4 +1,5 @@
 import { differenceInCalendarDays, parseISO } from "date-fns";
+import { earliestRequestableDate, toCalendarDate } from "./calendar-date";
 import type { TripProposal } from "./discover-trips-schema";
 
 type FlexiblePeriod = { month: string; nights: number };
@@ -11,6 +12,11 @@ function isWindowConsistent(proposal: TripProposal, period: FlexiblePeriod): boo
   const { suggestedFrom, suggestedTo } = proposal;
   if (!suggestedFrom || !suggestedTo) return false;
   if (!isInMonth(suggestedFrom, period.month) || !isInMonth(suggestedTo, period.month)) return false;
+  // Stare nel mese richiesto non basta: col mese corrente scelto a fine mese, tutte le
+  // finestre dentro il mese possono essere già trascorse. Il confronto è fra stringhe
+  // "yyyy-MM-dd", quindi senza fusi di mezzo; la soglia porta con sé la tolleranza di un
+  // giorno che separa l'UTC del server dal fuso di chi ha fatto la richiesta.
+  if (suggestedFrom < toCalendarDate(earliestRequestableDate())) return false;
 
   const nights = differenceInCalendarDays(parseISO(suggestedTo), parseISO(suggestedFrom));
   return nights === period.nights;

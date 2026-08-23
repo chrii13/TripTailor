@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { discoverTripsRequestSchema } from "./discover-trips-request";
 import { buildDiscoverTripsRequestBody } from "./discover-trips-request-body";
 import { buildDiscoverTripsPrompt } from "./discover-trips-prompt";
@@ -35,7 +35,24 @@ function inTimeZone<T>(timeZone: string, run: () => T): T {
   }
 }
 
+/**
+ * Gli schemi ora rifiutano le date passate: le date fisse dei casi di prova
+ * (ottobre 2026) hanno quindi una scadenza, e l'orologio resta fermo a prima.
+ */
+const FROZEN_NOW = new Date("2026-08-01T12:00:00.000Z");
+
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(FROZEN_NOW);
+});
+
+/** I test che spostano l'orologio non devono lasciarlo spostato per i successivi. */
+afterEach(() => {
+  vi.setSystemTime(FROZEN_NOW);
+});
+
 afterAll(() => {
+  vi.useRealTimers();
   process.env.TZ = ORIGINAL_TZ;
 });
 
@@ -147,6 +164,91 @@ describe("date di calendario fra client e server (fusi diversi)", () => {
     );
 
     expect(prompt).toContain("dal 10/10/2026 al 12/10/2026");
+  });
+});
+
+/**
+ * Il rifiuto delle date passate è il gemello del difetto già presidiato qui sopra:
+ * il confronto avviene sul server (UTC) con una data scelta nel fuso del browser.
+ * Il caso scomodo è il client *indietro* rispetto a UTC — a Niue (UTC-11) è ancora
+ * il 22 agosto mentre a Greenwich è già il 23 — dove un confronto ingenuo con la
+ * mezzanotte UTC scarterebbe l'oggi dell'utente.
+ */
+describe("il confine sulle date passate regge fra client e server", () => {
+  it("il server in UTC accetta l'oggi di un client a fuso negativo", () => {
+    vi.setSystemTime(new Date("2026-08-23T05:00:00.000Z")); // Niue: 22 agosto, UTC: 23 agosto
+
+    const body = inTimeZone("Pacific/Niue", () =>
+      overTheWire(
+        buildGenerateItineraryRequestBody({
+          destination: "Lisbona",
+          dateRange: { from: new Date(2026, 7, 22), to: new Date(2026, 7, 24) },
+          participants,
+          budget: 1000,
+        })
+      )
+    );
+
+    const parsed = inTimeZone(SERVER_TZ, () => generateItineraryRequestSchema.safeParse(body));
+    expect(parsed.success).toBe(true);
+  });
+
+  it("il server in UTC scarta comunque un viaggio davvero passato", () => {
+    vi.setSystemTime(new Date("2026-08-23T05:00:00.000Z"));
+
+    const body = inTimeZone("Pacific/Niue", () =>
+      overTheWire(
+        buildGenerateItineraryRequestBody({
+          destination: "Lisbona",
+          dateRange: { from: new Date(2020, 0, 10), to: new Date(2020, 0, 12) },
+          participants,
+          budget: 1000,
+        })
+      )
+    );
+
+    const parsed = inTimeZone(SERVER_TZ, () => generateItineraryRequestSchema.safeParse(body));
+    expect(parsed.success).toBe(false);
+  });
+
+  it("anche /scopri accetta l'oggi di un client a fuso negativo", () => {
+    vi.setSystemTime(new Date("2026-08-23T05:00:00.000Z"));
+
+    const body = inTimeZone("Pacific/Niue", () =>
+      overTheWire(
+        buildDiscoverTripsRequestBody({
+          departureCity: "Milano",
+          dateMode: "esatte",
+          dateRange: { from: new Date(2026, 7, 22), to: new Date(2026, 7, 24) },
+          flexiblePeriod: {},
+          participants,
+          budget: 1500,
+        })
+      )
+    );
+
+    const parsed = inTimeZone(SERVER_TZ, () => discoverTripsRequestSchema.safeParse(body));
+    expect(parsed.success).toBe(true);
+  });
+
+  it("e accetta il mese corrente scelto da un client a fuso negativo l'ultimo giorno del mese", () => {
+    vi.setSystemTime(new Date("2026-09-01T05:00:00.000Z")); // Niue: 31 agosto, UTC: 1 settembre
+
+    const body = inTimeZone("Pacific/Niue", () =>
+      overTheWire(
+        buildDiscoverTripsRequestBody({
+          departureCity: "Milano",
+          dateMode: "flessibili",
+          dateRange: {},
+          flexiblePeriod: { month: "2026-08", nights: 5 },
+          participants,
+          budget: 1500,
+        })
+      )
+    );
+
+    const parsed = inTimeZone(SERVER_TZ, () => discoverTripsRequestSchema.safeParse(body));
+    expect(parsed.success).toBe(true);
   });
 });
 

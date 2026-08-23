@@ -8,6 +8,7 @@ import {
 } from "lucide-react"
 import {
   DayPicker,
+  formatCaption as defaultFormatCaption,
   getDefaultClassNames,
   type DayButton,
 } from "react-day-picker"
@@ -16,6 +17,10 @@ import { it } from "date-fns/locale"
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
+
+function conInizialeMaiuscola(testo: string): string {
+  return testo.charAt(0).toUpperCase() + testo.slice(1)
+}
 
 function Calendar({
   className,
@@ -62,6 +67,14 @@ function Calendar({
         ...labels,
       }}
       formatters={{
+        // In italiano i mesi vanno minuscoli dentro una frase, ma l'intestazione
+        // del calendario è l'etichetta del pannello, non una parola in un
+        // discorso: si legge "Agosto 2026", come le voci del menu dei mesi in
+        // /scopri (lib/discover-trips-flexible-period.ts). Si avvolge il
+        // formattatore di default invece di riscriverlo, così restano la lingua
+        // e l'ordine mese/anno decisi dalla locale.
+        formatCaption: (month, options, dateLib) =>
+          conInizialeMaiuscola(defaultFormatCaption(month, options, dateLib)),
         formatMonthDropdown: (date) =>
           date.toLocaleString("it-IT", { month: "short" }),
         ...formatters,

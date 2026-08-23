@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { differenceInCalendarDays } from "date-fns";
-import { calendarDateSchema } from "./calendar-date";
-import { participantSchema, MAX_TRIP_DAYS } from "./schema";
+import { calendarDateSchema, earliestRequestableDate, toCalendarDate } from "./calendar-date";
+import { participantSchema, MAX_TRIP_DAYS, MAX_DESTINATION_LENGTH } from "./schema";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -44,6 +44,9 @@ const exactDateRangeSchema = z
       .refine((range) => range.to >= range.from, {
         message: "La data di fine deve essere successiva o uguale alla data di inizio",
       })
+      .refine((range) => range.from >= earliestRequestableDate(), {
+        message: "Le date del viaggio non possono essere nel passato",
+      })
       .refine(
         (range) => {
           const days = Math.round((range.to.getTime() - range.from.getTime()) / MS_PER_DAY) + 1;
@@ -53,8 +56,18 @@ const exactDateRangeSchema = z
       )
   );
 
+/** Il mese corrente visto dal server, con la stessa tolleranza sul fuso delle date esatte. */
+function earliestRequestableMonth(): string {
+  return toCalendarDate(earliestRequestableDate()).slice(0, 7);
+}
+
 const flexiblePeriodSchema = z.object({
-  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Mese non valido, usa il formato YYYY-MM"),
+  month: z
+    .string()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Mese non valido, usa il formato YYYY-MM")
+    .refine((month) => month >= earliestRequestableMonth(), {
+      message: "Il mese scelto è già passato",
+    }),
   nights: z
     .number()
     .int()
@@ -64,7 +77,7 @@ const flexiblePeriodSchema = z.object({
 
 export const discoverTripsRequestSchema = z
   .object({
-    departureCity: z.string().trim().min(1).max(200),
+    departureCity: z.string().trim().min(1).max(MAX_DESTINATION_LENGTH),
     dateRange: exactDateRangeSchema.optional(),
     flexiblePeriod: flexiblePeriodSchema.optional(),
     participants: z.array(participantSchema).min(1).max(20),

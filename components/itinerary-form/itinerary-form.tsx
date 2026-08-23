@@ -16,7 +16,14 @@ import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/use-media-query";
-import { tripFormSchema, type TripFormValues } from "@/lib/schema";
+import {
+  tripFormSchema,
+  type TripFormValues,
+  MAX_DESTINATION_LENGTH,
+  MAX_STYLE_NOTES_LENGTH,
+  MAX_MUST_SEE_LENGTH,
+} from "@/lib/schema";
+import { startOfToday } from "@/lib/calendar-date";
 import { buildGenerateItineraryRequestBody } from "@/lib/generate-itinerary-request-body";
 import type { CreaPrefill } from "@/lib/crea-query-params";
 import type { ErrorCode } from "@/lib/generate-itinerary-errors";
@@ -207,6 +214,7 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
                 id="destination"
                 label="Destinazione"
                 placeholder="Es. Roma, Italia"
+                maxLength={MAX_DESTINATION_LENGTH}
                 error={errors.destination?.message}
               />
 
@@ -253,6 +261,8 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
                       );
                     }}
                     numberOfMonths={isDesktop ? 2 : 1}
+                    disabled={{ before: startOfToday() }}
+                    startMonth={startOfToday()}
                   />
                   <div className="grid grid-cols-1 gap-3 border-t p-3 sm:grid-cols-2">
                     <div className="min-w-0 space-y-1">
@@ -402,6 +412,7 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
               <Input
                 id="styleNotes"
                 placeholder="Es. lusso, economico, avventura..."
+                maxLength={MAX_STYLE_NOTES_LENGTH}
                 {...register("styleNotes")}
               />
             </div>
@@ -415,10 +426,11 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
               <Input
                 id="mustSee"
                 placeholder="Es. Sagrada Família, il tramonto a Oia..."
+                maxLength={MAX_MUST_SEE_LENGTH}
                 {...register("mustSee")}
               />
               <p className="text-xs text-muted-foreground">
-                Dicci cosa non può mancare nel tuo viaggio.
+                Dicci cosa non può mancare nel tuo viaggio (massimo {MAX_MUST_SEE_LENGTH} caratteri).
               </p>
             </div>
             </div>

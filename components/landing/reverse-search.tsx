@@ -30,7 +30,7 @@ export function ReverseSearch() {
           Parti dal <span className="emphasis-mark-display">budget</span>, non dalla meta.
         </h2>
         <p className="mt-4 max-w-xl text-balance text-foreground">
-          Dicci quanto puoi spendere, quando vorresti partire e con chi. Ti mostriamo 5 possibili
+          Dicci quanto puoi spendere, quando vorresti partire e con chi. Ti mostriamo fino a 6
           proposte di viaggio, ognuna con quanto costa arrivarci, dormirci e viverci. Scegli, e
           all&apos;itinerario ci pensiamo noi.
         </p>

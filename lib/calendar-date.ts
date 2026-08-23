@@ -29,6 +29,34 @@ export function formatCalendarDate(value: string): string {
 }
 
 /**
+ * Mezzanotte locale di oggi. È il confine di "data passata" dalla parte del browser,
+ * dove il fuso è quello dell'utente: un viaggio che comincia oggi è ancora plausibile,
+ * uno cominciato ieri no.
+ */
+export function startOfToday(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+/**
+ * Lo stesso confine, ma visto dal server — che su Vercel gira in UTC mentre l'utente
+ * sceglie le date nel proprio fuso. I due non concordano su "che giorno è": a Niue
+ * (UTC-11) è ancora il 22 quando a Greenwich è già il 23, e a Kiritimati (UTC+14) è
+ * il contrario. Confrontare la data scelta con la mezzanotte UTC scarterebbe quindi,
+ * per alcune ore al giorno, un "oggi" perfettamente legittimo — lo stesso genere di
+ * slittamento di un giorno che `toCalendarDate` esiste per togliere di mezzo.
+ *
+ * Un giorno di tolleranza copre l'intero arco dei fusi (da UTC-12 a UTC+14 lo scarto
+ * fra due date di calendario non supera mai un giorno) e continua a fermare quello
+ * che il controllo deve fermare: le richieste per date davvero passate.
+ */
+export function earliestRequestableDate(): Date {
+  const boundary = startOfToday();
+  boundary.setDate(boundary.getDate() - 1);
+  return boundary;
+}
+
+/**
  * `z.iso.date()` accetta solo "yyyy-MM-dd" e solo date che esistono davvero
  * (scarta 2026-02-31, che `new Date` interpreterebbe come il 3 marzo).
  */

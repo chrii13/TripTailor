@@ -1,4 +1,12 @@
 import { z } from "zod";
+import { startOfToday } from "./calendar-date";
+
+// Limiti dei campi di testo: stessi numeri per lo schema del form e per quello
+// della richiesta, così l'utente li vede nell'interfaccia invece di ricevere un
+// 400 su un errore che non potrebbe capire.
+export const MAX_DESTINATION_LENGTH = 200;
+export const MAX_STYLE_NOTES_LENGTH = 1000;
+export const MAX_MUST_SEE_LENGTH = 200;
 
 export const AGE_RANGES = {
   bambino: { min: 0, max: 12 },
@@ -36,7 +44,11 @@ export const participantSchema = z
   );
 
 export const tripFormSchema = z.object({
-  destination: z.string().trim().min(1, "Inserisci una destinazione"),
+  destination: z
+    .string()
+    .trim()
+    .min(1, "Inserisci una destinazione")
+    .max(MAX_DESTINATION_LENGTH, `Massimo ${MAX_DESTINATION_LENGTH} caratteri`),
   dateRange: z
     .object({
       from: z.date().optional(),
@@ -44,6 +56,9 @@ export const tripFormSchema = z.object({
     })
     .refine((range) => !!range.from && !!range.to, {
       message: "Seleziona le date di inizio e fine",
+    })
+    .refine((range) => !range.from || range.from >= startOfToday(), {
+      message: "Le date del viaggio non possono essere nel passato",
     })
     .refine((range) => !range.from || !range.to || range.to >= range.from, {
       message: "La data di fine deve essere successiva o uguale alla data di inizio",
@@ -58,8 +73,8 @@ export const tripFormSchema = z.object({
     ),
   participants: z.array(participantSchema).min(1, "Aggiungi almeno un partecipante").max(20, "Massimo 20 partecipanti"),
   budget: z.number().min(0),
-  styleNotes: z.string().optional(),
-  mustSee: z.string().optional(),
+  styleNotes: z.string().max(MAX_STYLE_NOTES_LENGTH, `Massimo ${MAX_STYLE_NOTES_LENGTH} caratteri`).optional(),
+  mustSee: z.string().max(MAX_MUST_SEE_LENGTH, `Massimo ${MAX_MUST_SEE_LENGTH} caratteri`).optional(),
   arrivalTime: z.string().optional(),
   departureTime: z.string().optional(),
 });

@@ -28,6 +28,26 @@ function formatApprox(value: number): string {
   return `~${euro.format(value)}`;
 }
 
+/**
+ * Le due cifre "a persona" della card (il viaggio A/R e il totale) NON sono
+ * quelle restituite dal modello: il modello sbaglia questa moltiplicazione (può
+ * dire "120 a persona" e "200 in totale" per quattro persone) e il server non la
+ * verifica, così come non si fida del `total` del modello e lo ricalcola dalle
+ * voci. Si ricavano quindi dalla cifra verificata — il totale già mostrato —
+ * invece di scartare la proposta: stessa scelta clemente già fatta per `total`
+ * in `verifyProposalsAgainstBudget`, che ricalcola e tiene la proposta anziché
+ * eliminarla.
+ *
+ * Divisione arrotondata all'euro, non alla cinquantina: il totale da cui parte
+ * è già arrotondato, e un secondo arrotondamento a passo largo rimetterebbe le
+ * due cifre in contraddizione (700 / 3 → 250, che per tre fa 750 accanto a un
+ * totale di 700). All'euro lo scarto residuo resta di pochi centesimi di euro
+ * per persona, non di cinquanta.
+ */
+export function derivePerPerson(total: number, travelerCount: number): number {
+  return Math.round(total / travelerCount);
+}
+
 export function ProposalCard({
   proposal,
   href,
@@ -41,7 +61,8 @@ export function ProposalCard({
   const suggestedWindow = formatSuggestedWindowLabel(proposal);
   const remaining = budget - costs.total;
   const roundedRemaining = remaining > 0 ? roundToNearestFifty(remaining) : 0;
-  const perPerson = travelerCount > 1 ? roundToNearestFifty(costs.total / travelerCount) : null;
+  const travelPerPerson = derivePerPerson(costs.travelTotal, travelerCount);
+  const perPerson = travelerCount > 1 ? derivePerPerson(costs.total, travelerCount) : null;
   const realPriceSearchUrl = departureDate
     ? buildRealPriceSearchUrl(departureCity, proposal.destination, departureDate, proposal.country)
     : null;
@@ -86,7 +107,7 @@ export function ProposalCard({
           <div className="flex items-center justify-between gap-2">
             <dt className="flex items-center gap-2 text-muted-foreground">
               <Route className="size-4" />
-              Viaggio A/R ({formatApprox(costs.travelPerPerson)} a persona)
+              Viaggio A/R ({formatApprox(travelPerPerson)} a persona)
             </dt>
             <dd className="font-medium text-primary">{formatApprox(costs.travelTotal)}</dd>
           </div>

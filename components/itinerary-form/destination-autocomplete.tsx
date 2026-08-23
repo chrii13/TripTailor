@@ -14,6 +14,7 @@ interface DestinationAutocompleteProps<T extends FieldValues> {
   placeholder: string;
   id: string;
   error?: string;
+  maxLength: number;
 }
 
 interface Suggestion {
@@ -31,6 +32,7 @@ export function DestinationAutocomplete<T extends FieldValues>({
   placeholder,
   id,
   error,
+  maxLength,
 }: DestinationAutocompleteProps<T>) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -95,6 +97,7 @@ export function DestinationAutocomplete<T extends FieldValues>({
             <Input
               id={id}
               placeholder={placeholder}
+              maxLength={maxLength}
               autoComplete="off"
               role="combobox"
               aria-expanded={isOpen}
