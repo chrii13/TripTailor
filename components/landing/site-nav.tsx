@@ -118,7 +118,13 @@ export function SiteNav() {
               size="icon-sm"
               variant="outline"
               aria-label="Sezioni della pagina"
-              className="size-11 border-primary shadow-none sm:size-8 lg:hidden"
+              // Da `sm` il bottone si rimpicciolisce a 32px, ma resta l'unico
+              // accesso alle sezioni fino a `lg` — cioè anche sui tablet in
+              // verticale (820-834px), dove si tocca col dito. `after:` estende
+              // l'area toccabile a 44px senza ingrandire il bottone né l'icona,
+              // come già fatto per il logo qui sopra: intorno c'è solo spazio
+              // vuoto, il bersaglio più vicino è a ~200px.
+              className="relative size-11 border-primary shadow-none sm:size-8 sm:after:absolute sm:after:-inset-1.5 sm:after:rounded-full sm:after:content-[''] lg:hidden"
             >
               <Menu aria-hidden="true" />
             </Button>
