@@ -17,7 +17,7 @@ const FONTI = [
 
 function ColonnaTitolo({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="mb-3 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+    <h3 className="mb-3 text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
       {children}
     </h3>
   );
@@ -28,7 +28,7 @@ export function SiteFooter() {
     <footer className="bg-background px-4 pt-12 sm:px-8">
       <div className="mx-auto max-w-5xl">
         <span aria-hidden className="block h-[3px] w-7 bg-voltage" />
-        <p className="mt-3 font-display text-sm font-[725] tracking-[0.15em] text-primary uppercase">
+        <p className="mt-3 font-display text-sm font-[725] tracking-[0.16em] text-primary uppercase">
           TripTailor
         </p>
 

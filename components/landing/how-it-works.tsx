@@ -29,9 +29,18 @@ const STEPS = [
   },
 ];
 
+// Il ritardo progressivo sta dentro la variante, non nella prop `transition`
+// del componente: in Framer Motion la transizione dichiarata nella variante
+// scavalca del tutto quella passata come prop, quindi un `delay` là fuori è
+// codice morto e i quattro passi entrano insieme. Con `custom={i}` la variante
+// diventa una funzione e il ritardo agisce davvero.
 const item: Variants = {
   hidden: { opacity: 0, x: -16 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: "easeOut" } },
+  visible: (i: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.5, ease: "easeOut", delay: i * 0.1 },
+  }),
 };
 
 export function HowItWorks() {
@@ -50,7 +59,11 @@ export function HowItWorks() {
           viewport={{ once: true, amount: 0.6 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          <h2 className="font-display text-3xl font-[725] tracking-[-0.01em] text-primary uppercase sm:text-5xl">
+          {/* Scala fluida come l'h1 e con un tetto più basso: con
+              `text-3xl sm:text-5xl` l'h2 saltava di netto da 30 a 48px a 640px
+              e restava più grande dell'h1 (fluido) su tutta la fascia
+              640–873px, invertendo la gerarchia. */}
+          <h2 className="font-display text-[clamp(2rem,4.6vw,3rem)] font-[725] tracking-[-0.015em] text-primary uppercase">
             Come funziona
           </h2>
           <p className="mt-3 text-muted-foreground">
@@ -62,12 +75,12 @@ export function HowItWorks() {
           {STEPS.map((step, i) => (
             <motion.li
               key={step.n}
+              custom={i}
               className="relative pb-10 last:pb-0"
               initial={reduceMotion ? undefined : "hidden"}
               whileInView={reduceMotion ? undefined : "visible"}
               viewport={{ once: true, amount: 0.5 }}
               variants={reduceMotion ? undefined : item}
-              transition={{ delay: i * 0.1 }}
             >
               <span className="absolute -left-[37px] top-1.5 size-3 rounded-full border-2 border-secondary bg-voltage" />
               {/* Solo cifre: la classe va sull'elemento, non serve un wrapper. */}

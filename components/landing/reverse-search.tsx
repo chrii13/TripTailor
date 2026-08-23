@@ -26,7 +26,7 @@ export function ReverseSearch() {
         <span className="mt-3 block text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
           E se non sai dove andare
         </span>
-        <h2 className="mt-3 font-display text-3xl font-[725] tracking-[-0.01em] text-primary uppercase sm:text-5xl">
+        <h2 className="mt-3 font-display text-[clamp(2rem,4.6vw,3rem)] font-[725] tracking-[-0.015em] text-primary uppercase">
           Parti dal <span className="emphasis-mark-display">budget</span>, non dalla meta.
         </h2>
         <p className="mt-4 max-w-xl text-balance text-foreground">
@@ -60,8 +60,13 @@ export function ReverseSearch() {
                 </span>
               ))}
             </div>
-            <div className="scopri-marquee-fade pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-accent to-transparent" />
-            <div className="scopri-marquee-fade pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-accent to-transparent" />
+            {/* Uniche due sfumature della landing, e sono maschere di
+                leggibilità, non superfici: coprono il taglio netto delle chip
+                ai bordi del nastro. `to-accent/0` e non `to-transparent`, che
+                interpola verso il nero trasparente e può far virare al grigio
+                la fascia intermedia. */}
+            <div className="scopri-marquee-fade pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-accent to-accent/0" />
+            <div className="scopri-marquee-fade pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-accent to-accent/0" />
           </div>
 
           {/* Comando di pausa richiesto da WCAG 2.2.2: il nastro dura più di 5s,
