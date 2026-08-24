@@ -38,7 +38,7 @@ export function parseOverpassRestaurants(json: unknown, lat: number, lon: number
   if (!Array.isArray(elements)) return [];
 
   return elements
-    .map((raw) => {
+    .map((raw): Omit<DinnerCandidate, "id"> | null => {
       const el = raw as OverpassElement;
       const name = el.tags?.name;
       const elLat = el.lat ?? el.center?.lat;
