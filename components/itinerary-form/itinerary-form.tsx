@@ -89,7 +89,14 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
   const [apiError, setApiError] = useState<string | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [participantsPopoverOpen, setParticipantsPopoverOpen] = useState(false);
-  const isDesktop = useMediaQuery("(min-width: 640px)");
+  // 768px e non 640: la soglia deve coincidere con `md:flex-row` di
+  // components/ui/calendar.tsx, l'unica regola che affianca davvero i due mesi.
+  // Con 640 la fascia 640-767 chiedeva due mesi e li impilava — pannello alto
+  // 712px, che su un viewport da 1000 finiva sotto il bordo dello schermo.
+  // Spostando la soglia (invece di abbassare a `sm` la classe di shadcn) quella
+  // fascia vede un mese solo, compatto come da telefono, e la breakpoint CSS
+  // resta l'unica sorgente di verità. Cambiando l'una va cambiata l'altra.
+  const isTwoMonthsWide = useMediaQuery("(min-width: 768px)");
 
   const initialValues: TripFormValues = {
     ...defaultValues,
@@ -263,7 +270,7 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
                         { shouldValidate: true }
                       );
                     }}
-                    numberOfMonths={isDesktop ? 2 : 1}
+                    numberOfMonths={isTwoMonthsWide ? 2 : 1}
                     disabled={{ before: startOfToday() }}
                     startMonth={startOfToday()}
                   />

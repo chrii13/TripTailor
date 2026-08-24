@@ -301,6 +301,39 @@ input[type="time"] {
   max-width: 100%;
 }
 
+/* Popover del calendario su schermi bassi: il pannello è alto 420px su /crea, e
+   su un viewport da 700 (portatile 13" con barre) non ci sta né sopra né sotto
+   il campo. Radix in quel caso sceglie il lato con più spazio e poi lascia
+   traboccare: misurato `top: -74`, cioè intestazione del mese e prima riga di
+   giorni tagliate sopra il bordo dello schermo — a 700px di altezza sia a 1280
+   sia a 700 di larghezza, perché il difetto è sull'asse verticale e non dipende
+   dalla larghezza.
+
+   La cura NON è estendere agli schermi bassi il trattamento a overlay centrato
+   di sotto: quello richiederebbe una soglia in pixel («sotto quanti px di
+   altezza?») tarata sull'ingombro odierno di /crea, che cambia appena si
+   aggiunge un campo sopra il calendario, e prenderebbe in ostaggio anche i casi
+   che funzionano (su /scopri, a 1280x700, il pannello è alto 343 e sta tutto a
+   schermo). `--radix-popper-available-height` è lo spazio che Radix ha davvero
+   trovato sul lato scelto: usarlo come tetto vincola il pannello solo quando
+   serve davvero e di quel tanto che serve, senza numeri magici. Il pannello
+   resta ancorato al campo e scorre al proprio interno.
+
+   Sotto 640px vince comunque la regola a `!important` qui sotto, che il pannello
+   lo centra: lì il problema non è la sola altezza ma il calcolo di Radix in
+   generale, e su un telefono un riquadro centrato è la resa attesa. */
+[data-calendar-popover] {
+  /* I due pixel di tolleranza non sono un vezzo: la disponibilità che Radix
+     pubblica è arrotondata all'intero, mentre il pannello ha altezze frazionarie
+     (su /scopri 343,13px naturali contro i 342 dichiarati all'apertura). Senza
+     margine comparirebbe una barra di scorrimento — e con lei 14px di larghezza
+     in più — per un pixel di contenuto, su un pannello che a schermo ci stava.
+     Due pixel di sbordo, peraltro dentro i 4 di distacco dal campo, non si
+     vedono; una barra di scorrimento spuria sì. */
+  max-height: calc(var(--radix-popper-available-height) + 2px);
+  overflow-y: auto;
+}
+
 /* Popover del calendario (date del viaggio) su schermi stretti: ancorarlo al
    trigger dipende dal calcolo dello spazio disponibile che Radix fa alla
    propria apertura, calcolo che su viewport corte (es. iPhone SE) può
