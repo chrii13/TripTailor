@@ -42,7 +42,14 @@ let rispostaLocationIq: unknown = RISPOSTA_LOCATIONIQ;
 let rispostaLocationIqTappa: unknown = RISPOSTA_LOCATIONIQ;
 let rispostaOverpass: unknown = RISPOSTA_OVERPASS;
 
+// Quanto "invecchia" l'orologio a ogni chiamata di rete. A zero il tempo non conta e i
+// test si comportano come se la fase fosse istantanea; alzandolo si simulano servizi lenti
+// senza far durare davvero il test (vedi il test sul tetto della fase di ricerca).
+let avanzamentoPerChiamataMs = 0;
+let scartoOrologioMs = 0;
+
 const fetchMock = vi.fn(async (input: unknown) => {
+  scartoOrologioMs += avanzamentoPerChiamataMs;
   const url = String(input);
   const corpo = url.includes("overpass")
     ? rispostaOverpass
@@ -86,6 +93,12 @@ beforeEach(() => {
   rispostaLocationIq = RISPOSTA_LOCATIONIQ;
   rispostaLocationIqTappa = RISPOSTA_LOCATIONIQ;
   rispostaOverpass = RISPOSTA_OVERPASS;
+  avanzamentoPerChiamataMs = 0;
+  scartoOrologioMs = 0;
+  // Si sposta solo la lettura dell'orologio, non i timer: `AbortSignal.timeout`, usato
+  // dalle chiamate di rete vere, continua a lavorare sul tempo reale.
+  const adesso = Date.now.bind(Date);
+  vi.spyOn(Date, "now").mockImplementation(() => adesso() + scartoOrologioMs);
   process.env.GEMINI_API_KEY = "chiave-di-prova";
   delete process.env.GEMINI_API_KEY_BACKUP;
   process.env.LOCATIONIQ_API_KEY = "chiave-locationiq";
@@ -230,6 +243,58 @@ describe("POST /api/dinner-suggestions", () => {
     expect(body.suggestions[0].name).toBe("Osteria Vicina");
     // Le distanze sono calcolate dal centro della destinazione, non da un punto inventato.
     expect(body.suggestions[0].distanceMeters).toBe(0);
+  });
+
+  it("tiene una sola cena per sera quando il modello propone due scelte per la stessa data", async () => {
+    generateContent.mockResolvedValue(
+      rispostaGemini(
+        JSON.stringify({
+          days: [
+            { date: "2026-09-10", chosenId: 1, comment: "La prima scelta." },
+            { date: "2026-09-10", chosenId: 2, comment: "Un ripensamento." },
+          ],
+        })
+      )
+    );
+
+    const response = await POST(richiesta(corpoValido));
+    const body = await response.json();
+
+    expect(body.suggestions).toHaveLength(1);
+    expect(body.suggestions[0].name).toBe("Osteria Vicina");
+    expect(body.suggestions[0].comment).toBe("La prima scelta.");
+  });
+
+  it("interrompe la ricerca dei candidati al tetto di fase e lascia le ultime giornate senza consiglio", async () => {
+    // Ogni chiamata di rete fa invecchiare l'orologio di 3 secondi: la geocodifica della
+    // destinazione più il primo gruppo di quattro giornate (due chiamate l'una) superano
+    // da soli il tetto di 20 secondi, e il secondo gruppo non parte nemmeno.
+    avanzamentoPerChiamataMs = 3_000;
+
+    const giornate = ["10", "11", "12", "13", "14", "15"].map((giorno) => ({
+      date: `2026-09-${giorno}`,
+      anchorTitle: `Tappa del ${giorno}`,
+    }));
+
+    generateContent.mockResolvedValue(
+      rispostaGemini(
+        JSON.stringify({
+          days: giornate.map((g) => ({ date: g.date, chosenId: 1, comment: "Un consiglio." })),
+        })
+      )
+    );
+
+    const response = await POST(richiesta({ ...corpoValido, days: giornate }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.suggestions).toHaveLength(4);
+    expect(body.suggestions.map((s: { date: string }) => s.date)).toEqual([
+      "2026-09-10",
+      "2026-09-11",
+      "2026-09-12",
+      "2026-09-13",
+    ]);
   });
 
   it("risponde 200 con un elenco vuoto quando manca la chiave del modello", async () => {

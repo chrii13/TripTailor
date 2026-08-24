@@ -27,6 +27,15 @@ const PRE_MODEL_PHASE_MS = 20_000;
 const GEOCODE_TIMEOUT_MS = 2_500;
 const OVERPASS_TIMEOUT_MS = 5_000;
 
+// Quante giornate si lavorano insieme. Non è illimitata perché LocationIQ e Overpass sono
+// servizi pubblici e gratuiti che limitano a poche richieste al secondo: un viaggio di 14
+// giorni tutto in parallelo sono 14 geocodifiche e 14 POST simultanei, cioè un rifiuto per
+// eccesso di richieste come esito *normale*, con tutte le sere che finiscono a pescare
+// dall'elenco attorno al centro città. Quattro per volta è un ritmo che quei limiti
+// reggono, e ha l'effetto secondario di rendere davvero verificabile il tetto di fase, che
+// si controlla fra un gruppo e l'altro.
+const GIORNATE_PER_GRUPPO = 4;
+
 const PER_CALL_CAP_MS = 25_000;
 const MIN_CALL_TIMEOUT_MS = 8_000;
 
@@ -106,25 +115,43 @@ export async function POST(request: Request) {
     }
     const coordinate = { lat: centro.lat, lon: centro.lon };
 
-    // Fase 1 — i candidati. Le giornate sono indipendenti: in parallelo, con tetto
-    // condiviso.
-    const perGiornata = await Promise.all(
-      days.map(async (day): Promise<GiornataConCandidati | null> => {
-        if (Date.now() >= preModelDeadline) return null;
+    // Fase 1 — i candidati. Le giornate sono indipendenti, quindi in parallelo, ma a
+    // gruppi: il tetto di fase si controlla prima di ogni gruppo, e le giornate non
+    // raggiunte entro il tetto restano semplicemente senza consiglio — un'assenza onesta
+    // è meglio di un consiglio preso attorno al centro città perché il servizio pubblico
+    // ci ha risposto "troppe richieste".
+    const conCandidati: GiornataConCandidati[] = [];
 
-        const punto =
-          (await geocodePlaceNear(
-            `${day.anchorTitle}, ${destination}`,
-            coordinate,
-            GEOCODE_TIMEOUT_MS
-          )) ?? coordinate;
+    for (let inizio = 0; inizio < days.length; inizio += GIORNATE_PER_GRUPPO) {
+      if (Date.now() >= preModelDeadline) {
+        console.error(
+          `Consigli cena: tetto della fase di ricerca superato, ${days.length - inizio} giornate restano senza candidati`
+        );
+        break;
+      }
 
-        const candidates = await fetchDinnerCandidates(punto.lat, punto.lon, OVERPASS_TIMEOUT_MS);
-        return candidates.length > 0 ? { ...day, candidates } : null;
-      })
-    );
+      const gruppo = await Promise.all(
+        days.slice(inizio, inizio + GIORNATE_PER_GRUPPO).map(
+          async (day): Promise<GiornataConCandidati | null> => {
+            const punto =
+              (await geocodePlaceNear(
+                `${day.anchorTitle}, ${destination}`,
+                coordinate,
+                GEOCODE_TIMEOUT_MS
+              )) ?? coordinate;
 
-    const conCandidati = perGiornata.filter((g): g is GiornataConCandidati => g !== null);
+            const candidates = await fetchDinnerCandidates(
+              punto.lat,
+              punto.lon,
+              OVERPASS_TIMEOUT_MS
+            );
+            return candidates.length > 0 ? { ...day, candidates } : null;
+          }
+        )
+      );
+
+      conCandidati.push(...gruppo.filter((g): g is GiornataConCandidati => g !== null));
+    }
 
     // Nessun candidato da nessuna parte: non è un errore, è una risposta onesta.
     if (conCandidati.length === 0) {
@@ -241,7 +268,29 @@ export async function POST(request: Request) {
     }
 
     // Fase 3 — il cancello.
+    //
+    // Lo schema garantisce la forma della risposta, non il senso: `days` può contenere due
+    // scelte con la stessa data, ed entrambe passerebbero il resto dei controlli
+    // producendo due cene per la stessa sera. È la stessa diffidenza di
+    // `verifyItineraryDays` verso i giorni dell'itinerario, applicata però una giornata
+    // alla volta: qui una sera in meno non invalida le altre, quindi la prima occorrenza
+    // vince e le successive si scartano invece di far fallire tutta la risposta.
+    const giornateGiaConsigliate = new Set<string>();
+
     const suggestions = parsedResponse.data.days.flatMap((scelta): DinnerSuggestion[] => {
+      if (giornateGiaConsigliate.has(scelta.date)) {
+        console.error(
+          `Consigli cena: seconda scelta per la giornata ${scelta.date}, scartata (vale la prima)`
+        );
+        return [];
+      }
+
+      // La data si segna qui, non dopo il cancello: vale la *prima* scelta per quella
+      // sera, anche quando viene scartata. Segnarla solo in caso di successo lascerebbe
+      // che una seconda scelta subentri alla prima, cioè esattamente il ripensamento che
+      // non vogliamo concedere al modello.
+      giornateGiaConsigliate.add(scelta.date);
+
       const giornata = conCandidati.find((g) => g.date === scelta.date);
       if (!giornata) {
         console.error(`Consigli cena: giornata ${scelta.date} non richiesta, scelta scartata`);
