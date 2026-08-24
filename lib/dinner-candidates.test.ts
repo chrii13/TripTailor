@@ -32,9 +32,15 @@ describe("parseOverpassRestaurants", () => {
     expect(parseOverpassRestaurants(json, LAT, LON).map((c) => c.id)).toEqual([1, 2]);
   });
 
-  it("tronca a MAX_CANDIDATES: a Porto ce n'erano 161 entro 500 m", () => {
-    const elements = Array.from({ length: 40 }, (_, i) => elemento(`R${i}`, LAT + i * 0.0001, LON));
-    expect(parseOverpassRestaurants({ elements }, LAT, LON)).toHaveLength(MAX_CANDIDATES);
+  it("tronca a MAX_CANDIDATES tenendo i più vicini, non i primi dell'array: a Porto ce n'erano 161 entro 500 m", () => {
+    // Ordine di arrivo dal più lontano (R0) al più vicino (R39): l'opposto dell'ordine
+    // per distanza. Se l'implementazione troncasse prima di ordinare, sopravvivrebbero
+    // R0..R11 (i primi dell'array, cioè i più lontani) invece dei 12 realmente più vicini.
+    const elements = Array.from({ length: 40 }, (_, i) => elemento(`R${i}`, LAT + (39 - i) * 0.0001, LON));
+    const out = parseOverpassRestaurants({ elements }, LAT, LON);
+    expect(out).toHaveLength(MAX_CANDIDATES);
+    const attesi = Array.from({ length: MAX_CANDIDATES }, (_, i) => `R${39 - i}`); // R39 (più vicino) ... R28
+    expect(out.map((c) => c.name)).toEqual(attesi);
   });
 
   it("riporta i campi opzionali solo quando ci sono: il 71% dei locali non ha la cucina", () => {
