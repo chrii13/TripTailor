@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { itineraryResponseSchema } from "./itinerary-schema";
 import { discoverTripsResponseSchema } from "./discover-trips-schema";
+import { dinnerSuggestionsResponseSchema } from "./dinner-suggestions-schema";
 
 /**
  * Rete di sicurezza per un difetto che nessun altro test può vedere: le route AI sono
@@ -42,6 +43,7 @@ describe("schemi inviati a Gemini come responseJsonSchema", () => {
   it.each([
     ["itinerario (/api/generate-itinerary)", itineraryResponseSchema],
     ["proposte (/api/discover-trips)", discoverTripsResponseSchema],
+    ["consigli cena (scelta del ristorante)", dinnerSuggestionsResponseSchema],
   ])("%s non contiene chiavi che Gemini rifiuta", (_name, schema) => {
     const found = findRejectedKeys(z.toJSONSchema(schema));
     expect(
