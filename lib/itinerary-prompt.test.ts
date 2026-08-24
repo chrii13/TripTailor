@@ -117,6 +117,11 @@ describe("buildItineraryPrompt", () => {
     expect(buildItineraryPrompt(baseRequest, null)).toContain("Non imporre un numero fisso");
   });
 
+  it("vieta di nominare ristoranti e locali fra le attività: quelli li sceglie il blocco verificato", () => {
+    const prompt = buildItineraryPrompt(baseRequest, null);
+    expect(prompt).toContain("non nominare ristoranti, bar o altri locali specifici");
+  });
+
   it("istruisce a dare la posizione esatta per la prima attività del giorno, senza presumere un punto di partenza", () => {
     const prompt = buildItineraryPrompt(baseRequest, null);
     expect(prompt).toContain("primissima attività di ogni giornata");
