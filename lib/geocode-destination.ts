@@ -117,7 +117,16 @@ export async function geocodePlaceNear(
     const data = (await response.json()) as { lat: string; lon: string }[];
     if (!Array.isArray(data) || data.length === 0) return null;
 
-    return { lat: Number(data[0].lat), lon: Number(data[0].lon) };
+    const lat = Number.parseFloat(data[0].lat);
+    const lon = Number.parseFloat(data[0].lon);
+
+    // Senza questa guardia un NaN arriverebbe fino alla query a Overpass (`around:600,NaN,NaN`),
+    // dove non dà un errore chiaro ma risultati vuoti o insensati, lontano da dove nasce.
+    if (Number.isNaN(lat) || Number.isNaN(lon)) {
+      return null;
+    }
+
+    return { lat, lon };
   } catch (error) {
     console.error("Consigli cena: geocodifica della tappa fallita", error);
     return null;

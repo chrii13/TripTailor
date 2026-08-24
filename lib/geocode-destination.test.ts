@@ -45,6 +45,19 @@ describe("geocodePlaceNear", () => {
     expect(url.searchParams.get("bounded")).toBe("1");
   });
 
+  it("restituisce null quando le coordinate non sono numeri: un NaN finirebbe nella query a Overpass", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [{ lat: "non-un-numero", lon: "-8.61" }],
+      })
+    );
+    process.env.LOCATIONIQ_API_KEY = "chiave-finta";
+
+    expect(await geocodePlaceNear("Tappa malformata", { lat: 41.14, lon: -8.61 }, 2500)).toBeNull();
+  });
+
   it("restituisce null quando LocationIQ non trova nulla, senza lanciare", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => [] }));
     process.env.LOCATIONIQ_API_KEY = "chiave-finta";
