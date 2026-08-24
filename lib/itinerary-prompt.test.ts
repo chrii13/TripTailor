@@ -208,4 +208,10 @@ describe("buildItineraryPrompt", () => {
     expect(prompt).toMatch(/non vanno tradotti|non si traducono/i);
     expect(prompt).toMatch(/"[^"]+", non "[^"]+"/);
   });
+
+  it("gli esempi della regola sui nomi propri non nominano un locale dove si mangia o si beve, altrimenti si contraddicono con il divieto sopra", () => {
+    const prompt = buildItineraryPrompt(baseRequest, null);
+    expect(prompt).not.toContain("Temple Bar");
+    expect(prompt).not.toContain("Mercado da Ribeira");
+  });
 });
