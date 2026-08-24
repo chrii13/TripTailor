@@ -106,7 +106,16 @@ export async function POST(request: Request) {
 
   const prompt = buildItineraryPrompt(parsedRequest.data, climate);
 
-  const GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"];
+  // Flash Lite per primo, non per ultimo (2026-08-24). L'alias gemini-flash-latest punta
+  // oggi a Gemini 3.7 Flash, che su questo prompt misura 43s per un itinerario di 4 giorni
+  // contro un tetto per chiamata di 45s, e in questi giorni risponde spesso 503 ("high
+  // demand"); gemini-flash-lite-latest (Gemini 3.5 Flash Lite) fa lo stesso lavoro in 17s,
+  // e in 28s sui 14 giorni massimi. Con l'ordine precedente il primo tentativo sforava il
+  // tetto, e un timeout esce dal ciclo senza fallback (vedi il catch piu' sotto): l'utente
+  // vedeva un 502 dopo 55s. Il modello piu' lento resta come seconda scelta. L'ordine e'
+  // anche piu' gentile con le quote del livello gratuito: 500 richieste al giorno su Flash
+  // Lite contro 20 su Flash.
+  const GEMINI_MODELS = ["gemini-flash-lite-latest", "gemini-flash-latest"];
 
   let responseText: string | undefined;
   let finishReason: string | undefined;
