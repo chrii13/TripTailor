@@ -142,23 +142,30 @@ describe("ItineraryResult — consiglio sulla cena", () => {
     // Nessuno stato d'errore: né un alert, né la riga della giornata senza consiglio.
     expect(screen.queryAllByRole("alert")).toHaveLength(0);
     expect(screen.queryByText(/Dove cenare/)).toBeNull();
-    expect(screen.queryByText(/Nessun locale/)).toBeNull();
+    expect(screen.queryByText(/Per questa sera non abbiamo un consiglio/)).toBeNull();
     // L'itinerario è quello di prima.
     expect(screen.getByText("Colosseo")).toBeInTheDocument();
     expect(screen.getByText("Pantheon")).toBeInTheDocument();
   });
 
-  it("con una risposta senza consiglio per la giornata mostra una riga discreta, non un errore", async () => {
+  it("con una risposta senza consiglio per la giornata non afferma che lì attorno non ci sono locali", async () => {
+    // La route risponde `200 { suggestions: [] }` in quattro casi diversi (nessun candidato,
+    // modello fallito, destinazione non geocodificata, giornata oltre il tetto di fase) e il
+    // client non li distingue: la riga può quindi parlare solo di noi, mai del mondo.
     fetchMock = respondingFetch({ suggestions: [SUGGESTION] });
     vi.stubGlobal("fetch", fetchMock);
 
     renderResult();
 
     const giornata = within(dayCard("2026-05-20"));
-    expect(await giornata.findByText(/Nessun locale/)).toBeInTheDocument();
+    expect(
+      await giornata.findByText("Per questa sera non abbiamo un consiglio.")
+    ).toBeInTheDocument();
+    // Nessuna affermazione sull'assenza di locali attorno alla tappa.
+    expect(screen.queryByText(/Nessun locale|non ci sono locali/)).toBeNull();
     expect(screen.queryAllByRole("alert")).toHaveLength(0);
     // La giornata senza tappe non chiede e non annuncia niente.
-    expect(within(dayCard("2026-05-22")).queryByText(/Nessun locale/)).toBeNull();
+    expect(within(dayCard("2026-05-22")).queryByText(/Per questa sera non abbiamo un consiglio/)).toBeNull();
   });
 
   it("con un `suggestions` che non è un array non esplode e non mostra niente", async () => {
@@ -173,7 +180,7 @@ describe("ItineraryResult — consiglio sulla cena", () => {
     await waitFor(() => expect(screen.queryByText(/Cerchiamo dove cenare/)).toBeNull());
     expect(screen.queryAllByRole("alert")).toHaveLength(0);
     expect(screen.queryByText(/Dove cenare/)).toBeNull();
-    expect(screen.queryByText(/Nessun locale/)).toBeNull();
+    expect(screen.queryByText(/Per questa sera non abbiamo un consiglio/)).toBeNull();
     expect(screen.getByText("Colosseo")).toBeInTheDocument();
     expect(screen.getByText("Pantheon")).toBeInTheDocument();
   });
@@ -190,7 +197,7 @@ describe("ItineraryResult — consiglio sulla cena", () => {
     expect(await screen.findByText(SUGGESTION.name)).toBeInTheDocument();
     expect(screen.queryAllByRole("alert")).toHaveLength(0);
     // La giornata senza un consiglio utilizzabile resta alla riga discreta.
-    expect(within(dayCard("2026-05-20")).getByText(/Nessun locale/)).toBeInTheDocument();
+    expect(within(dayCard("2026-05-20")).getByText(/Per questa sera non abbiamo un consiglio/)).toBeInTheDocument();
     expect(screen.getByText("Colosseo")).toBeInTheDocument();
   });
 
@@ -212,7 +219,7 @@ describe("ItineraryResult — consiglio sulla cena", () => {
     expect(await screen.findByText(SUGGESTION.name)).toBeInTheDocument();
     expect(screen.queryByText("Locale con commento rotto")).toBeNull();
     expect(screen.queryAllByRole("alert")).toHaveLength(0);
-    expect(within(dayCard("2026-05-20")).getByText(/Nessun locale/)).toBeInTheDocument();
+    expect(within(dayCard("2026-05-20")).getByText(/Per questa sera non abbiamo un consiglio/)).toBeInTheDocument();
     expect(screen.getByText("Colosseo")).toBeInTheDocument();
   });
 

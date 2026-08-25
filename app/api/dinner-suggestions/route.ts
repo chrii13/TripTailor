@@ -228,6 +228,11 @@ export async function POST(request: Request) {
             config: {
               responseMimeType: "application/json",
               responseJsonSchema: z.toJSONSchema(dinnerSuggestionsResponseSchema),
+              // Largo per quel che serve: `GIORNATE_PER_GRUPPO` e `PRE_MODEL_PHASE_MS`
+              // limitano la risposta a circa sei voci (vedi il conto sopra), non a una per
+              // giornata di viaggio. Un itinerario di quattordici giorni non produce
+              // quattordici scelte, quindi il caso lungo non è mai stato un rischio di
+              // troncamento.
               maxOutputTokens: 8000,
               thinkingConfig: { thinkingBudget: 512 },
               httpOptions: { timeout: callTimeoutMs, retryOptions: { attempts: 1 } },

@@ -528,15 +528,22 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                     </DinnerSlot>
                   )}
                   {/* `dinner` nullo a richiesta conclusa vuol dire che è andata storta:
-                      nessun messaggio, la giornata resta com'era. */}
+                      nessun messaggio, la giornata resta com'era.
+
+                      Quando invece la risposta è arrivata ma questa giornata non ha un
+                      consiglio, la riga parla solo di noi: la route risponde 200 con un
+                      elenco vuoto in quattro casi diversi — nessun candidato trovato,
+                      modello fallito, destinazione non geocodificata, giornata oltre il
+                      tetto di fase — e il client non può distinguerli. Dire "nessun locale
+                      qui attorno" sarebbe un'affermazione sul mondo che non abbiamo
+                      verificato, cioè lo stesso difetto che questa funzionalità esiste per
+                      eliminare, spostato dal nome del locale alla sua assenza. */}
                   {dinnerAsked && dinnerDone && dinner && (
                     <DinnerSlot>
                       {dinnerSuggestion ? (
                         <DinnerSuggestionBlock suggestion={dinnerSuggestion} />
                       ) : (
-                        <DinnerNote>
-                          Nessun locale segnalato vicino alla tappa di questa sera.
-                        </DinnerNote>
+                        <DinnerNote>Per questa sera non abbiamo un consiglio.</DinnerNote>
                       )}
                     </DinnerSlot>
                   )}
