@@ -195,6 +195,27 @@ function CountryStat({
 }
 
 /**
+ * I consigli utilizzabili dentro la risposta della route, o `null` se non c'è proprio un
+ * elenco. La convalida non si ferma al contenitore: un elemento che non è un oggetto —
+ * `[null]` — farebbe lanciare `entry.date` dentro il `.find()`, che gira in **fase di
+ * resa**, cioè manderebbe in error boundary l'itinerario che questa richiesta non deve
+ * poter toccare. Gli elementi a cui manca solo un campo non sono invece un pericolo:
+ * React ignora `undefined` come figlio e il confronto sulla data diventa falso.
+ * Quel che si scarta si scarta in silenzio, come tutto il resto di questa fase.
+ */
+function accettaConsigli(value: unknown): DinnerSuggestion[] | null {
+  if (!Array.isArray(value)) return null;
+
+  return value.filter(
+    (entry): entry is DinnerSuggestion =>
+      typeof entry === "object" &&
+      entry !== null &&
+      typeof (entry as DinnerSuggestion).date === "string" &&
+      typeof (entry as DinnerSuggestion).name === "string"
+  );
+}
+
+/**
  * Il posto del consiglio sulla cena, in coda alla giornata. L'altezza è riservata fin
  * dall'attesa — 7rem è l'ingombro del blocco con un commento su una riga — così quando il
  * consiglio arriva non spinge in giù ciò che sta sotto. Un contenitore solo per tutti e tre
@@ -295,12 +316,9 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
     })
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
-        // La forma si verifica, non si dà per buona: un `suggestions` che non è un array
-        // passerebbe un `?? null` e farebbe poi esplodere il `.find()` in fase di resa,
-        // cioè manderebbe in error boundary proprio l'itinerario che tutto questo giro
-        // esiste per non toccare. Non è la forma che la route produce oggi, ma è l'unico
-        // ramo malformato scoperto e chiuderlo non costa niente.
-        if (!annullato) setDinner(Array.isArray(data?.suggestions) ? data.suggestions : null);
+        // La forma si verifica, non si dà per buona: quel che arriva dal filo non può
+        // essere lasciato raggiungere la resa senza un controllo (vedi accettaConsigli).
+        if (!annullato) setDinner(accettaConsigli(data?.suggestions));
       })
       .catch(() => {})
       .finally(() => {

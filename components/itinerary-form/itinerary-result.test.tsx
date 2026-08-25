@@ -178,6 +178,22 @@ describe("ItineraryResult — consiglio sulla cena", () => {
     expect(screen.getByText("Pantheon")).toBeInTheDocument();
   });
 
+  it("scarta gli elementi malformati e tiene quello buono che li accompagna", async () => {
+    // Un elemento che non è un oggetto farebbe lanciare `entry.date` dentro il .find(),
+    // che gira in fase di resa: error boundary, cioè lo stesso esito che tutta questa
+    // diffidenza esiste per evitare. Il consiglio valido accanto deve arrivare lo stesso.
+    fetchMock = respondingFetch({ suggestions: [null, "non un oggetto", SUGGESTION] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderResult();
+
+    expect(await screen.findByText(SUGGESTION.name)).toBeInTheDocument();
+    expect(screen.queryAllByRole("alert")).toHaveLength(0);
+    // La giornata senza un consiglio utilizzabile resta alla riga discreta.
+    expect(within(dayCard("2026-05-20")).getByText(/Nessun locale/)).toBeInTheDocument();
+    expect(screen.getByText("Colosseo")).toBeInTheDocument();
+  });
+
   it("chiede il consiglio una volta sola, anche dopo altri render", async () => {
     // Una dipendenza instabile dell'effetto costerebbe una chiamata a Gemini per ogni
     // ridisegno del componente: qui il ridisegno si provoca apposta, due volte.
