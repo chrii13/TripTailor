@@ -13,6 +13,7 @@ const FONTI = [
   { cosa: "Itinerari", chi: "Google Gemini" },
   { cosa: "Clima", chi: "Open-Meteo", nota: "media degli ultimi 5 anni, non una previsione" },
   { cosa: "Luoghi", chi: "LocationIQ" },
+  { cosa: "Locali", chi: "OpenStreetMap", nota: "contributori OpenStreetMap, licenza ODbL" },
 ];
 
 function ColonnaTitolo({ children }: { children: React.ReactNode }) {
