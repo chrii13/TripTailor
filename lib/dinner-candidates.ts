@@ -6,6 +6,15 @@ export const MAX_CANDIDATES = 12;
 const SEARCH_RADIUS_METERS = 600;
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 
+// Overpass rifiuta con **406 Not Acceptable** le richieste che arrivano con lo
+// User-Agent di default di Node (undici): misurato il 2026-08-25 su ogni singola
+// interrogazione, cioè con la funzionalità completamente morta in produzione mentre
+// l'intera suite era verde. La stessa identica richiesta fatta con `curl` passava, perché
+// curl un suo User-Agent ce l'ha: è la differenza che ha portato alla diagnosi. Con questa
+// intestazione la stessa query risponde 200 con 178 locali. Non toglierla e non lasciarla
+// vuota: è l'unica cosa che separa questa funzionalità dal non funzionare affatto.
+const USER_AGENT = "TripTailor/1.0 (https://trip-tailor-ten.vercel.app)";
+
 export interface DinnerCandidate {
   id: number;
   name: string;
@@ -60,10 +69,12 @@ export function parseOverpassRestaurants(json: unknown, lat: number, lon: number
 }
 
 /**
- * Overpass pubblico risponde in 1-2 secondi quando va, ma i fallimenti sono frequenti e
- * costosi: misurate risposte 500/504 dopo 46-55 secondi. Il timeout stretto e la rinuncia
- * silenziosa sono la protezione: una giornata senza consiglio è accettabile, mezzo minuto
- * di attesa per un errore no.
+ * Overpass pubblico ha tempi di risposta molto variabili: quattro interrogazioni vere
+ * attorno a Bologna, il 2026-08-25, hanno dato 1,0s, 8,4s (504), 10,6s (504) e 17,3s. I
+ * fallimenti sono frequenti e possono essere costosi: misurate anche risposte 500/504 dopo
+ * 46-55 secondi. Il timeout e la rinuncia silenziosa sono la protezione: una giornata senza
+ * consiglio è accettabile, mezzo minuto di attesa per un errore no. Il tetto vero lo decide
+ * il chiamante (OVERPASS_TIMEOUT_MS nella route), che deve stare nel proprio budget.
  */
 export async function fetchDinnerCandidates(
   lat: number,
@@ -76,6 +87,7 @@ export async function fetchDinnerCandidates(
     const response = await fetch(OVERPASS_URL, {
       method: "POST",
       body: new URLSearchParams({ data: query }),
+      headers: { "User-Agent": USER_AGENT },
       signal: AbortSignal.timeout(timeoutMs),
     });
 

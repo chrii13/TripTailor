@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { MAX_CANDIDATES, parseOverpassRestaurants } from "./dinner-candidates";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fetchDinnerCandidates, MAX_CANDIDATES, parseOverpassRestaurants } from "./dinner-candidates";
 
 // Il punto di riferimento dei test: Ribeira, Porto.
 const LAT = 41.1404;
@@ -67,5 +67,28 @@ describe("parseOverpassRestaurants", () => {
     expect(parseOverpassRestaurants({}, LAT, LON)).toEqual([]);
     expect(parseOverpassRestaurants(null, LAT, LON)).toEqual([]);
     expect(parseOverpassRestaurants({ elements: "non un array" }, LAT, LON)).toEqual([]);
+  });
+});
+
+describe("fetchDinnerCandidates", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // Senza User-Agent Overpass risponde 406 a *ogni* richiesta, cioè la funzionalità è
+  // morta in produzione con la suite tutta verde: è successo davvero il 2026-08-25.
+  // Questo test è l'unica rete contro il ritorno di quel difetto, perché il resto della
+  // suite guarda solo il corpo della risposta.
+  it("si presenta con uno User-Agent: senza, Overpass risponde 406", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [] }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchDinnerCandidates(LAT, LON, 5_000);
+
+    const headers = fetchMock.mock.calls[0][1].headers as Record<string, string>;
+    expect(headers["User-Agent"]).toBeTruthy();
   });
 });
