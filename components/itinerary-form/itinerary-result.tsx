@@ -295,7 +295,12 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
     })
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
-        if (!annullato) setDinner(data?.suggestions ?? null);
+        // La forma si verifica, non si dà per buona: un `suggestions` che non è un array
+        // passerebbe un `?? null` e farebbe poi esplodere il `.find()` in fase di resa,
+        // cioè manderebbe in error boundary proprio l'itinerario che tutto questo giro
+        // esiste per non toccare. Non è la forma che la route produce oggi, ma è l'unico
+        // ramo malformato scoperto e chiuderlo non costa niente.
+        if (!annullato) setDinner(Array.isArray(data?.suggestions) ? data.suggestions : null);
       })
       .catch(() => {})
       .finally(() => {

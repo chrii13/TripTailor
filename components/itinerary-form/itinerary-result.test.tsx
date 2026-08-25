@@ -3,6 +3,7 @@
 process.env.TZ = "Europe/Rome";
 
 import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ItineraryResult } from "@/components/itinerary-form/itinerary-result";
@@ -158,6 +159,52 @@ describe("ItineraryResult — consiglio sulla cena", () => {
     expect(screen.queryAllByRole("alert")).toHaveLength(0);
     // La giornata senza tappe non chiede e non annuncia niente.
     expect(within(dayCard("2026-05-22")).queryByText(/Nessun locale/)).toBeNull();
+  });
+
+  it("con un `suggestions` che non è un array non esplode e non mostra niente", async () => {
+    // Non è la forma che la route produce oggi, ma è l'unico ramo malformato scoperto:
+    // accettarlo farebbe esplodere il .find() in fase di resa, cioè manderebbe in error
+    // boundary l'itinerario che questa richiesta non deve poter toccare.
+    fetchMock = respondingFetch({ suggestions: {} });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderResult();
+
+    await waitFor(() => expect(screen.queryByText(/Cerchiamo dove cenare/)).toBeNull());
+    expect(screen.queryAllByRole("alert")).toHaveLength(0);
+    expect(screen.queryByText(/Dove cenare/)).toBeNull();
+    expect(screen.queryByText(/Nessun locale/)).toBeNull();
+    expect(screen.getByText("Colosseo")).toBeInTheDocument();
+    expect(screen.getByText("Pantheon")).toBeInTheDocument();
+  });
+
+  it("chiede il consiglio una volta sola, anche dopo altri render", async () => {
+    // Una dipendenza instabile dell'effetto costerebbe una chiamata a Gemini per ogni
+    // ridisegno del componente: qui il ridisegno si provoca apposta, due volte.
+    fetchMock = respondingFetch({ suggestions: [SUGGESTION] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    const { rerender } = renderResult();
+    await screen.findByText(SUGGESTION.name);
+
+    // Render da stato interno: aprire il dettaglio di un'attività.
+    await user.click(screen.getByRole("button", { name: /Colosseo/ }));
+    // Render dal genitore, con le stesse identiche prop.
+    rerender(
+      <ItineraryResult
+        tripData={TRIP}
+        itinerary={ITINERARY}
+        weather={null}
+        countryInfo={null}
+        onEdit={() => {}}
+      />
+    );
+
+    const calls = fetchMock.mock.calls.filter(
+      ([url]) => String(url) === "/api/dinner-suggestions"
+    );
+    expect(calls).toHaveLength(1);
   });
 
   it("riserva lo spazio del consiglio fin dallo stato d'attesa", async () => {
