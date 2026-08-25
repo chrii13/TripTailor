@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import {
@@ -29,6 +29,10 @@ import type { Activity, ItineraryResponse } from "@/lib/itinerary-schema";
 import type { DailyClimateAverage } from "@/lib/climate-forecast";
 import type { CountryInfo } from "@/lib/country-info";
 import { buildItineraryIcs } from "@/lib/itinerary-to-ics";
+import { pickDinnerAnchor } from "@/lib/dinner-anchor";
+// Solo il tipo, cancellato in compilazione: la forma del consiglio è quella che la
+// route restituisce davvero, non una copia che può divergerne.
+import type { DinnerSuggestion } from "@/app/api/dinner-suggestions/route";
 
 interface ItineraryResultProps {
   tripData: TripFormValues;
@@ -190,11 +194,59 @@ function CountryStat({
   );
 }
 
+/**
+ * Il posto del consiglio sulla cena, in coda alla giornata. L'altezza è riservata fin
+ * dall'attesa — 7rem è l'ingombro del blocco con un commento su una riga — così quando il
+ * consiglio arriva non spinge in giù ciò che sta sotto. Un contenitore solo per tutti e tre
+ * gli stati: separarli farebbe divergere le misure alla prima modifica.
+ */
+function DinnerSlot({ children }: { children: React.ReactNode }) {
+  return (
+    <div data-dinner-slot className="min-h-[7rem] border-t border-border py-3">
+      {children}
+    </div>
+  );
+}
+
+function DinnerNote({ children }: { children: React.ReactNode }) {
+  return <p className="text-xs text-muted-foreground">{children}</p>;
+}
+
+/**
+ * Il consiglio non è una tappa: niente orario di appuntamento, niente bottone che apre un
+ * dettaglio. È un riquadro a sé, staccato dall'elenco delle attività.
+ */
+function DinnerSuggestionBlock({ suggestion }: { suggestion: DinnerSuggestion }) {
+  const meta = [
+    `${suggestion.distanceMeters} m a piedi`,
+    suggestion.street,
+    suggestion.openingHours,
+  ].filter(Boolean);
+
+  return (
+    <>
+      <p className="mb-2 text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">
+        Dove cenare
+      </p>
+      <div className="rounded-lg border border-border bg-accent p-3">
+        <p className="text-sm font-medium text-primary">{suggestion.name}</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">{suggestion.comment}</p>
+        <p className="mt-1.5 text-xs tabular-nums text-muted-foreground">{meta.join(" · ")}</p>
+      </div>
+    </>
+  );
+}
+
 export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onEdit }: ItineraryResultProps) {
   const [open, setOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [pdfState, setPdfState] = useState<"idle" | "loading" | "error">("idle");
   const [calendarError, setCalendarError] = useState(false);
+  // `null` vuol dire "nessun dato": è lo stato iniziale ed è anche quello in cui si resta
+  // se la richiesta fallisce, perché in quel caso la giornata deve restare com'era.
+  // Un array (anche vuoto) vuol dire che la route ha risposto.
+  const [dinner, setDinner] = useState<DinnerSuggestion[] | null>(null);
+  const [dinnerAnswered, setDinnerAnswered] = useState(false);
   const reduceMotion = useReducedMotion();
   const titleRef = useRef<HTMLHeadingElement>(null);
 
@@ -203,6 +255,57 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
   useEffect(() => {
     titleRef.current?.focus();
   }, []);
+
+  // L'itinerario è già a schermo quando questa richiesta parte: non deve poter rompere
+  // niente, quindi non esiste uno stato d'errore. O arriva un consiglio, o la giornata
+  // resta com'è. La route, dal canto suo, non restituisce mai un errore del modello:
+  // risponde 200 con un elenco vuoto. Le coordinate non si mandano — se le ricava lei
+  // dalla destinazione.
+  // Le giornate per cui ha senso chiedere: senza una tappa attorno a cui cercare non c'è
+  // niente da domandare. Sta fuori dall'effetto perché serve anche alla resa, che deve
+  // sapere quali giornate hanno una risposta da aspettare.
+  const dinnerDays = useMemo(
+    () =>
+      itinerary.days.flatMap((day) => {
+        const anchorTitle = pickDinnerAnchor(day);
+        return anchorTitle ? [{ date: day.date, anchorTitle }] : [];
+      }),
+    [itinerary]
+  );
+
+  // Senza giornate da chiedere non c'è nessuna attesa: l'attesa finisce prima di
+  // cominciare, e si ricava invece di essere messa in stato dentro l'effetto.
+  const dinnerDone = dinnerDays.length === 0 || dinnerAnswered;
+
+  useEffect(() => {
+    let annullato = false;
+
+    if (dinnerDays.length === 0) return;
+
+    fetch("/api/dinner-suggestions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        destination: tripData.destination,
+        participants: tripData.participants,
+        budget: tripData.budget,
+        styleNotes: tripData.styleNotes,
+        days: dinnerDays,
+      }),
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!annullato) setDinner(data?.suggestions ?? null);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!annullato) setDinnerAnswered(true);
+      });
+
+    return () => {
+      annullato = true;
+    };
+  }, [dinnerDays, tripData]);
 
   const handleExportCalendar = () => {
     try {
@@ -298,9 +401,12 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
           {itinerary.days.map((day, dayIndex) => {
             const formattedDate = formatCalendarDate(day.date);
             const dayWeather = weather?.find((entry) => entry.date === day.date);
+            const dinnerAsked = pickDinnerAnchor(day) !== null;
+            const dinnerSuggestion = dinner?.find((entry) => entry.date === day.date);
             return (
               <motion.div
                 key={dayIndex}
+                data-day-date={day.date}
                 className="overflow-hidden rounded-xl border border-border"
                 variants={reduceMotion ? undefined : dayCard}
               >
@@ -376,6 +482,26 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                           </div>
                         </div>
                       )
+                  )}
+                  {/* Solo dove c'è stato qualcosa da chiedere: una giornata senza tappe
+                      non deve nemmeno annunciare che non ha un consiglio. */}
+                  {dinnerAsked && !dinnerDone && (
+                    <DinnerSlot>
+                      <DinnerNote>Cerchiamo dove cenare…</DinnerNote>
+                    </DinnerSlot>
+                  )}
+                  {/* `dinner` nullo a richiesta conclusa vuol dire che è andata storta:
+                      nessun messaggio, la giornata resta com'era. */}
+                  {dinnerAsked && dinnerDone && dinner && (
+                    <DinnerSlot>
+                      {dinnerSuggestion ? (
+                        <DinnerSuggestionBlock suggestion={dinnerSuggestion} />
+                      ) : (
+                        <DinnerNote>
+                          Nessun locale segnalato vicino alla tappa di questa sera.
+                        </DinnerNote>
+                      )}
+                    </DinnerSlot>
                   )}
                 </div>
               </motion.div>
