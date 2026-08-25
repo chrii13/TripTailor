@@ -266,12 +266,16 @@ describe("POST /api/dinner-suggestions", () => {
   });
 
   it("interrompe la ricerca dei candidati al tetto di fase e lascia le ultime giornate senza consiglio", async () => {
-    // Ogni chiamata di rete fa invecchiare l'orologio di 3 secondi: la geocodifica della
-    // destinazione più il primo gruppo di quattro giornate (due chiamate l'una) superano
-    // da soli il tetto di 20 secondi, e il secondo gruppo non parte nemmeno.
+    // Ogni chiamata di rete fa invecchiare l'orologio di 3 secondi, e le conta tutte, anche
+    // quelle che nella route partono insieme (l'orologio qui è finto: il parallelismo non
+    // fa risparmiare tempo). I gruppi sono da due giornate e ogni giornata costa due
+    // chiamate — geocodifica e Overpass — cioè 12 secondi a gruppo, più i 3 della
+    // geocodifica della destinazione: i controlli sul tetto di 30 secondi cadono a 3, 15 e
+    // 27, poi a 39, quindi passano i primi tre gruppi — sei giornate — e il quarto non
+    // parte nemmeno.
     avanzamentoPerChiamataMs = 3_000;
 
-    const giornate = ["10", "11", "12", "13", "14", "15"].map((giorno) => ({
+    const giornate = ["10", "11", "12", "13", "14", "15", "16", "17"].map((giorno) => ({
       date: `2026-09-${giorno}`,
       anchorTitle: `Tappa del ${giorno}`,
     }));
@@ -288,12 +292,14 @@ describe("POST /api/dinner-suggestions", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.suggestions).toHaveLength(4);
+    expect(body.suggestions).toHaveLength(6);
     expect(body.suggestions.map((s: { date: string }) => s.date)).toEqual([
       "2026-09-10",
       "2026-09-11",
       "2026-09-12",
       "2026-09-13",
+      "2026-09-14",
+      "2026-09-15",
     ]);
   });
 

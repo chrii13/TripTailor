@@ -21,20 +21,37 @@ const USABLE_BUDGET_MS = maxDuration * 1_000 - RESPONSE_HEADROOM_MS;
 
 // Geocodifica delle tappe e Overpass hanno un tetto condiviso: sono la fase che precede
 // il modello, e senza un tetto un Overpass appeso si mangerebbe il budget della scelta.
-// Venti secondi bastano per una decina di giornate in parallelo e lasciano al modello il
-// resto della finestra.
-const PRE_MODEL_PHASE_MS = 20_000;
+//
+// I due numeri sono stati **misurati** il 2026-08-25, non stimati, e valgono insieme:
+// trenta secondi di fase con otto di tetto per singola interrogazione. Prima erano venti e
+// cinque, tarati sull'idea che Overpass rispondesse in 1-2 secondi; quattro interrogazioni
+// vere attorno a Bologna hanno invece dato 1,0s, 8,4s (504), 10,6s (504) e 17,3s. Con il
+// tetto a cinque secondi *tutte* le giornate finivano in timeout e la risposta era un
+// elenco vuoto anche in pieno centro di una città grande.
+//
+// Otto secondi prendono la parte buona di quella distribuzione senza inseguire la coda
+// lunga, e trenta di fase lasciano comunque venticinque secondi al modello: 30 + 25
+// (PER_CALL_CAP_MS) + 5 (RESPONSE_HEADROOM_MS) = i 60 di maxDuration. Alzando uno dei tre,
+// abbassarne un altro.
+const PRE_MODEL_PHASE_MS = 30_000;
 const GEOCODE_TIMEOUT_MS = 2_500;
-const OVERPASS_TIMEOUT_MS = 5_000;
+const OVERPASS_TIMEOUT_MS = 8_000;
 
 // Quante giornate si lavorano insieme. Non è illimitata perché LocationIQ e Overpass sono
 // servizi pubblici e gratuiti che limitano a poche richieste al secondo: un viaggio di 14
 // giorni tutto in parallelo sono 14 geocodifiche e 14 POST simultanei, cioè un rifiuto per
 // eccesso di richieste come esito *normale*, con tutte le sere che finiscono a pescare
-// dall'elenco attorno al centro città. Quattro per volta è un ritmo che quei limiti
-// reggono, e ha l'effetto secondario di rendere davvero verificabile il tetto di fase, che
-// si controlla fra un gruppo e l'altro.
-const GIORNATE_PER_GRUPPO = 4;
+// dall'elenco attorno al centro città.
+//
+// Il numero era **quattro**, scelto a intuito, ed è stato corretto a due il 2026-08-25
+// dopo averlo misurato: quattro geocodifiche LocationIQ in parallelo tornano
+// `[200, 429, 429, 200]`, cioè metà delle sere perde la propria tappa e ripiega sul centro
+// città. Due in parallelo tornano `[200, 200]` (il piano gratuito consente 2 richieste al
+// secondo). È il difetto peggiore del genere, perché non produce nessun errore: i consigli
+// arrivano lo stesso, solo attorno al posto sbagliato. **Non rialzarlo senza rimisurare.**
+// La chiamata a Overpass che segue ogni geocodifica dura qualche secondo e fa da
+// distanziatore naturale fra un gruppo e il successivo.
+const GIORNATE_PER_GRUPPO = 2;
 
 const PER_CALL_CAP_MS = 25_000;
 const MIN_CALL_TIMEOUT_MS = 8_000;
