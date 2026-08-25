@@ -30,9 +30,21 @@ const USABLE_BUDGET_MS = maxDuration * 1_000 - RESPONSE_HEADROOM_MS;
 // elenco vuoto anche in pieno centro di una città grande.
 //
 // Otto secondi prendono la parte buona di quella distribuzione senza inseguire la coda
-// lunga, e trenta di fase lasciano comunque venticinque secondi al modello: 30 + 25
-// (PER_CALL_CAP_MS) + 5 (RESPONSE_HEADROOM_MS) = i 60 di maxDuration. Alzando uno dei tre,
-// abbassarne un altro.
+// lunga.
+//
+// **PRE_MODEL_PHASE_MS non è una partizione del budget, ed è facile crederlo.** Il tetto si
+// controlla *solo fra un gruppo e l'altro*, mai dentro: un gruppo che parte a 29,999s
+// arriva a ~40,5s (2,5 di geocodifica più 8 di Overpass), cioè la fase può sforare il
+// proprio tetto **di un gruppo intero**. Non esiste quindi nessun "30 + 25 + 5 = 60": a
+// quel punto al modello non restano i 25 di PER_CALL_CAP_MS ma `deadline - now`, cioè
+// ~14,5s.
+//
+// A garantire i 60 secondi è il residuo che `getCallAttemptBudget` calcola per la chiamata
+// al modello — il minimo fra PER_CALL_CAP_MS e quel che resta fino alla scadenza — non la
+// somma dei tetti. Il che vuol dire che alzare OVERPASS_TIMEOUT_MS non fa sforare
+// maxDuration, ma **strozza in silenzio la chiamata al modello**: sotto MIN_CALL_TIMEOUT_MS
+// il tentativo non parte nemmeno e l'itinerario resta senza consigli. È l'effetto da
+// misurare prima di toccare questi numeri, non lo sforamento del tetto di piattaforma.
 const PRE_MODEL_PHASE_MS = 30_000;
 const GEOCODE_TIMEOUT_MS = 2_500;
 const OVERPASS_TIMEOUT_MS = 8_000;
@@ -51,6 +63,14 @@ const OVERPASS_TIMEOUT_MS = 8_000;
 // arrivano lo stesso, solo attorno al posto sbagliato. **Non rialzarlo senza rimisurare.**
 // La chiamata a Overpass che segue ogni geocodifica dura qualche secondo e fa da
 // distanziatore naturale fra un gruppo e il successivo.
+//
+// **Conseguenza da conoscere: la funzionalità si ferma attorno alla sesta sera.** Un gruppo
+// costa ~10,5s nel caso peggiore (2,5 di geocodifica + 8 di Overpass), quindi dentro i 30s
+// di fase entrano tre gruppi — sei giornate — e il quarto trova il tetto già superato.
+// Vale *indipendentemente dalla lunghezza del viaggio*: un viaggio di quattordici giorni
+// riceve consigli per sei sere, non per quattordici. È un compromesso accettato, non una
+// svista: meglio sei sere giuste e otto assenti che quattordici prese attorno al centro
+// città perché i servizi pubblici ci hanno risposto "troppe richieste".
 const GIORNATE_PER_GRUPPO = 2;
 
 const PER_CALL_CAP_MS = 25_000;
