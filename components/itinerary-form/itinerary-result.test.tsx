@@ -194,6 +194,28 @@ describe("ItineraryResult — consiglio sulla cena", () => {
     expect(screen.getByText("Colosseo")).toBeInTheDocument();
   });
 
+  it("scarta il consiglio con un commento che non è testo", async () => {
+    // `comment` è reso come figlio JSX diretto: un oggetto lì dentro fa lanciare React
+    // ("Objects are not valid as a React child") in fase di resa, cioè di nuovo l'error
+    // boundary. date e name validi non bastano a salvarlo.
+    fetchMock = respondingFetch({
+      suggestions: [
+        { date: "2026-05-20", name: "Locale con commento rotto", comment: {} },
+        SUGGESTION,
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderResult();
+
+    // Il consiglio buono accanto arriva comunque: si scarta l'elemento, non la risposta.
+    expect(await screen.findByText(SUGGESTION.name)).toBeInTheDocument();
+    expect(screen.queryByText("Locale con commento rotto")).toBeNull();
+    expect(screen.queryAllByRole("alert")).toHaveLength(0);
+    expect(within(dayCard("2026-05-20")).getByText(/Nessun locale/)).toBeInTheDocument();
+    expect(screen.getByText("Colosseo")).toBeInTheDocument();
+  });
+
   it("chiede il consiglio una volta sola, anche dopo altri render", async () => {
     // Una dipendenza instabile dell'effetto costerebbe una chiamata a Gemini per ogni
     // ridisegno del componente: qui il ridisegno si provoca apposta, due volte.

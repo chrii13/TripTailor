@@ -199,8 +199,21 @@ function CountryStat({
  * elenco. La convalida non si ferma al contenitore: un elemento che non è un oggetto —
  * `[null]` — farebbe lanciare `entry.date` dentro il `.find()`, che gira in **fase di
  * resa**, cioè manderebbe in error boundary l'itinerario che questa richiesta non deve
- * poter toccare. Gli elementi a cui manca solo un campo non sono invece un pericolo:
- * React ignora `undefined` come figlio e il confronto sulla data diventa falso.
+ * poter toccare.
+ *
+ * Si convalidano i campi che la resa **non** stringifica, cioè quelli che finiscono come
+ * figli JSX diretti: un oggetto lì dentro fa lanciare React ("Objects are not valid as a
+ * React child"), e un `undefined` invece no — React lo ignora. Censimento campo per campo,
+ * così non va rifatto da capo:
+ *
+ *   date           → solo confrontato (`entry.date === day.date`): stringa, obbligatoria
+ *   name           → figlio JSX diretto: stringa, obbligatoria
+ *   comment        → figlio JSX diretto: stringa, obbligatoria
+ *   distanceMeters → dentro un template literal in `meta`: stringifica, non lancia
+ *   street         → elemento di `meta`, reso con `.join()`: stringifica, non lancia
+ *   openingHours   → elemento di `meta`, reso con `.join()`: stringifica, non lancia
+ *
+ * Aggiungendo un campo reso come figlio JSX diretto, va aggiunto anche qui.
  * Quel che si scarta si scarta in silenzio, come tutto il resto di questa fase.
  */
 function accettaConsigli(value: unknown): DinnerSuggestion[] | null {
@@ -211,7 +224,8 @@ function accettaConsigli(value: unknown): DinnerSuggestion[] | null {
       typeof entry === "object" &&
       entry !== null &&
       typeof (entry as DinnerSuggestion).date === "string" &&
-      typeof (entry as DinnerSuggestion).name === "string"
+      typeof (entry as DinnerSuggestion).name === "string" &&
+      typeof (entry as DinnerSuggestion).comment === "string"
   );
 }
 
