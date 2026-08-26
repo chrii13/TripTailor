@@ -37,11 +37,20 @@ export interface OverpassPlace {
   street?: string;
 }
 
-/** Un locale già riferito alla tappa di una sera: ha una distanza e un identificativo. */
+/**
+ * Un locale già riferito alla tappa di una sera: ha una distanza e un identificativo.
+ *
+ * Le coordinate restano anche dopo il calcolo della distanza, e non sono un residuo da
+ * ripulire: sono ciò che permette al collegamento alla mappa di centrare il locale *giusto*
+ * fra i suoi omonimi (vedi `lib/dinner-map-link.ts`). Al modello non vengono mostrate — il
+ * prompt non le stampa — perché non gli servono per scegliere.
+ */
 export interface DinnerCandidate {
   id: number;
   name: string;
   distanceMeters: number;
+  lat: number;
+  lon: number;
   cuisine?: string;
   openingHours?: string;
   street?: string;
@@ -102,6 +111,8 @@ export function selectNearbyCandidates(
     .map((p) => ({
       name: p.name,
       distanceMeters: distanceMeters(lat, lon, p.lat, p.lon),
+      lat: p.lat,
+      lon: p.lon,
       cuisine: p.cuisine,
       openingHours: p.openingHours,
       street: p.street,

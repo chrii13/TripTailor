@@ -48,6 +48,8 @@ const SUGGESTION = {
   distanceMeters: 180,
   street: "Via dei Pastini",
   openingHours: "19:00-23:00",
+  lat: 41.8992,
+  lon: 12.4768,
 };
 
 function renderResult() {
@@ -285,5 +287,45 @@ describe("ItineraryResult — consiglio sulla cena", () => {
     expect(slot.textContent).toContain(SUGGESTION.openingHours);
     // Non è cliccabile come le attività: non apre nessun dettaglio.
     expect(within(slot).queryByRole("button")).toBeNull();
+  });
+
+  it("fa del nome del locale un collegamento alla mappa, centrato sulle sue coordinate", async () => {
+    fetchMock = respondingFetch({ suggestions: [SUGGESTION] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderResult();
+    await screen.findByText(SUGGESTION.name);
+
+    const slot = dayCard("2026-05-21").querySelector("[data-dinner-slot]") as HTMLElement;
+    // Il nome accessibile dice dove porta e che apre una scheda nuova: chi usa uno
+    // screen reader non deve sentire solo il nome del ristorante.
+    const link = within(slot).getByRole("link", {
+      name: "Osteria del Pantheon su Google Maps (si apre in una nuova scheda)",
+    });
+    // Le coordinate vengono da OSM: senza, un omonimo in un'altra città vincerebbe.
+    expect(link).toHaveAttribute(
+      "href",
+      "https://www.google.com/maps/search/Osteria%20del%20Pantheon/@41.8992,12.4768,18z"
+    );
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    // Il testo visibile resta il nome del locale, non l'etichetta accessibile.
+    expect(link).toHaveTextContent("Osteria del Pantheon");
+  });
+
+  it("senza coordinate mostra il nome senza collegamento, invece di un link rotto", async () => {
+    // Un consiglio senza lat/lon non è la forma che la route produce, ma un link
+    // "@undefined,undefined" porterebbe l'utente da nessuna parte: meglio niente link.
+    fetchMock = respondingFetch({
+      suggestions: [{ ...SUGGESTION, lat: undefined, lon: undefined }],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderResult();
+    await screen.findByText(SUGGESTION.name);
+
+    const slot = dayCard("2026-05-21").querySelector("[data-dinner-slot]") as HTMLElement;
+    expect(within(slot).queryByRole("link")).toBeNull();
+    expect(slot.textContent).toContain(SUGGESTION.name);
   });
 });

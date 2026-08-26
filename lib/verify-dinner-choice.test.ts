@@ -3,8 +3,8 @@ import { resolveDinnerChoice } from "./verify-dinner-choice";
 import type { DinnerCandidate } from "./dinner-candidates";
 
 const candidati: DinnerCandidate[] = [
-  { id: 1, name: "Adega São Nicolau", distanceMeters: 120 },
-  { id: 2, name: "Dom Tonho", distanceMeters: 240 },
+  { id: 1, name: "Adega São Nicolau", distanceMeters: 120, lat: 41.1408, lon: -8.6135 },
+  { id: 2, name: "Dom Tonho", distanceMeters: 240, lat: 41.1401, lon: -8.6112 },
 ];
 
 describe("resolveDinnerChoice", () => {

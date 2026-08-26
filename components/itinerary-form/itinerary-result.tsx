@@ -30,6 +30,7 @@ import type { DailyClimateAverage } from "@/lib/climate-forecast";
 import type { CountryInfo } from "@/lib/country-info";
 import { buildItineraryIcs } from "@/lib/itinerary-to-ics";
 import { pickDinnerAnchor } from "@/lib/dinner-anchor";
+import { buildDinnerMapUrl } from "@/lib/dinner-map-link";
 // Solo il tipo, cancellato in compilazione: la forma del consiglio è quella che la
 // route restituisce davvero, non una copia che può divergerne.
 import type { DinnerSuggestion } from "@/app/api/dinner-suggestions/route";
@@ -212,6 +213,10 @@ function CountryStat({
  *   distanceMeters → dentro un template literal in `meta`: stringifica, non lancia
  *   street         → elemento di `meta`, reso con `.join()`: stringifica, non lancia
  *   openingHours   → elemento di `meta`, reso con `.join()`: stringifica, non lancia
+ *   lat, lon       → dentro l'href del collegamento alla mappa: non lancia, ma un valore
+ *                    che non è un numero produrrebbe un link che non porta da nessuna
+ *                    parte, quindi il collegamento si rende solo se entrambi sono numeri
+ *                    finiti (vedi DinnerSuggestionBlock).
  *
  * Aggiungendo un campo reso come figlio JSX diretto, va aggiunto anche qui.
  * Quel che si scarta si scarta in silenzio, come tutto il resto di questa fase.
@@ -258,13 +263,39 @@ function DinnerSuggestionBlock({ suggestion }: { suggestion: DinnerSuggestion })
     suggestion.openingHours,
   ].filter(Boolean);
 
+  // Senza coordinate non si costruisce un collegamento: `@undefined,undefined` porterebbe
+  // l'utente da nessuna parte, e un link rotto è peggio di un nome semplice.
+  const mapUrl =
+    Number.isFinite(suggestion.lat) && Number.isFinite(suggestion.lon)
+      ? buildDinnerMapUrl(suggestion.name, suggestion.lat, suggestion.lon)
+      : null;
+
   return (
     <>
       <p className="mb-2 text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">
         Dove cenare
       </p>
       <div className="rounded-lg border border-border bg-accent p-3">
-        <p className="text-sm font-medium text-primary">{suggestion.name}</p>
+        <p className="text-sm font-medium text-primary">
+          {mapUrl ? (
+            <a
+              href={mapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              // Il testo visibile è il solo nome, che è quello che serve leggendo la
+              // scheda; ad alta voce servirebbe anche dove porta e che apre altrove.
+              aria-label={`${suggestion.name} su Google Maps (si apre in una nuova scheda)`}
+              // Sottolineato come gli altri collegamenti esterni del progetto (footer,
+              // "Verifica i prezzi reali"): niente ombre, niente gradienti, e nessun
+              // colore proprio — il nome resta Bosco com'era.
+              className="underline underline-offset-2 hover:decoration-2"
+            >
+              {suggestion.name}
+            </a>
+          ) : (
+            suggestion.name
+          )}
+        </p>
         <p className="mt-0.5 text-sm text-muted-foreground">{suggestion.comment}</p>
         <p className="mt-1.5 text-xs tabular-nums text-muted-foreground">{meta.join(" · ")}</p>
       </div>

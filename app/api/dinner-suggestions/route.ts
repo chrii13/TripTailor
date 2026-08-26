@@ -99,6 +99,10 @@ export interface DinnerSuggestion {
   name: string;
   comment: string;
   distanceMeters: number;
+  // Le coordinate OSM del locale: servono al client per il collegamento alla mappa, che
+  // deve centrarla sul locale vero e non sul primo omonimo.
+  lat: number;
+  lon: number;
   street?: string;
   openingHours?: string;
 }
@@ -415,13 +419,15 @@ export async function POST(request: Request) {
         return [];
       }
 
-      // Nome, via, distanza e orari vengono dai dati OSM. Della risposta del modello
-      // sopravvive solo il commento.
+      // Nome, coordinate, via, distanza e orari vengono dai dati OSM. Della risposta del
+      // modello sopravvive solo il commento.
       return [
         {
           date: giornata.date,
           name: locale.name,
           distanceMeters: locale.distanceMeters,
+          lat: locale.lat,
+          lon: locale.lon,
           street: locale.street,
           openingHours: locale.openingHours,
           comment: scelta.comment,

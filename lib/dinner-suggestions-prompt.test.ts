@@ -10,8 +10,15 @@ const input = {
       date: "2026-10-10",
       anchorTitle: "Ponte Luís I",
       candidates: [
-        { id: 1, name: "Adega São Nicolau", distanceMeters: 120, cuisine: "regional" },
-        { id: 2, name: "Dom Tonho", distanceMeters: 240 },
+        {
+          id: 1,
+          name: "Adega São Nicolau",
+          distanceMeters: 120,
+          cuisine: "regional",
+          lat: 41.1408,
+          lon: -8.6135,
+        },
+        { id: 2, name: "Dom Tonho", distanceMeters: 240, lat: 41.1401, lon: -8.6112 },
       ],
     },
   ],
@@ -37,6 +44,15 @@ describe("buildDinnerSuggestionsPrompt", () => {
     const prompt = buildDinnerSuggestionsPrompt(input).toLowerCase();
     expect(prompt).toContain("italiano");
     expect(prompt).toMatch(/nomi propri|non tradurre/);
+  });
+
+  it("non mostra al modello le coordinate dei locali", () => {
+    // Le coordinate arrivano fino al client per il collegamento alla mappa, ma al modello
+    // non servono per scegliere: nel prompt sarebbero solo rumore, moltiplicato per dodici
+    // candidati per ogni giornata di viaggio.
+    const prompt = buildDinnerSuggestionsPrompt(input);
+    expect(prompt).not.toContain("41.1408");
+    expect(prompt).not.toContain("-8.6135");
   });
 
   it("passa le date in formato ISO, come le riceverà indietro", () => {
