@@ -117,6 +117,11 @@ describe("buildItineraryPrompt", () => {
     expect(buildItineraryPrompt(baseRequest, null)).toContain("Non imporre un numero fisso");
   });
 
+  it("vieta di nominare ristoranti e locali fra le attività: quelli li sceglie il blocco verificato", () => {
+    const prompt = buildItineraryPrompt(baseRequest, null);
+    expect(prompt).toContain("non nominare ristoranti, bar o altri locali specifici");
+  });
+
   it("istruisce a dare la posizione esatta per la prima attività del giorno, senza presumere un punto di partenza", () => {
     const prompt = buildItineraryPrompt(baseRequest, null);
     expect(prompt).toContain("primissima attività di ogni giornata");
@@ -202,5 +207,11 @@ describe("buildItineraryPrompt", () => {
     expect(prompt).toMatch(/nomi propri/i);
     expect(prompt).toMatch(/non vanno tradotti|non si traducono/i);
     expect(prompt).toMatch(/"[^"]+", non "[^"]+"/);
+  });
+
+  it("gli esempi della regola sui nomi propri non nominano un locale dove si mangia o si beve, altrimenti si contraddicono con il divieto sopra", () => {
+    const prompt = buildItineraryPrompt(baseRequest, null);
+    expect(prompt).not.toContain("Temple Bar");
+    expect(prompt).not.toContain("Mercado da Ribeira");
   });
 });

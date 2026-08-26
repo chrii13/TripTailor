@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import {
@@ -29,6 +29,11 @@ import type { Activity, ItineraryResponse } from "@/lib/itinerary-schema";
 import type { DailyClimateAverage } from "@/lib/climate-forecast";
 import type { CountryInfo } from "@/lib/country-info";
 import { buildItineraryIcs } from "@/lib/itinerary-to-ics";
+import { pickDinnerAnchor } from "@/lib/dinner-anchor";
+import { buildDinnerMapUrl } from "@/lib/dinner-map-link";
+// Solo il tipo, cancellato in compilazione: la forma del consiglio è quella che la
+// route restituisce davvero, non una copia che può divergerne.
+import type { DinnerSuggestion } from "@/app/api/dinner-suggestions/route";
 
 interface ItineraryResultProps {
   tripData: TripFormValues;
@@ -190,11 +195,124 @@ function CountryStat({
   );
 }
 
+/**
+ * I consigli utilizzabili dentro la risposta della route, o `null` se non c'è proprio un
+ * elenco. La convalida non si ferma al contenitore: un elemento che non è un oggetto —
+ * `[null]` — farebbe lanciare `entry.date` dentro il `.find()`, che gira in **fase di
+ * resa**, cioè manderebbe in error boundary l'itinerario che questa richiesta non deve
+ * poter toccare.
+ *
+ * Si convalidano i campi che la resa **non** stringifica, cioè quelli che finiscono come
+ * figli JSX diretti: un oggetto lì dentro fa lanciare React ("Objects are not valid as a
+ * React child"), e un `undefined` invece no — React lo ignora. Censimento campo per campo,
+ * così non va rifatto da capo:
+ *
+ *   date           → solo confrontato (`entry.date === day.date`): stringa, obbligatoria
+ *   name           → figlio JSX diretto: stringa, obbligatoria
+ *   comment        → figlio JSX diretto: stringa, obbligatoria
+ *   distanceMeters → dentro un template literal in `meta`: stringifica, non lancia
+ *   street         → elemento di `meta`, reso con `.join()`: stringifica, non lancia
+ *   openingHours   → elemento di `meta`, reso con `.join()`: stringifica, non lancia
+ *   lat, lon       → dentro l'href del collegamento alla mappa: non lancia, ma un valore
+ *                    che non è un numero produrrebbe un link che non porta da nessuna
+ *                    parte, quindi il collegamento si rende solo se entrambi sono numeri
+ *                    finiti (vedi DinnerSuggestionBlock).
+ *
+ * Aggiungendo un campo reso come figlio JSX diretto, va aggiunto anche qui.
+ * Quel che si scarta si scarta in silenzio, come tutto il resto di questa fase.
+ */
+function accettaConsigli(value: unknown): DinnerSuggestion[] | null {
+  if (!Array.isArray(value)) return null;
+
+  return value.filter(
+    (entry): entry is DinnerSuggestion =>
+      typeof entry === "object" &&
+      entry !== null &&
+      typeof (entry as DinnerSuggestion).date === "string" &&
+      typeof (entry as DinnerSuggestion).name === "string" &&
+      typeof (entry as DinnerSuggestion).comment === "string"
+  );
+}
+
+/**
+ * Il posto del consiglio sulla cena, in coda alla giornata. L'altezza è riservata fin
+ * dall'attesa — 7rem è l'ingombro del blocco con un commento su una riga — così quando il
+ * consiglio arriva non spinge in giù ciò che sta sotto. Un contenitore solo per tutti e tre
+ * gli stati: separarli farebbe divergere le misure alla prima modifica.
+ */
+function DinnerSlot({ children }: { children: React.ReactNode }) {
+  return (
+    <div data-dinner-slot className="min-h-[7rem] border-t border-border py-3">
+      {children}
+    </div>
+  );
+}
+
+function DinnerNote({ children }: { children: React.ReactNode }) {
+  return <p className="text-xs text-muted-foreground">{children}</p>;
+}
+
+/**
+ * Il consiglio non è una tappa: niente orario di appuntamento, niente bottone che apre un
+ * dettaglio. È un riquadro a sé, staccato dall'elenco delle attività.
+ */
+function DinnerSuggestionBlock({ suggestion }: { suggestion: DinnerSuggestion }) {
+  const meta = [
+    `${suggestion.distanceMeters} m a piedi`,
+    suggestion.street,
+    suggestion.openingHours,
+  ].filter(Boolean);
+
+  // Senza coordinate non si costruisce un collegamento: `@undefined,undefined` porterebbe
+  // l'utente da nessuna parte, e un link rotto è peggio di un nome semplice.
+  const mapUrl =
+    Number.isFinite(suggestion.lat) && Number.isFinite(suggestion.lon)
+      ? buildDinnerMapUrl(suggestion.name, suggestion.lat, suggestion.lon)
+      : null;
+
+  return (
+    <>
+      <p className="mb-2 text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">
+        Dove cenare
+      </p>
+      <div className="rounded-lg border border-border bg-accent p-3">
+        <p className="text-sm font-medium text-primary">
+          {mapUrl ? (
+            <a
+              href={mapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              // Il testo visibile è il solo nome, che è quello che serve leggendo la
+              // scheda; ad alta voce servirebbe anche dove porta e che apre altrove.
+              aria-label={`${suggestion.name} su Google Maps (si apre in una nuova scheda)`}
+              // Sottolineato come gli altri collegamenti esterni del progetto (footer,
+              // "Verifica i prezzi reali"): niente ombre, niente gradienti, e nessun
+              // colore proprio — il nome resta Bosco com'era.
+              className="underline underline-offset-2 hover:decoration-2"
+            >
+              {suggestion.name}
+            </a>
+          ) : (
+            suggestion.name
+          )}
+        </p>
+        <p className="mt-0.5 text-sm text-muted-foreground">{suggestion.comment}</p>
+        <p className="mt-1.5 text-xs tabular-nums text-muted-foreground">{meta.join(" · ")}</p>
+      </div>
+    </>
+  );
+}
+
 export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onEdit }: ItineraryResultProps) {
   const [open, setOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [pdfState, setPdfState] = useState<"idle" | "loading" | "error">("idle");
   const [calendarError, setCalendarError] = useState(false);
+  // `null` vuol dire "nessun dato": è lo stato iniziale ed è anche quello in cui si resta
+  // se la richiesta fallisce, perché in quel caso la giornata deve restare com'era.
+  // Un array (anche vuoto) vuol dire che la route ha risposto.
+  const [dinner, setDinner] = useState<DinnerSuggestion[] | null>(null);
+  const [dinnerAnswered, setDinnerAnswered] = useState(false);
   const reduceMotion = useReducedMotion();
   const titleRef = useRef<HTMLHeadingElement>(null);
 
@@ -203,6 +321,59 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
   useEffect(() => {
     titleRef.current?.focus();
   }, []);
+
+  // L'itinerario è già a schermo quando questa richiesta parte: non deve poter rompere
+  // niente, quindi non esiste uno stato d'errore. O arriva un consiglio, o la giornata
+  // resta com'è. La route, dal canto suo, non restituisce mai un errore del modello:
+  // risponde 200 con un elenco vuoto. Le coordinate non si mandano — se le ricava lei
+  // dalla destinazione.
+  // Le giornate per cui ha senso chiedere: senza una tappa attorno a cui cercare non c'è
+  // niente da domandare. Sta fuori dall'effetto perché serve anche alla resa, che deve
+  // sapere quali giornate hanno una risposta da aspettare.
+  const dinnerDays = useMemo(
+    () =>
+      itinerary.days.flatMap((day) => {
+        const anchorTitle = pickDinnerAnchor(day);
+        return anchorTitle ? [{ date: day.date, anchorTitle }] : [];
+      }),
+    [itinerary]
+  );
+
+  // Senza giornate da chiedere non c'è nessuna attesa: l'attesa finisce prima di
+  // cominciare, e si ricava invece di essere messa in stato dentro l'effetto.
+  const dinnerDone = dinnerDays.length === 0 || dinnerAnswered;
+
+  useEffect(() => {
+    let annullato = false;
+
+    if (dinnerDays.length === 0) return;
+
+    fetch("/api/dinner-suggestions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        destination: tripData.destination,
+        participants: tripData.participants,
+        budget: tripData.budget,
+        styleNotes: tripData.styleNotes,
+        days: dinnerDays,
+      }),
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        // La forma si verifica, non si dà per buona: quel che arriva dal filo non può
+        // essere lasciato raggiungere la resa senza un controllo (vedi accettaConsigli).
+        if (!annullato) setDinner(accettaConsigli(data?.suggestions));
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!annullato) setDinnerAnswered(true);
+      });
+
+    return () => {
+      annullato = true;
+    };
+  }, [dinnerDays, tripData]);
 
   const handleExportCalendar = () => {
     try {
@@ -298,9 +469,12 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
           {itinerary.days.map((day, dayIndex) => {
             const formattedDate = formatCalendarDate(day.date);
             const dayWeather = weather?.find((entry) => entry.date === day.date);
+            const dinnerAsked = pickDinnerAnchor(day) !== null;
+            const dinnerSuggestion = dinner?.find((entry) => entry.date === day.date);
             return (
               <motion.div
                 key={dayIndex}
+                data-day-date={day.date}
                 className="overflow-hidden rounded-xl border border-border"
                 variants={reduceMotion ? undefined : dayCard}
               >
@@ -376,6 +550,33 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
                           </div>
                         </div>
                       )
+                  )}
+                  {/* Solo dove c'è stato qualcosa da chiedere: una giornata senza tappe
+                      non deve nemmeno annunciare che non ha un consiglio. */}
+                  {dinnerAsked && !dinnerDone && (
+                    <DinnerSlot>
+                      <DinnerNote>Cerchiamo dove cenare…</DinnerNote>
+                    </DinnerSlot>
+                  )}
+                  {/* `dinner` nullo a richiesta conclusa vuol dire che è andata storta:
+                      nessun messaggio, la giornata resta com'era.
+
+                      Quando invece la risposta è arrivata ma questa giornata non ha un
+                      consiglio, la riga parla solo di noi: la route risponde 200 con un
+                      elenco vuoto in quattro casi diversi — nessun candidato trovato,
+                      modello fallito, destinazione non geocodificata, giornata oltre il
+                      tetto di fase — e il client non può distinguerli. Dire "nessun locale
+                      qui attorno" sarebbe un'affermazione sul mondo che non abbiamo
+                      verificato, cioè lo stesso difetto che questa funzionalità esiste per
+                      eliminare, spostato dal nome del locale alla sua assenza. */}
+                  {dinnerAsked && dinnerDone && dinner && (
+                    <DinnerSlot>
+                      {dinnerSuggestion ? (
+                        <DinnerSuggestionBlock suggestion={dinnerSuggestion} />
+                      ) : (
+                        <DinnerNote>Per questa sera non abbiamo un consiglio.</DinnerNote>
+                      )}
+                    </DinnerSlot>
                   )}
                 </div>
               </motion.div>

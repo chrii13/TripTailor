@@ -77,3 +77,58 @@ export async function geocodeDestination(destination: string): Promise<Coordinat
     return null;
   }
 }
+
+// Mezzo grado attorno al punto: abbondante per una città, stretto abbastanza da escludere
+// l'omonimo dall'altra parte del mondo. `bounded=1` rende il riquadro un vincolo e non un
+// suggerimento.
+const VIEWBOX_DEGREES = 0.5;
+
+export async function geocodePlaceNear(
+  query: string,
+  near: { lat: number; lon: number },
+  timeoutMs: number
+): Promise<{ lat: number; lon: number } | null> {
+  const apiKey = process.env.LOCATIONIQ_API_KEY;
+  if (!apiKey) return null;
+
+  const url = new URL("https://api.locationiq.com/v1/search");
+  url.searchParams.set("key", apiKey);
+  url.searchParams.set("q", query);
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", "1");
+  url.searchParams.set(
+    "viewbox",
+    [
+      near.lon - VIEWBOX_DEGREES,
+      near.lat + VIEWBOX_DEGREES,
+      near.lon + VIEWBOX_DEGREES,
+      near.lat - VIEWBOX_DEGREES,
+    ].join(",")
+  );
+  url.searchParams.set("bounded", "1");
+
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    if (!response.ok) {
+      console.error(`Consigli cena: LocationIQ ha risposto ${response.status}`);
+      return null;
+    }
+
+    const data = (await response.json()) as { lat: string; lon: string }[];
+    if (!Array.isArray(data) || data.length === 0) return null;
+
+    const lat = Number.parseFloat(data[0].lat);
+    const lon = Number.parseFloat(data[0].lon);
+
+    // Senza questa guardia un NaN arriverebbe fino alla query a Overpass (`around:600,NaN,NaN`),
+    // dove non dà un errore chiaro ma risultati vuoti o insensati, lontano da dove nasce.
+    if (Number.isNaN(lat) || Number.isNaN(lon)) {
+      return null;
+    }
+
+    return { lat, lon };
+  } catch (error) {
+    console.error("Consigli cena: geocodifica della tappa fallita", error);
+    return null;
+  }
+}

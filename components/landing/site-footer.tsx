@@ -13,6 +13,14 @@ const FONTI = [
   { cosa: "Itinerari", chi: "Google Gemini" },
   { cosa: "Clima", chi: "Open-Meteo", nota: "media degli ultimi 5 anni, non una previsione" },
   { cosa: "Luoghi", chi: "LocationIQ" },
+  // Il collegamento a openstreetmap.org/copyright non è decorativo: le linee guida
+  // sull'attribuzione ODbL lo richiedono esplicitamente. Non trasformarlo in testo semplice.
+  {
+    cosa: "Locali",
+    chi: "OpenStreetMap",
+    href: "https://www.openstreetmap.org/copyright",
+    nota: "© i contributori, licenza ODbL",
+  },
 ];
 
 function ColonnaTitolo({ children }: { children: React.ReactNode }) {
@@ -54,7 +62,19 @@ export function SiteFooter() {
             <ul className="flex flex-col gap-1.5 text-sm text-muted-foreground">
               {FONTI.map((fonte) => (
                 <li key={fonte.cosa}>
-                  <span className="font-medium text-primary">{fonte.cosa}</span> — {fonte.chi}
+                  <span className="font-medium text-primary">{fonte.cosa}</span> —{" "}
+                  {fonte.href ? (
+                    <a
+                      href={fonte.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-4"
+                    >
+                      {fonte.chi}
+                    </a>
+                  ) : (
+                    fonte.chi
+                  )}
                   {fonte.nota && (
                     <span className="block text-xs">{fonte.nota}</span>
                   )}
