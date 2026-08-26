@@ -86,8 +86,9 @@ const GIORNATE_PER_GRUPPO = 2;
 // geocodifica della destinazione, che è una richiesta come le altre.
 const FINESTRA_LOCATIONIQ_MS = 1_000;
 
-// Lo stesso distanziamento fra un'interrogazione Overpass e la successiva, nel caso — non
-// più raro di tanto — in cui i rettangoli siano più d'uno (due grappoli di tappe distanti).
+// Lo stesso distanziamento fra un'interrogazione Overpass e la successiva, nel caso in cui
+// i rettangoli siano più d'uno: un itinerario che si allunga in due direzioni opposte
+// attorno alla base (vedi le misure in `lib/dinner-bounding-box.ts`).
 //
 // **Che cosa dicono le misure del 2026-08-26**, perché questo numero non nasce da un `429`
 // osservato: `/api/status` dichiara «Rate limit: 2», e sono **due slot simultanei**, non una
@@ -276,6 +277,14 @@ export async function POST(request: Request) {
       await finestraOverpass.distanzia();
 
       const luoghi = await fetchPlacesInBoundingBox(gruppo.riquadro, timeoutResiduo());
+
+      // La finestra si conta dalla **fine** della richiesta, non dal suo inizio: qui il
+      // vincolo non è una frequenza ma uno slot occupato, e lo slot si libera alla fine.
+      // Contandola dall'inizio, la richiesta successiva a una andata in timeout a venti
+      // secondi partirebbe senza nessuna pausa — cioè proprio nel caso in cui la cautela
+      // esiste, perché uno slot abbandonato per timeout resta occupato dall'altra parte.
+      finestraOverpass.riapri();
+
       for (const giornata of gruppo.punti) raccogli(giornata, luoghi);
     }
 

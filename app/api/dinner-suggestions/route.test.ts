@@ -541,6 +541,36 @@ describe("POST /api/dinner-suggestions", () => {
     expect(atteseInMezzo[0]).toBeLessThanOrEqual(FINESTRA_MS);
   });
 
+  // Il caso in cui quella cautela serve davvero, e in cui una finestra contata dall'inizio
+  // **non** proteggerebbe: la prima interrogazione ci mette più dell'intervallo — al limite
+  // va in timeout dopo venti secondi — e la successiva partirebbe senza nessuna pausa,
+  // proprio mentre lo slot abbandonato è ancora occupato dall'altra parte. Qui ogni chiamata
+  // di rete costa 1,2s di orologio, cioè più della finestra: contata dall'inizio l'attesa
+  // sarebbe negativa e sparirebbe.
+  it("conta la finestra dalla fine dell'interrogazione, non dal suo inizio", async () => {
+    avanzamentoPerChiamataMs = 1_200;
+    rispostaLocationIqTappa = (url: string) =>
+      url.includes("Gita") ? [{ lat: String(LONTANO.lat), lon: String(LONTANO.lon) }] : RISPOSTA_LOCATIONIQ;
+
+    const giornate = [
+      { date: "2026-09-10", anchorTitle: "Colosseo" },
+      { date: "2026-09-11", anchorTitle: "Gita fuori porta" },
+    ];
+    generateContent.mockResolvedValue(rispostaGemini(JSON.stringify({ days: [] })));
+
+    await POST(richiesta({ ...corpoValido, days: giornate }));
+
+    const prima = registro.indexOf("overpass");
+    const seconda = registro.indexOf("overpass", prima + 1);
+    const atteseInMezzo = registro
+      .slice(prima + 1, seconda)
+      .filter((voce) => voce.startsWith("attesa:"))
+      .map((voce) => Number(voce.slice("attesa:".length)));
+
+    expect(atteseInMezzo).toHaveLength(1);
+    expect(atteseInMezzo[0]).toBeGreaterThan(FINESTRA_MS - 100);
+  });
+
   it("risponde 200 con un elenco vuoto quando manca la chiave del modello", async () => {
     delete process.env.GEMINI_API_KEY;
 

@@ -16,6 +16,19 @@ export interface FinestraScorrevole {
   attesaMs(): number;
   /** Aspetta quel che manca (niente, se è già passato) e apre la finestra successiva. */
   distanzia(): Promise<void>;
+  /**
+   * Riporta l'inizio della finestra a **adesso**. Serve a chi vuole contare l'intervallo
+   * dalla *fine* della chiamata precedente invece che dal suo inizio: lo si chiama quando
+   * la chiamata è finita.
+   *
+   * I due modi non sono intercambiabili, e la scelta dipende da cosa impone il servizio.
+   * Chi limita la **frequenza** (LocationIQ: due richieste al secondo) va contato
+   * dall'inizio, che è il momento che il servizio conta. Chi limita le richieste
+   * **simultanee** (Overpass: due slot) va contato dalla fine, perché è lì che lo slot si
+   * libera — e contarlo dall'inizio farebbe partire senza pausa proprio la richiesta che
+   * segue una andata in timeout, cioè il caso in cui la cautela serve di più.
+   */
+  riapri(): void;
 }
 
 /**
@@ -35,6 +48,9 @@ export function finestraScorrevole(intervalloMs: number, inizio: number = Date.n
       // Si chiama `attendi` solo quando c'è davvero da aspettare: così una finestra già
       // scaduta non lascia tracce, e un test può contare le attese vere.
       if (ms > 0) await attendi(ms);
+      apertura = Date.now();
+    },
+    riapri() {
       apertura = Date.now();
     },
   };

@@ -99,11 +99,12 @@ describe("raggruppaPerRiquadri", () => {
 
     const gruppi = raggruppaPerRiquadri([...vicine, ...lontane], CENTRO);
 
+    // Il numero di gruppi va asserito, non solo chi ci finisce dentro: le due tappe lontane
+    // stanno su una fascia stretta di ~160 km², quindi devono condividere **un** rettangolo.
+    // Senza questa riga, tre gruppi (una richiesta per tappa) passavano come due.
+    expect(gruppi).toHaveLength(2);
     expect(gruppi[0].punti.map((p) => p.nome)).toEqual(["a", "b"]);
-    expect(gruppi.slice(1).flatMap((g) => g.punti.map((p) => p.nome)).sort()).toEqual([
-      "nordest",
-      "sudest",
-    ]);
+    expect(gruppi[1].punti.map((p) => p.nome).sort()).toEqual(["nordest", "sudest"]);
     for (const g of gruppi) expect(areaKm2(g.riquadro)).toBeLessThanOrEqual(AREA_MASSIMA_KM2);
   });
 

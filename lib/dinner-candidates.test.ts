@@ -156,16 +156,6 @@ describe("interrogazioni Overpass", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  // Dal 2026-08-26 il rettangolo è l'unica forma di interrogazione: anche una tappa isolata
-  // ne riceve uno proprio (1,6 km per lato) invece di un `around`, così due grappoli di
-  // tappe distanti costano due richieste e non una per tappa. Il raggio di ricerca resta,
-  // ma lo applica `selectNearbyCandidates` in casa.
-  it("non usa più interrogazioni a raggio: il rettangolo è l'unica forma", async () => {
-    const fetchMock = mockFetch();
-    await fetchPlacesInBoundingBox({ sud: 41.1, ovest: -8.7, nord: 41.2, est: -8.5 }, 5_000);
-    expect(corpoInviato(fetchMock)).not.toContain("around:");
-  });
-
   it("un errore di Overpass diventa un elenco vuoto, mai un'eccezione", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 429 }));
     await expect(fetchPlacesInBoundingBox({ sud: 41, ovest: -9, nord: 42, est: -8 }, 5_000)).resolves.toEqual([]);

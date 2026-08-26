@@ -165,13 +165,28 @@ function ritaglia<T extends Punto>(punti: T[], riferimento: Punto): { dentro: T[
  *
  * **Perché un secondo rettangolo e non un'interrogazione per tappa lontana** (corretto il
  * 2026-08-26): fino a quel giorno chi restava fuori riceveva un `around` proprio, uno per
- * tappa. Sembrava il caso raro della gita isolata, ma non lo è: Napoli più la costiera —
- * sessanta chilometri, due grappoli distinti — espelle *tutte* le tappe del secondo
- * grappolo, una alla volta, e produce quattro o cinque richieste ravvicinate, cioè
- * esattamente il pattern che questa riscrittura esisteva per eliminare. Raggruppandole, quel
- * viaggio costa **due** interrogazioni invece di cinque, e il caso della gita davvero
- * isolata resta un rettangolo minimo di 1,6 km per lato (2,56 km²), che Overpass serve al
- * prezzo di un `around`.
+ * tappa, e più tappe lontane facevano più richieste ravvicinate — il pattern che questa
+ * riscrittura esisteva per eliminare. Raggruppandole, ne basta una per grappolo.
+ *
+ * **Quanto è largo il caso, misurato sulle coordinate vere** (e più stretto di quanto si
+ * creda a occhio: l'esempio «Napoli più la costiera» era sbagliato, sta dentro il tetto):
+ *
+ *   Napoli + Amalfi + Positano                      →   791 km² → **un** gruppo solo
+ *   Napoli + Caserta + Pompei + Sorrento            → 1.078 km² → due gruppi
+ *   ...più i Campi Flegrei a ovest                  → 1.875 km² → due gruppi
+ *
+ * Serve cioè un itinerario che si allunghi in **due direzioni opposte** attorno alla base:
+ * una sola gita, per quanto lontana, di solito allunga il rettangolo in un verso e resta
+ * sotto il tetto. E c'è un secondo limite, a monte: `geocodePlaceNear` vincola la ricerca a
+ * mezzo grado dal centro della destinazione (`VIEWBOX_DEGREES`, con `bounded=1`), cioè
+ * **±55,7 km in latitudine e ±42,1 km in longitudine** alle latitudini italiane. Una tappa
+ * oltre quel riquadro non si geocodifica affatto e ripiega **in silenzio** sul centro
+ * città — nessun errore, solo un consiglio cercato attorno al posto sbagliato. Il
+ * raggruppamento lavora quindi nella fascia fra 900 km² e i ~9.400 km² del riquadro
+ * massimo: reale, ma non sconfinata.
+ *
+ * Il caso della gita davvero isolata resta un rettangolo minimo di 1,6 km per lato
+ * (2,56 km²), che Overpass serve al prezzo di un `around`.
  *
  * Il polo di ogni gruppo successivo è la tappa **più lontana** da quello precedente: è il
  * capo del grappolo remoto (Amalfi rispetto a Napoli), e prenderlo come centro tiene insieme
