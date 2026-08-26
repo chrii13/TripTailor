@@ -13,13 +13,27 @@ vi.mock("@google/genai", async (importOriginal) => ({
   },
 }));
 
-// Il distanziamento fra i gruppi di geocodifica è vero solo in produzione: qui aspettare
-// davvero un secondo per gruppo costerebbe secondi di suite per non verificare nulla. Che
-// la pausa ci sia, e fra un gruppo e l'altro, lo verifica il test dedicato più sotto.
-const { attendi } = vi.hoisted(() => ({
-  attendi: vi.fn<(ms: number) => Promise<void>>(async () => {}),
-}));
+// Il distanziamento fra le chiamate ai servizi esterni è vero solo in produzione: qui
+// aspettare davvero un secondo per gruppo costerebbe secondi di suite per non verificare
+// nulla. Si sostituisce **solo l'attesa**, non il calcolo: `finestraScorrevole` resta
+// quella vera, quindi i millisecondi che arrivano qui sono quelli veri e i test possono
+// asserirli. Sostituire la finestra intera renderebbe i test ciechi proprio sul valore.
+const { attendi, registro } = vi.hoisted(() => {
+  const registro: string[] = [];
+  return {
+    registro,
+    attendi: vi.fn<(ms: number) => Promise<void>>(async (ms) => {
+      registro.push(`attesa:${Math.round(ms)}`);
+    }),
+  };
+});
 vi.mock("@/lib/attesa", () => ({ attendi }));
+
+// La finestra di distanziamento, in millisecondi: lo stesso valore che la route usa per
+// LocationIQ e per Overpass. Se là cambia, questi test devono cambiare con lui — è il
+// punto: prima asserivano solo che *un* numero fosse passato, e portare la finestra a zero
+// li lasciava verdi.
+const FINESTRA_MS = 1_000;
 
 // Il centro della destinazione e il punto della tappa coincidono: le distanze dei
 // candidati sono così calcolate da un punto noto e restano prevedibili.
@@ -57,6 +71,21 @@ let rispostaLocationIq: Simulata = RISPOSTA_LOCATIONIQ;
 let rispostaLocationIqTappa: Simulata = RISPOSTA_LOCATIONIQ;
 let rispostaOverpass: Simulata = RISPOSTA_OVERPASS;
 
+// Una tappa a ~70 km dal centro: abbastanza per non entrare nel rettangolo comune.
+const LONTANO = { lat: CENTRO.lat + 0.7, lon: CENTRO.lon + 0.7 };
+
+/**
+ * Il rettangolo interrogato contiene quel punto? Dal 2026-08-26 anche le tappe lontane
+ * viaggiano in un rettangolo, quindi non basta più cercare `around:` per distinguere le due
+ * interrogazioni: si legge il riquadro dalla query e si guarda chi ci sta dentro.
+ */
+const contiene = (query: string, p: { lat: number; lon: number }) => {
+  const m = query.match(/\((-?\d+\.?\d*),(-?\d+\.?\d*),(-?\d+\.?\d*),(-?\d+\.?\d*)\)/);
+  if (!m) return false;
+  const [sud, ovest, nord, est] = m.slice(1).map(Number);
+  return p.lat >= sud && p.lat <= nord && p.lon >= ovest && p.lon <= est;
+};
+
 /** Le sole interrogazioni Overpass fatte, nel testo che è davvero partito. */
 const interrogazioniOverpass = () =>
   fetchMock.mock.calls
@@ -72,6 +101,7 @@ let scartoOrologioMs = 0;
 const fetchMock = vi.fn(async (input: unknown, init?: unknown) => {
   scartoOrologioMs += avanzamentoPerChiamataMs;
   const url = String(input);
+  registro.push(url.includes("overpass") ? "overpass" : "geocodifica");
   const corpo = url.includes("overpass")
     ? risolvi(rispostaOverpass, String((init as { body: URLSearchParams }).body.get("data")))
     : url.includes("bounded=1")
@@ -111,6 +141,7 @@ beforeEach(() => {
   generateContent.mockReset();
   attendi.mockClear();
   fetchMock.mockClear();
+  registro.length = 0;
   vi.stubGlobal("fetch", fetchMock);
   rispostaLocationIq = RISPOSTA_LOCATIONIQ;
   rispostaLocationIqTappa = RISPOSTA_LOCATIONIQ;
@@ -338,9 +369,36 @@ describe("POST /api/dinner-suggestions", () => {
 
     await POST(richiesta({ ...corpoValido, days: giornate }));
 
-    // Quattro giornate, due gruppi, un'attesa in apertura di ciascuno.
-    expect(attendi).toHaveBeenCalledTimes(2);
-    expect(attendi.mock.calls.every(([ms]) => typeof ms === "number")).toBe(true);
+    // Quattro giornate, due gruppi, un'attesa in apertura di ciascuno. I **millisecondi**
+    // vanno asseriti, non solo il fatto che l'attesa ci sia: fino al 2026-08-26 questo test
+    // asseriva `typeof ms === "number"`, e restava verde anche portando la finestra a zero,
+    // cioè con la protezione disattivata. Le chiamate qui sotto non passano mai per una rete
+    // vera, quindi l'orologio avanza di pochissimo e l'attesa residua è quasi tutto
+    // l'intervallo: la tolleranza copre quei pochi millisecondi reali.
+    const attese = attendi.mock.calls.map(([ms]) => ms);
+    expect(attese).toHaveLength(2);
+    for (const ms of attese) {
+      expect(ms).toBeGreaterThan(FINESTRA_MS - 100);
+      expect(ms).toBeLessThanOrEqual(FINESTRA_MS);
+    }
+  });
+
+  // L'altro dettaglio fragile della finestra, e finora non pinnato da niente: **da quando**
+  // si conta. La geocodifica della destinazione è una richiesta LocationIQ come le altre, e
+  // se la finestra partisse dopo di lei il primo gruppo ne farebbe tre nello stesso secondo
+  // — che nella prova sul campo del 2026-08-26 era l'unico `429` rimasto. Qui la
+  // destinazione consuma 600 ms dei 1000 della finestra: al primo gruppo ne devono restare
+  // ~400. Spostando la riga della finestra dopo la geocodifica, l'attesa torna a ~1000 e
+  // questo test diventa rosso.
+  it("la finestra parte dalla geocodifica della destinazione, non dal primo gruppo", async () => {
+    avanzamentoPerChiamataMs = 600;
+    generateContent.mockResolvedValue(rispostaGemini(JSON.stringify({ days: [] })));
+
+    await POST(richiesta(corpoValido));
+
+    const [primaAttesa] = attendi.mock.calls.map(([ms]) => ms);
+    expect(primaAttesa).toBeGreaterThan(FINESTRA_MS - 600 - 100);
+    expect(primaAttesa).toBeLessThanOrEqual(FINESTRA_MS - 600);
   });
 
   it("interrompe la geocodifica al tetto di fase e lascia le ultime giornate senza consiglio", async () => {
@@ -376,17 +434,13 @@ describe("POST /api/dinner-suggestions", () => {
   });
 
   // La gita fuori porta: una tappa a decine di chilometri allargherebbe il rettangolo a
-  // dismisura, e il costo di una risposta cresce con l'area. Le si dedica un'interrogazione
-  // propria invece di far pagare a tutti il suo raggio.
-  it("dedica un'interrogazione a raggio alla tappa troppo lontana per il rettangolo", async () => {
-    const LONTANO = { lat: CENTRO.lat + 0.7, lon: CENTRO.lon + 0.7 };
-
+  // dismisura, e il costo di una risposta cresce con l'area. Le si dedica un rettangolo
+  // proprio (1,6 km per lato) invece di far pagare a tutti la sua distanza.
+  it("dedica un rettangolo proprio alla tappa troppo lontana per quello comune", async () => {
     rispostaLocationIqTappa = (url: string) =>
       url.includes("Gita") ? [{ lat: String(LONTANO.lat), lon: String(LONTANO.lon) }] : RISPOSTA_LOCATIONIQ;
-
-    // Overpass risponde con un locale sul punto interrogato, così ogni sera ha il proprio.
     rispostaOverpass = (query: string) =>
-      query.includes("around:")
+      contiene(query, LONTANO)
         ? { elements: [{ lat: LONTANO.lat, lon: LONTANO.lon, tags: { name: "Locanda di Campagna" } }] }
         : RISPOSTA_OVERPASS;
 
@@ -408,13 +462,83 @@ describe("POST /api/dinner-suggestions", () => {
 
     const query = interrogazioniOverpass();
     expect(query).toHaveLength(2);
-    expect(query.filter((q) => q.includes("around:"))).toHaveLength(1);
+    // Nessun raggio: dal 2026-08-26 anche la gita viaggia dentro un rettangolo.
+    expect(query.filter((q) => q.includes("around:"))).toHaveLength(0);
 
     expect(response.status).toBe(200);
     expect(body.suggestions.map((s: { date: string; name: string }) => [s.date, s.name])).toEqual([
       ["2026-09-10", "Osteria Vicina"],
       ["2026-09-11", "Locanda di Campagna"],
     ]);
+  });
+
+  // Il rilievo del 2026-08-26. Il ripiego per le tappe lontane era un'interrogazione a
+  // raggio **per tappa**, sequenziali e senza distanziamento: cioè il pattern che produce i
+  // `429`, reintrodotto proprio dal lavoro che l'aveva eliminato. E non è un caso raro:
+  // Napoli più la costiera espelle *tutto* il grappolo lontano, una tappa alla volta.
+  // Quattro sere sulla costiera devono costare **una** interrogazione, non quattro.
+  it("raggruppa le tappe lontane in un solo rettangolo, non una interrogazione a testa", async () => {
+    rispostaLocationIqTappa = (url: string) =>
+      url.includes("Costiera") ? [{ lat: String(LONTANO.lat), lon: String(LONTANO.lon) }] : RISPOSTA_LOCATIONIQ;
+    rispostaOverpass = (query: string) =>
+      contiene(query, LONTANO)
+        ? { elements: [{ lat: LONTANO.lat, lon: LONTANO.lon, tags: { name: "Locanda di Campagna" } }] }
+        : RISPOSTA_OVERPASS;
+
+    const giornate = [
+      { date: "2026-09-10", anchorTitle: "Colosseo" },
+      { date: "2026-09-11", anchorTitle: "Costiera, primo giorno" },
+      { date: "2026-09-12", anchorTitle: "Costiera, secondo giorno" },
+      { date: "2026-09-13", anchorTitle: "Costiera, terzo giorno" },
+      { date: "2026-09-14", anchorTitle: "Costiera, quarto giorno" },
+    ];
+
+    generateContent.mockResolvedValue(
+      rispostaGemini(
+        JSON.stringify({
+          days: giornate.map((g) => ({ date: g.date, chosenId: 1, comment: "Un consiglio." })),
+        })
+      )
+    );
+
+    const response = await POST(richiesta({ ...corpoValido, days: giornate }));
+    const body = await response.json();
+
+    expect(interrogazioniOverpass()).toHaveLength(2);
+    expect(body.suggestions).toHaveLength(5);
+    expect(response.status).toBe(200);
+  });
+
+  // Il secondo rettangolo non deve partire addosso al primo. Il limite di Overpass è di due
+  // richieste *simultanee* (misurato il 2026-08-26: `/api/status` dichiara «Rate limit: 2»,
+  // e quattro richieste in parallelo hanno messo in coda le ultime due per 13,5s), quindi la
+  // protezione vera è che il ciclo resti sequenziale; la finestra è la cautela in più, e
+  // questo test pinna entrambe — un'attesa vera, con il suo valore, **fra** le due
+  // interrogazioni.
+  it("distanzia le interrogazioni Overpass quando i rettangoli sono più d'uno", async () => {
+    rispostaLocationIqTappa = (url: string) =>
+      url.includes("Gita") ? [{ lat: String(LONTANO.lat), lon: String(LONTANO.lon) }] : RISPOSTA_LOCATIONIQ;
+
+    const giornate = [
+      { date: "2026-09-10", anchorTitle: "Colosseo" },
+      { date: "2026-09-11", anchorTitle: "Gita fuori porta" },
+    ];
+    generateContent.mockResolvedValue(rispostaGemini(JSON.stringify({ days: [] })));
+
+    await POST(richiesta({ ...corpoValido, days: giornate }));
+
+    const prima = registro.indexOf("overpass");
+    const seconda = registro.indexOf("overpass", prima + 1);
+    expect(seconda).toBeGreaterThan(prima);
+
+    const atteseInMezzo = registro
+      .slice(prima + 1, seconda)
+      .filter((voce) => voce.startsWith("attesa:"))
+      .map((voce) => Number(voce.slice("attesa:".length)));
+
+    expect(atteseInMezzo).toHaveLength(1);
+    expect(atteseInMezzo[0]).toBeGreaterThan(FINESTRA_MS - 100);
+    expect(atteseInMezzo[0]).toBeLessThanOrEqual(FINESTRA_MS);
   });
 
   it("risponde 200 con un elenco vuoto quando manca la chiave del modello", async () => {

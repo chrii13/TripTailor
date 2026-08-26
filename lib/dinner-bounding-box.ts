@@ -54,6 +54,36 @@ export const MARGINE_METRI = 800;
  * il Grande Raccordo sta in ~285 km², il comune di Bologna in 141, e le 14 tappe vere di un
  * itinerario bolognese misurate lo stesso giorno danno 47,9 km² col margine — restando nella
  * parte piatta della tabella: ~1,4s e un terzo di megabyte. Oltre, si comincia a pagare.
+ *
+ * ── Le città dense, misurate il 2026-08-26 (la tabella qui sopra è tutta bolognese) ──
+ *
+ * Un tetto sull'area non è un tetto sul *carico*: a parità di km² una capitale sta un ordine
+ * di grandezza sopra. Gli stessi 900 km², con chiamate vere:
+ *
+ *   Bologna → 940 elementi,    339 KB,  1,0-1,4s
+ *   Londra  → 8.169 elementi,  3,85 MB, 7,9s
+ *   Parigi  → 13.916 elementi, 5,56 MB, 6,7s
+ *   Tokyo   → 15.746 elementi, 4,39 MB, 3,9s
+ *
+ * Il tetto **resta 900**, e non c'è nessun limite sul numero di elementi. Le tre ragioni,
+ * tutte misurate:
+ *
+ * 1. Il caso peggiore regge. 5,56 MB si scaricano in 6,7s contro `OVERPASS_TIMEOUT_MS`
+ *    (20s), e la parte in casa non si vede: `JSON.parse` più la selezione dei candidati di
+ *    quella risposta costano **126 ms e 16 MB di heap**, su una funzione che ne ha 1024.
+ * 2. Abbassare la soglia non toglierebbe il carico, perché il carico *sta nel centro*: a
+ *    Parigi 400 km² danno già 12.541 elementi e 5,05 MB (il 90% dei byte) e persino 100 km²
+ *    ne danno 9.359 per 3,9 MB (il 70%). Si spezzerebbe in due o tre interrogazioni un
+ *    itinerario parigino del tutto normale, cioè si tornerebbe alle richieste ripetute che
+ *    questo lavoro esiste per eliminare, senza guadagnare quasi nulla in byte.
+ * 3. Un tetto sul numero di elementi (`out ... N`) è **peggio del male**: Overpass non
+ *    garantisce *quali* elementi sopravvivono al taglio, e a Parigi un tetto di 500 ne
+ *    terrebbe il 3,6% scelto senza alcun rapporto con le nostre tappe. Il risultato non
+ *    sarebbe un errore ma un consiglio silenziosamente peggiore, o una sera vuota in pieno
+ *    centro: esattamente il genere di difetto invisibile che qui si sta cercando di evitare.
+ *
+ * Queste misure sono anche la conferma indipendente di `OVERPASS_TIMEOUT_MS = 20_000`: con
+ * il vecchio tetto di 5s, Londra e Parigi sarebbero andate in timeout **sempre**.
  */
 export const AREA_MASSIMA_KM2 = 900;
 
@@ -84,43 +114,92 @@ export function areaKm2(r: Riquadro): number {
   return (altezza * larghezza) / 1_000_000;
 }
 
-/**
- * Separa le tappe che stanno nel rettangolo condiviso da quelle troppo lontane per
- * entrarci — la gita fuori porta, che da sola allargherebbe l'area a dismisura.
- *
- * Il criterio è iterativo e ha un solo parametro, il tetto d'area: finché il rettangolo
- * sfora, si toglie la tappa più lontana dal `riferimento` — il centro della destinazione —
- * e la si mette da parte.
- *
- * Il riferimento è il centro della destinazione e non una statistica ricavata dalle tappe
- * (media, mediana) perché con **due** tappe qualsiasi statistica cade a metà strada fra le
- * due e le rende equidistanti: il criterio non saprebbe quale escludere e ne caccerebbe una
- * a caso, potenzialmente quella in centro città. Il centro della destinazione, invece, dice
- * qual è la base del viaggio e quale la gita: è l'informazione che serve, e ce l'abbiamo già.
- *
- * Chi resta fuori non perde il consiglio: il chiamante gli dedica un'interrogazione `around`
- * propria, se il budget di tempo lo consente. Il ciclo non svuota mai l'elenco, perché un
- * punto solo produce un rettangolo di 1,6 km per lato, cioè 2,56 km², sempre sotto il tetto.
- */
-export function dividiPerRiquadro<T extends Punto>(
-  punti: T[],
-  riferimento: Punto
-): { dentro: T[]; fuori: T[]; riquadro: Riquadro | null } {
-  if (punti.length === 0) return { dentro: [], fuori: [], riquadro: null };
+/** Le tappe che condividono un rettangolo, e quindi una sola interrogazione Overpass. */
+export interface GruppoDiTappe<T> {
+  punti: T[];
+  riquadro: Riquadro;
+}
 
+/** Il quadrato della distanza in metri: basta a confrontare, e non paga una radice. */
+function distanzaQuadrata(p: Punto, riferimento: Punto): number {
+  const metriLon = metriPerGradoLon(riferimento.lat);
+  return (
+    ((p.lat - riferimento.lat) * METRI_PER_GRADO_LAT) ** 2 +
+    ((p.lon - riferimento.lon) * metriLon) ** 2
+  );
+}
+
+/**
+ * Il rettangolo attorno a `riferimento`: si tengono le tappe che ci stanno dentro rispettando
+ * il tetto d'area, si mettono da parte le altre. Finché il rettangolo sfora, si toglie la
+ * tappa più lontana dal riferimento.
+ *
+ * Il riferimento è un punto dato da fuori e non una statistica ricavata dalle tappe (media,
+ * mediana) perché con **due** tappe qualsiasi statistica cade a metà strada fra le due e le
+ * rende equidistanti: il criterio non saprebbe quale escludere e ne caccerebbe una a caso,
+ * potenzialmente quella in centro città. Il centro della destinazione, invece, dice qual è
+ * la base del viaggio e quale la gita: è l'informazione che serve, e ce l'abbiamo già.
+ */
+function ritaglia<T extends Punto>(punti: T[], riferimento: Punto): { dentro: T[]; fuori: T[] } {
   const dentro = [...punti];
   const fuori: T[] = [];
-  const metriLon = metriPerGradoLon(riferimento.lat);
-  const distanza = (p: Punto) =>
-    ((p.lat - riferimento.lat) * METRI_PER_GRADO_LAT) ** 2 + ((p.lon - riferimento.lon) * metriLon) ** 2;
 
   while (dentro.length > 1 && areaKm2(riquadroAttorno(dentro)) > AREA_MASSIMA_KM2) {
     let peggiore = 0;
     dentro.forEach((p, i) => {
-      if (distanza(p) > distanza(dentro[peggiore])) peggiore = i;
+      if (distanzaQuadrata(p, riferimento) > distanzaQuadrata(dentro[peggiore], riferimento)) peggiore = i;
     });
     fuori.push(dentro.splice(peggiore, 1)[0]);
   }
 
-  return { dentro, fuori, riquadro: riquadroAttorno(dentro) };
+  return { dentro, fuori };
+}
+
+/**
+ * Raggruppa le tappe in **rettangoli**, uno per interrogazione Overpass.
+ *
+ * Nel caso normale — un itinerario in una città sola — il gruppo è uno solo e la funzione
+ * restituisce esattamente ciò che la funzionalità promette: una sola interrogazione per
+ * tutto il viaggio. I gruppi successivi nascono solo quando ci sono tappe troppo lontane per
+ * entrare nel primo rettangolo senza sfondare `AREA_MASSIMA_KM2`.
+ *
+ * **Perché un secondo rettangolo e non un'interrogazione per tappa lontana** (corretto il
+ * 2026-08-26): fino a quel giorno chi restava fuori riceveva un `around` proprio, uno per
+ * tappa. Sembrava il caso raro della gita isolata, ma non lo è: Napoli più la costiera —
+ * sessanta chilometri, due grappoli distinti — espelle *tutte* le tappe del secondo
+ * grappolo, una alla volta, e produce quattro o cinque richieste ravvicinate, cioè
+ * esattamente il pattern che questa riscrittura esisteva per eliminare. Raggruppandole, quel
+ * viaggio costa **due** interrogazioni invece di cinque, e il caso della gita davvero
+ * isolata resta un rettangolo minimo di 1,6 km per lato (2,56 km²), che Overpass serve al
+ * prezzo di un `around`.
+ *
+ * Il polo di ogni gruppo successivo è la tappa **più lontana** da quello precedente: è il
+ * capo del grappolo remoto (Amalfi rispetto a Napoli), e prenderlo come centro tiene insieme
+ * i suoi vicini invece di ritagliarli a fette. Il ciclo termina sempre perché ogni giro
+ * consuma almeno una tappa: un punto solo produce un rettangolo sempre sotto il tetto.
+ */
+export function raggruppaPerRiquadri<T extends Punto>(
+  punti: T[],
+  riferimento: Punto
+): GruppoDiTappe<T>[] {
+  const gruppi: GruppoDiTappe<T>[] = [];
+  let restanti = punti;
+  let polo = riferimento;
+
+  while (restanti.length > 0) {
+    const { dentro, fuori } = ritaglia(restanti, polo);
+    gruppi.push({ punti: dentro, riquadro: riquadroAttorno(dentro) });
+
+    if (fuori.length > 0) {
+      let piuLontana = fuori[0];
+      for (const p of fuori) {
+        if (distanzaQuadrata(p, polo) > distanzaQuadrata(piuLontana, polo)) piuLontana = p;
+      }
+      polo = piuLontana;
+    }
+
+    restanti = fuori;
+  }
+
+  return gruppi;
 }

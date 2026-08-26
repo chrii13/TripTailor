@@ -5,14 +5,13 @@ import { dinnerSuggestionsRequestSchema } from "@/lib/dinner-suggestions-request
 import { dinnerSuggestionsResponseSchema } from "@/lib/dinner-suggestions-schema";
 import { buildDinnerSuggestionsPrompt } from "@/lib/dinner-suggestions-prompt";
 import {
-  fetchPlacesAround,
   fetchPlacesInBoundingBox,
   selectNearbyCandidates,
   type DinnerCandidate,
   type OverpassPlace,
 } from "@/lib/dinner-candidates";
-import { dividiPerRiquadro } from "@/lib/dinner-bounding-box";
-import { attendi } from "@/lib/attesa";
+import { raggruppaPerRiquadri } from "@/lib/dinner-bounding-box";
+import { finestraScorrevole } from "@/lib/finestra-scorrevole";
 import { resolveDinnerChoice } from "@/lib/verify-dinner-choice";
 import { geocodeDestination, geocodePlaceNear } from "@/lib/geocode-destination";
 import { getGeminiApiKeys } from "@/lib/gemini-api-keys";
@@ -32,8 +31,8 @@ const USABLE_BUDGET_MS = maxDuration * 1_000 - RESPONSE_HEADROOM_MS;
 // Dal 2026-08-26 la fase ha due tempi ben separati, e ciascuno il proprio tetto:
 //
 //   1. la geocodifica delle tappe, a gruppi di due (LocationIQ), entro GEOCODE_PHASE_MS;
-//   2. **una sola** interrogazione Overpass sul rettangolo che le contiene tutte, entro
-//      PRE_MODEL_PHASE_MS.
+//   2. un'interrogazione Overpass per **rettangolo** — una sola per un itinerario in una
+//      città sola, che è il caso normale — entro PRE_MODEL_PHASE_MS.
 //
 // Prima l'interrogazione era una per sera, e le misure del 2026-08-26 hanno mostrato che
 // era proprio quello il problema: sei richieste `around` identiche alle stesse coordinate
@@ -86,6 +85,23 @@ const GIORNATE_PER_GRUPPO = 2;
 // costo per gruppo resta al massimo GEOCODE_TIMEOUT_MS. La finestra parte dalla
 // geocodifica della destinazione, che è una richiesta come le altre.
 const FINESTRA_LOCATIONIQ_MS = 1_000;
+
+// Lo stesso distanziamento fra un'interrogazione Overpass e la successiva, nel caso — non
+// più raro di tanto — in cui i rettangoli siano più d'uno (due grappoli di tappe distanti).
+//
+// **Che cosa dicono le misure del 2026-08-26**, perché questo numero non nasce da un `429`
+// osservato: `/api/status` dichiara «Rate limit: 2», e sono **due slot simultanei**, non una
+// frequenza. Dieci interrogazioni sequenziali su rettangoli veri da 900 km² hanno dato
+// **dieci 200 e nessun 429**; le stesse quattro lanciate *in parallelo* sono passate tutte
+// ma due hanno atteso 13,5s in coda — ed è la firma dei «429 lenti, dopo 12-14s» annotati
+// prima. Conclusione: a limitarci è la **concorrenza**, non il ritmo.
+//
+// Ne discendono due cose, e la prima conta più della seconda: (1) il ciclo delle
+// interrogazioni deve restare **sequenziale**, mai un `Promise.all` — è quella la
+// protezione vera; (2) la finestra resta come cautela a buon mercato, perché uno slot che
+// abbiamo abbandonato per timeout resta occupato sul server e non lo vediamo. Costa un
+// secondo una volta sola, e solo su un itinerario a più rettangoli.
+const FINESTRA_OVERPASS_MS = 1_000;
 
 const PER_CALL_CAP_MS = 25_000;
 const MIN_CALL_TIMEOUT_MS = 8_000;
@@ -177,7 +193,7 @@ export async function POST(request: Request) {
     // è una richiesta come le altre, e senza contarla il primo gruppo di tappe ne farebbe
     // tre nello stesso secondo. Nella prova sul campo del 2026-08-26 era l'unico `429`
     // rimasto, cioè una sera cercata attorno al centro città invece che alla sua tappa.
-    let inizioFinestra = Date.now();
+    const finestraLocationIq = finestraScorrevole(FINESTRA_LOCATIONIQ_MS);
     const centro = await geocodeDestination(destination);
     if (centro?.lat == null || centro.lon == null) {
       console.error(`Consigli cena: destinazione "${destination}" non geocodificata, nessun consiglio`);
@@ -193,17 +209,16 @@ export async function POST(request: Request) {
     const ancorate: GiornataAncorata[] = [];
 
     for (let inizio = 0; inizio < days.length; inizio += GIORNATE_PER_GRUPPO) {
-      const attesa = FINESTRA_LOCATIONIQ_MS - (Date.now() - inizioFinestra);
+      const attesa = Math.max(finestraLocationIq.attesaMs(), 0);
 
-      if (Date.now() + Math.max(attesa, 0) + GEOCODE_TIMEOUT_MS > geocodeDeadline) {
+      if (Date.now() + attesa + GEOCODE_TIMEOUT_MS > geocodeDeadline) {
         console.error(
           `Consigli cena: tetto della geocodifica superato, ${days.length - inizio} giornate restano senza tappa`
         );
         break;
       }
 
-      await attendi(attesa);
-      inizioFinestra = Date.now();
+      await finestraLocationIq.distanzia();
 
       const gruppo = await Promise.all(
         days.slice(inizio, inizio + GIORNATE_PER_GRUPPO).map(
@@ -221,11 +236,12 @@ export async function POST(request: Request) {
       ancorate.push(...gruppo);
     }
 
-    // Fase 1b — i locali. Una sola interrogazione per tutto l'itinerario, sul rettangolo
-    // che contiene ogni tappa; le distanze di ciascuna sera si ricavano poi in casa, senza
-    // toccare la rete. Le tappe troppo lontane per starci dentro (la gita fuori porta)
-    // ricadono su un'interrogazione propria, finché il budget lo consente.
-    const { dentro, fuori, riquadro } = dividiPerRiquadro(ancorate, coordinate);
+    // Fase 1b — i locali. Un'interrogazione per **rettangolo**, e nel caso normale — un
+    // itinerario in una città sola — il rettangolo è uno solo: le distanze di ciascuna sera
+    // si ricavano poi in casa, senza toccare la rete. Le tappe troppo lontane per starci
+    // dentro non ricevono più un raggio a testa ma un rettangolo condiviso (vedi
+    // `raggruppaPerRiquadri`), così due grappoli distanti costano due richieste e non sei.
+    const gruppi = raggruppaPerRiquadri(ancorate, coordinate);
     const conCandidati: GiornataConCandidati[] = [];
 
     const raccogli = (giornata: GiornataAncorata, luoghi: OverpassPlace[]) => {
@@ -236,29 +252,34 @@ export async function POST(request: Request) {
     };
 
     // Il timeout non è fisso: è il minimo fra il tetto per interrogazione e quel che resta
-    // della fase. È così che i tetti tornano a sommarsi (vedi il conto sopra).
-    const timeoutResiduo = () => Math.min(OVERPASS_TIMEOUT_MS, preModelDeadline - Date.now());
+    // della fase, tolta l'attesa di distanziamento ancora da pagare. È così che i tetti
+    // tornano a sommarsi (vedi il conto sopra).
+    const timeoutResiduo = (attesaMs = 0) =>
+      Math.min(OVERPASS_TIMEOUT_MS, preModelDeadline - Date.now() - attesaMs);
 
-    if (riquadro && dentro.length > 0) {
-      const timeout = timeoutResiduo();
-      if (timeout >= MIN_OVERPASS_TIMEOUT_MS) {
-        const luoghi = await fetchPlacesInBoundingBox(riquadro, timeout);
-        for (const giornata of dentro) raccogli(giornata, luoghi);
-      } else {
-        console.error("Consigli cena: tempo insufficiente per interrogare Overpass, nessun candidato");
-      }
-    }
+    // La prima interrogazione non ha nulla da cui distanziarsi: la finestra nasce scaduta.
+    // Il ciclo è **sequenziale** di proposito — vedi FINESTRA_OVERPASS_MS: il limite di
+    // Overpass è di due richieste *simultanee*, e due nostre in volo insieme si mettono in
+    // coda a vicenda per una dozzina di secondi.
+    const finestraOverpass = finestraScorrevole(FINESTRA_OVERPASS_MS, 0);
 
-    for (const giornata of fuori) {
-      const timeout = timeoutResiduo();
-      if (timeout < MIN_OVERPASS_TIMEOUT_MS) {
-        console.error(`Consigli cena: tempo esaurito, ${giornata.date} resta senza candidati`);
+    for (const gruppo of gruppi) {
+      const attesa = Math.max(finestraOverpass.attesaMs(), 0);
+
+      if (timeoutResiduo(attesa) < MIN_OVERPASS_TIMEOUT_MS) {
+        console.error(
+          `Consigli cena: tempo esaurito, ${gruppo.punti.length} giornate restano senza candidati`
+        );
         break;
       }
-      raccogli(giornata, await fetchPlacesAround(giornata.lat, giornata.lon, timeout));
+
+      await finestraOverpass.distanzia();
+
+      const luoghi = await fetchPlacesInBoundingBox(gruppo.riquadro, timeoutResiduo());
+      for (const giornata of gruppo.punti) raccogli(giornata, luoghi);
     }
 
-    // Le giornate fuori rettangolo sono state raccolte in coda: il prompt le vuole in
+    // I gruppi lontani sono stati raccolti in coda: il prompt vuole le giornate in
     // ordine di calendario, come le legge l'utente.
     conCandidati.sort((a, b) => a.date.localeCompare(b.date));
 

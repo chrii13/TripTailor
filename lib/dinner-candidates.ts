@@ -157,13 +157,13 @@ async function interroga(filtro: string, timeoutMs: number): Promise<OverpassPla
  * L'interrogazione che serve tutto l'itinerario: un rettangolo, una richiesta. Le sei
  * richieste `around` ravvicinate misurate il 2026-08-26 producevano due `429` per pura
  * autolimitazione; una sola non ha nessuno con cui competere.
+ *
+ * È rimasta **l'unica** forma di interrogazione: dal 2026-08-26 anche le tappe troppo
+ * lontane per il rettangolo comune ricevono un rettangolo proprio invece di un `around`
+ * ciascuna (vedi `raggruppaPerRiquadri`). Una tappa isolata dà un rettangolo di 1,6 km per
+ * lato, cioè 2,56 km²: costa quanto costava il raggio, e non moltiplica le richieste.
  */
 export function fetchPlacesInBoundingBox(riquadro: Riquadro, timeoutMs: number): Promise<OverpassPlace[]> {
   const { sud, ovest, nord, est } = riquadro;
   return interroga(`(${sud},${ovest},${nord},${est})`, timeoutMs);
-}
-
-/** Il ripiego per la gita fuori porta, troppo lontana per entrare nel rettangolo comune. */
-export function fetchPlacesAround(lat: number, lon: number, timeoutMs: number): Promise<OverpassPlace[]> {
-  return interroga(`(around:${SEARCH_RADIUS_METERS},${lat},${lon})`, timeoutMs);
 }

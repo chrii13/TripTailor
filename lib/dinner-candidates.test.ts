@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   MAX_CANDIDATES,
   SEARCH_RADIUS_METERS,
-  fetchPlacesAround,
   fetchPlacesInBoundingBox,
   parseOverpassPlaces,
   selectNearbyCandidates,
@@ -145,12 +144,6 @@ describe("interrogazioni Overpass", () => {
     expect((fetchMock.mock.calls[0][1].headers as Record<string, string>)["User-Agent"]).toBeTruthy();
   });
 
-  it("anche l'interrogazione attorno a un punto manda lo User-Agent", async () => {
-    const fetchMock = mockFetch();
-    await fetchPlacesAround(LAT, LON, 5_000);
-    expect((fetchMock.mock.calls[0][1].headers as Record<string, string>)["User-Agent"]).toBeTruthy();
-  });
-
   it("scrive il rettangolo nell'ordine che Overpass si aspetta: sud,ovest,nord,est", async () => {
     const fetchMock = mockFetch();
     await fetchPlacesInBoundingBox({ sud: 41.1, ovest: -8.7, nord: 41.2, est: -8.5 }, 5_000);
@@ -163,10 +156,14 @@ describe("interrogazioni Overpass", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("l'interrogazione attorno a un punto usa il raggio di ricerca", async () => {
+  // Dal 2026-08-26 il rettangolo è l'unica forma di interrogazione: anche una tappa isolata
+  // ne riceve uno proprio (1,6 km per lato) invece di un `around`, così due grappoli di
+  // tappe distanti costano due richieste e non una per tappa. Il raggio di ricerca resta,
+  // ma lo applica `selectNearbyCandidates` in casa.
+  it("non usa più interrogazioni a raggio: il rettangolo è l'unica forma", async () => {
     const fetchMock = mockFetch();
-    await fetchPlacesAround(LAT, LON, 5_000);
-    expect(corpoInviato(fetchMock)).toContain(`around:${SEARCH_RADIUS_METERS},${LAT},${LON}`);
+    await fetchPlacesInBoundingBox({ sud: 41.1, ovest: -8.7, nord: 41.2, est: -8.5 }, 5_000);
+    expect(corpoInviato(fetchMock)).not.toContain("around:");
   });
 
   it("un errore di Overpass diventa un elenco vuoto, mai un'eccezione", async () => {
@@ -174,6 +171,8 @@ describe("interrogazioni Overpass", () => {
     await expect(fetchPlacesInBoundingBox({ sud: 41, ovest: -9, nord: 42, est: -8 }, 5_000)).resolves.toEqual([]);
 
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("timeout")));
-    await expect(fetchPlacesAround(LAT, LON, 5_000)).resolves.toEqual([]);
+    await expect(
+      fetchPlacesInBoundingBox({ sud: 41, ovest: -9, nord: 42, est: -8 }, 5_000)
+    ).resolves.toEqual([]);
   });
 });
