@@ -241,25 +241,35 @@ function accettaConsigli(value: unknown): DinnerSuggestion[] | null {
  * consiglio arriva non spinge in giù ciò che sta sotto. Un contenitore solo per tutti e tre
  * gli stati: separarli farebbe divergere le misure alla prima modifica.
  *
- * **13rem (208px), e la garanzia vale solo da desktop.** Misurato sulla build di
- * produzione, blocco reso alle larghezze vere del contenitore — 574px da desktop, 245px
- * da telefono — con via e orari di lunghezza realistica e commenti delle lunghezze che
- * il sistema può davvero produrre (il prompt ne chiede MAX_DINNER_COMMENT_LENGTH = 220,
- * lo schema ne tollera MAX_DINNER_COMMENT_TOLERANCE = 300):
+ * **13rem (208px), e la garanzia vale solo alla larghezza piena.** Misurato sulla build
+ * di produzione, blocco reso ai due estremi di larghezza del contenitore — 574px con la
+ * card al suo `max-w-2xl`, 245px alla larghezza minima — con via e orari di lunghezza
+ * realistica e commenti delle lunghezze che il sistema può davvero produrre (il prompt ne
+ * chiede MAX_DINNER_COMMENT_LENGTH = 220, lo schema ne tollera
+ * MAX_DINNER_COMMENT_TOLERANCE = 300):
  *
  *              commento breve   220 caratteri   300 caratteri
  *   574px           143px           183px           203px
  *   245px           183px           303px           363px
  *
- * 13rem copre i 203px, cioè **il commento più lungo che lo schema possa ammettere**: da
- * desktop lo scatto è zero garantito dallo schema, non sperato. La riserva precedente —
- * 7rem, e poi 9rem tarate su un commento breve — era sotto misura in quasi tutti i casi
- * veri.
+ * 13rem copre i 203px, cioè **il commento più lungo che lo schema possa ammettere**: alla
+ * larghezza piena lo scatto è zero garantito dallo schema, non sperato. La riserva
+ * precedente — 7rem, e poi 9rem tarate su un commento breve — era sotto misura in quasi
+ * tutti i casi veri.
  *
- * **Da telefono la garanzia è irraggiungibile e resta un limite aperto**, non una svista:
- * il caso peggiore costerebbe 363px riservati per ogni giornata, cioè ~180px di vuoto
- * sotto ogni consiglio normale, che è un prezzo peggiore del difetto. Lì il blocco può
- * ancora spingere in giù ciò che sta sotto. E lo scarto **non è per giornata**:
+ * Nel caso tipico resta un po' di vuoto, ed è voluto: il prompt chiede di spiegare perché
+ * quel locale per quella sera, quindi il modello scrive due o tre righe, cioè i 183px
+ * della colonna centrale e ~25px di vuoto. I ~65px del commento su una riga sola sono
+ * l'eccezione, non il caso da cui tarare.
+ *
+ * **Sotto la larghezza piena la garanzia è irraggiungibile e resta un limite aperto**, non
+ * una svista. E attenzione: le due righe della tabella sono i due estremi di un intervallo
+ * **continuo**, non due casi separati — la card è `max-w-2xl`, quindi fra ~670px e ~375px
+ * di viewport il contenitore scende da 574px a 245px, e già a metà strada un commento da
+ * 220 caratteri supera i 208px. Il difetto non comincia «da telefono»: comincia appena la
+ * colonna si stringe. Alzare la riserva non lo chiude, lo sposta — il caso peggiore
+ * costerebbe 363px riservati per ogni giornata, cioè ~180px di vuoto sotto ogni consiglio
+ * normale, un prezzo peggiore del difetto. E lo scarto **non è per giornata**:
  * `dinnerDone` scatta per tutte le sere insieme, quindi su un viaggio di otto giorni gli
  * scarti si sommano — centinaia di pixel — e spostano sotto gli occhi la giornata che si
  * sta leggendo, non solo quella dopo. Chi vorrà chiuderlo dovrà accorciare il blocco o
