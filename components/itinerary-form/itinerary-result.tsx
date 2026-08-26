@@ -12,6 +12,7 @@ import {
   Droplets,
   Languages,
   Thermometer,
+  Utensils,
   type LucideIcon,
 } from "lucide-react";
 import { formatCalendarDate } from "@/lib/calendar-date";
@@ -210,7 +211,7 @@ function CountryStat({
  *   date           → solo confrontato (`entry.date === day.date`): stringa, obbligatoria
  *   name           → figlio JSX diretto: stringa, obbligatoria
  *   comment        → figlio JSX diretto: stringa, obbligatoria
- *   distanceMeters → dentro un template literal in `meta`: stringifica, non lancia
+ *   distanceMeters → dentro un template literal nella pastiglia: stringifica, non lancia
  *   street         → elemento di `meta`, reso con `.join()`: stringifica, non lancia
  *   openingHours   → elemento di `meta`, reso con `.join()`: stringifica, non lancia
  *   lat, lon       → dentro l'href del collegamento alla mappa: non lancia, ma un valore
@@ -236,13 +237,49 @@ function accettaConsigli(value: unknown): DinnerSuggestion[] | null {
 
 /**
  * Il posto del consiglio sulla cena, in coda alla giornata. L'altezza è riservata fin
- * dall'attesa — 7rem è l'ingombro del blocco con un commento su una riga — così quando il
+ * dall'attesa — l'ingombro del blocco con un commento su una riga — così quando il
  * consiglio arriva non spinge in giù ciò che sta sotto. Un contenitore solo per tutti e tre
  * gli stati: separarli farebbe divergere le misure alla prima modifica.
+ *
+ * **13rem (208px), e la garanzia vale solo alla larghezza piena.** Misurato sulla build
+ * di produzione, blocco reso ai due estremi di larghezza del contenitore — 574px con la
+ * card al suo `max-w-2xl`, 245px alla larghezza minima — con via e orari di lunghezza
+ * realistica e commenti delle lunghezze che il sistema può davvero produrre (il prompt ne
+ * chiede MAX_DINNER_COMMENT_LENGTH = 220, lo schema ne tollera
+ * MAX_DINNER_COMMENT_TOLERANCE = 300):
+ *
+ *              commento breve   220 caratteri   300 caratteri
+ *   574px           143px           183px           203px
+ *   245px           183px           303px           363px
+ *
+ * 13rem copre i 203px, cioè **il commento più lungo che lo schema possa ammettere**: alla
+ * larghezza piena lo scatto è zero garantito dallo schema, non sperato. La riserva
+ * precedente — 7rem, e poi 9rem tarate su un commento breve — era sotto misura in quasi
+ * tutti i casi veri.
+ *
+ * Nel caso tipico resta un po' di vuoto, ed è voluto: il prompt chiede di spiegare perché
+ * quel locale per quella sera, quindi il modello scrive due o tre righe, cioè i 183px
+ * della colonna centrale e ~25px di vuoto. I ~65px del commento su una riga sola sono
+ * l'eccezione, non il caso da cui tarare.
+ *
+ * **Sotto la larghezza piena la garanzia è irraggiungibile e resta un limite aperto**, non
+ * una svista. E attenzione: le due righe della tabella sono i due estremi di un intervallo
+ * **continuo**, non due casi separati — la card è `max-w-2xl`, quindi fra ~670px e ~375px
+ * di viewport il contenitore scende da 574px a 245px, e già a metà strada un commento da
+ * 220 caratteri supera i 208px. Il difetto non comincia «da telefono»: comincia appena la
+ * colonna si stringe. Alzare la riserva non lo chiude, lo sposta — il caso peggiore
+ * costerebbe 363px riservati per ogni giornata, cioè ~180px di vuoto sotto ogni consiglio
+ * normale, un prezzo peggiore del difetto. E lo scarto **non è per giornata**:
+ * `dinnerDone` scatta per tutte le sere insieme, quindi su un viaggio di otto giorni gli
+ * scarti si sommano — centinaia di pixel — e spostano sotto gli occhi la giornata che si
+ * sta leggendo, non solo quella dopo. Chi vorrà chiuderlo dovrà accorciare il blocco o
+ * troncare il commento, non alzare ancora la riserva.
+ *
+ * Toccando il corpo del blocco, rimisurare: queste cifre sono di misura, non di stima.
  */
 function DinnerSlot({ children }: { children: React.ReactNode }) {
   return (
-    <div data-dinner-slot className="min-h-[7rem] border-t border-border py-3">
+    <div data-dinner-slot className="min-h-[13rem] border-t border-border py-3">
       {children}
     </div>
   );
@@ -257,11 +294,8 @@ function DinnerNote({ children }: { children: React.ReactNode }) {
  * dettaglio. È un riquadro a sé, staccato dall'elenco delle attività.
  */
 function DinnerSuggestionBlock({ suggestion }: { suggestion: DinnerSuggestion }) {
-  const meta = [
-    `${suggestion.distanceMeters} m a piedi`,
-    suggestion.street,
-    suggestion.openingHours,
-  ].filter(Boolean);
+  // La distanza è uscita di qui: sta nella pastiglia accanto al nome.
+  const meta = [suggestion.street, suggestion.openingHours].filter(Boolean);
 
   // Senza coordinate non si costruisce un collegamento: `@undefined,undefined` porterebbe
   // l'utente da nessuna parte, e un link rotto è peggio di un nome semplice.
@@ -272,32 +306,61 @@ function DinnerSuggestionBlock({ suggestion }: { suggestion: DinnerSuggestion })
 
   return (
     <>
-      <p className="mb-2 text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">
+      <p className="mb-2 flex items-center gap-1.5 text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">
+        {/* Decorativa: dice quel che dice già il testo accanto, quindi nascosta. */}
+        <Utensils aria-hidden="true" className="size-3.5" />
         Dove cenare
       </p>
       <div className="rounded-lg border border-border bg-accent p-3">
-        <p className="text-sm font-medium text-primary">
-          {mapUrl ? (
-            <a
-              href={mapUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              // Il testo visibile è il solo nome, che è quello che serve leggendo la
-              // scheda; ad alta voce servirebbe anche dove porta e che apre altrove.
-              aria-label={`${suggestion.name} su Google Maps (si apre in una nuova scheda)`}
-              // Sottolineato come gli altri collegamenti esterni del progetto (footer,
-              // "Verifica i prezzi reali"): niente ombre, niente gradienti, e nessun
-              // colore proprio — il nome resta Bosco com'era.
-              className="underline underline-offset-2 hover:decoration-2"
-            >
-              {suggestion.name}
-            </a>
-          ) : (
-            suggestion.name
-          )}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          {/* Il nome è l'unica cosa che l'utente cerca: cresce di un gradino e prende
+              il peso, così non pesa quanto il commento e gli orari. */}
+          <p className="text-base font-semibold text-primary">
+            {mapUrl ? (
+              <a
+                href={mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                // Il testo visibile è il solo nome, che è quello che serve leggendo la
+                // scheda; ad alta voce servirebbe anche dove porta e che apre altrove.
+                aria-label={`${suggestion.name} su Google Maps (si apre in una nuova scheda)`}
+                // Sottolineato come gli altri collegamenti esterni del progetto (footer,
+                // "Verifica i prezzi reali"): niente ombre, niente gradienti, e nessun
+                // colore proprio — il nome resta Bosco com'era.
+                className="underline underline-offset-2 hover:decoration-2"
+              >
+                {suggestion.name}
+              </a>
+            ) : (
+              suggestion.name
+            )}
+          </p>
+          {/* «180 m» da solo non dice di che misura si tratti: il complemento resta
+              per chi ascolta, e a schermo la pastiglia sta accanto al nome. Ed è «in
+              linea d'aria», non «a piedi»: `distanceMeters` è una distanza haversine
+              fra due punti (lib/dinner-candidates.ts), non un percorso pedonale, e un
+              percorso pedonale non lo abbiamo mai calcolato. Dirlo solo a chi ascolta
+              sarebbe pure peggio: la stessa affermazione non verificata che questa
+              funzionalità esiste per eliminare, riservata a chi non può controllarla.
+
+              `border-border` e non `border-input`: quello è il bordo dei controlli, e
+              un chip bordato come un controllo accanto a un link sembra toccabile
+              senza esserlo. Stesso token della pastiglia di reverse-search.tsx. */}
+          <span
+            data-dinner-distance
+            className="mt-0.5 shrink-0 rounded-full border border-border bg-card px-2 py-0.5 text-xs tabular-nums text-muted-foreground"
+          >
+            {/* Template literal, non `{suggestion.distanceMeters} m`: così il valore
+                stringifica come faceva dentro `meta` e resta fuori dal censimento dei
+                campi resi come figli JSX diretti (vedi accettaConsigli). */}
+            {`${suggestion.distanceMeters} m`}
+            <span className="sr-only"> in linea d&apos;aria</span>
+          </span>
+        </div>
         <p className="mt-0.5 text-sm text-muted-foreground">{suggestion.comment}</p>
-        <p className="mt-1.5 text-xs tabular-nums text-muted-foreground">{meta.join(" · ")}</p>
+        <p data-dinner-meta className="mt-1.5 text-xs tabular-nums text-muted-foreground">
+          {meta.join(" · ")}
+        </p>
       </div>
     </>
   );

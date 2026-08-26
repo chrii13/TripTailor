@@ -289,6 +289,34 @@ describe("ItineraryResult — consiglio sulla cena", () => {
     expect(within(slot).queryByRole("button")).toBeNull();
   });
 
+  it("mette la distanza in una pastiglia che si capisce anche letta da sola", async () => {
+    // La distanza è uscita dalla riga dei metadati per stare accanto al nome: da sola,
+    // "180 m" non dice di che misura si tratti, quindi la pastiglia porta il complemento
+    // per lo screen reader. Via e orari restano nella riga, senza la distanza.
+    fetchMock = respondingFetch({ suggestions: [SUGGESTION] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderResult();
+    await screen.findByText(SUGGESTION.name);
+
+    const slot = dayCard("2026-05-21").querySelector("[data-dinner-slot]") as HTMLElement;
+
+    const distanza = slot.querySelector("[data-dinner-distance]");
+    expect(distanza).not.toBeNull();
+    // Letta ad alta voce la pastiglia è una frase, non una cifra sospesa. E dice
+    // "in linea d'aria", perché distanceMeters è una distanza haversine: promettere
+    // un percorso pedonale a chi non vede la mappa sarebbe un'affermazione che non
+    // abbiamo modo di sostenere.
+    expect(distanza!.textContent).toBe("180 m in linea d'aria");
+
+    const meta = slot.querySelector("[data-dinner-meta]");
+    expect(meta).not.toBeNull();
+    expect(meta!.textContent).toContain(SUGGESTION.street);
+    expect(meta!.textContent).toContain(SUGGESTION.openingHours);
+    // La distanza non è ripetuta: sta nella pastiglia e basta.
+    expect(meta!.textContent).not.toContain("180 m");
+  });
+
   it("fa del nome del locale un collegamento alla mappa, centrato sulle sue coordinate", async () => {
     fetchMock = respondingFetch({ suggestions: [SUGGESTION] });
     vi.stubGlobal("fetch", fetchMock);
