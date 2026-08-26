@@ -241,17 +241,35 @@ function accettaConsigli(value: unknown): DinnerSuggestion[] | null {
  * consiglio arriva non spinge in giù ciò che sta sotto. Un contenitore solo per tutti e tre
  * gli stati: separarli farebbe divergere le misure alla prima modifica.
  *
- * 9rem, non le 7 di prima: misurato con una chiamata vera (build di produzione, blocco
- * reso alle larghezze vere della card della giornata, 574px da desktop e 245px da
- * telefono) il blocco è alto **143px** con un commento su una riga — 139 prima che il
- * nome passasse da `text-sm` a `text-base` — quindi 7rem (112px) era già sotto misura e
- * lasciava scattare il contenuto di una trentina di pixel. 9rem = 144px lo copre.
- * Un commento su due righe arriva a 163px e sfora: la riserva è tarata sulla riga sola,
- * come è sempre stata. Toccando il corpo del blocco, rimisurare.
+ * **13rem (208px), e la garanzia vale solo da desktop.** Misurato sulla build di
+ * produzione, blocco reso alle larghezze vere del contenitore — 574px da desktop, 245px
+ * da telefono — con via e orari di lunghezza realistica e commenti delle lunghezze che
+ * il sistema può davvero produrre (il prompt ne chiede MAX_DINNER_COMMENT_LENGTH = 220,
+ * lo schema ne tollera MAX_DINNER_COMMENT_TOLERANCE = 300):
+ *
+ *              commento breve   220 caratteri   300 caratteri
+ *   574px           143px           183px           203px
+ *   245px           183px           303px           363px
+ *
+ * 13rem copre i 203px, cioè **il commento più lungo che lo schema possa ammettere**: da
+ * desktop lo scatto è zero garantito dallo schema, non sperato. La riserva precedente —
+ * 7rem, e poi 9rem tarate su un commento breve — era sotto misura in quasi tutti i casi
+ * veri.
+ *
+ * **Da telefono la garanzia è irraggiungibile e resta un limite aperto**, non una svista:
+ * il caso peggiore costerebbe 363px riservati per ogni giornata, cioè ~180px di vuoto
+ * sotto ogni consiglio normale, che è un prezzo peggiore del difetto. Lì il blocco può
+ * ancora spingere in giù ciò che sta sotto. E lo scarto **non è per giornata**:
+ * `dinnerDone` scatta per tutte le sere insieme, quindi su un viaggio di otto giorni gli
+ * scarti si sommano — centinaia di pixel — e spostano sotto gli occhi la giornata che si
+ * sta leggendo, non solo quella dopo. Chi vorrà chiuderlo dovrà accorciare il blocco o
+ * troncare il commento, non alzare ancora la riserva.
+ *
+ * Toccando il corpo del blocco, rimisurare: queste cifre sono di misura, non di stima.
  */
 function DinnerSlot({ children }: { children: React.ReactNode }) {
   return (
-    <div data-dinner-slot className="min-h-[9rem] border-t border-border py-3">
+    <div data-dinner-slot className="min-h-[13rem] border-t border-border py-3">
       {children}
     </div>
   );
@@ -308,16 +326,25 @@ function DinnerSuggestionBlock({ suggestion }: { suggestion: DinnerSuggestion })
             )}
           </p>
           {/* «180 m» da solo non dice di che misura si tratti: il complemento resta
-              per chi ascolta, e a schermo la pastiglia sta accanto al nome. */}
+              per chi ascolta, e a schermo la pastiglia sta accanto al nome. Ed è «in
+              linea d'aria», non «a piedi»: `distanceMeters` è una distanza haversine
+              fra due punti (lib/dinner-candidates.ts), non un percorso pedonale, e un
+              percorso pedonale non lo abbiamo mai calcolato. Dirlo solo a chi ascolta
+              sarebbe pure peggio: la stessa affermazione non verificata che questa
+              funzionalità esiste per eliminare, riservata a chi non può controllarla.
+
+              `border-border` e non `border-input`: quello è il bordo dei controlli, e
+              un chip bordato come un controllo accanto a un link sembra toccabile
+              senza esserlo. Stesso token della pastiglia di reverse-search.tsx. */}
           <span
             data-dinner-distance
-            className="mt-0.5 shrink-0 rounded-full border border-input bg-card px-2 py-0.5 text-xs tabular-nums text-muted-foreground"
+            className="mt-0.5 shrink-0 rounded-full border border-border bg-card px-2 py-0.5 text-xs tabular-nums text-muted-foreground"
           >
             {/* Template literal, non `{suggestion.distanceMeters} m`: così il valore
                 stringifica come faceva dentro `meta` e resta fuori dal censimento dei
                 campi resi come figli JSX diretti (vedi accettaConsigli). */}
             {`${suggestion.distanceMeters} m`}
-            <span className="sr-only"> a piedi</span>
+            <span className="sr-only"> in linea d&apos;aria</span>
           </span>
         </div>
         <p className="mt-0.5 text-sm text-muted-foreground">{suggestion.comment}</p>

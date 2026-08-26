@@ -303,8 +303,11 @@ describe("ItineraryResult — consiglio sulla cena", () => {
 
     const distanza = slot.querySelector("[data-dinner-distance]");
     expect(distanza).not.toBeNull();
-    // Letta ad alta voce la pastiglia è una frase, non una cifra sospesa.
-    expect(distanza!.textContent).toBe("180 m a piedi");
+    // Letta ad alta voce la pastiglia è una frase, non una cifra sospesa. E dice
+    // "in linea d'aria", perché distanceMeters è una distanza haversine: promettere
+    // un percorso pedonale a chi non vede la mappa sarebbe un'affermazione che non
+    // abbiamo modo di sostenere.
+    expect(distanza!.textContent).toBe("180 m in linea d'aria");
 
     const meta = slot.querySelector("[data-dinner-meta]");
     expect(meta).not.toBeNull();
