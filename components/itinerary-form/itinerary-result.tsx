@@ -12,6 +12,7 @@ import {
   Droplets,
   Languages,
   Thermometer,
+  Utensils,
   type LucideIcon,
 } from "lucide-react";
 import { formatCalendarDate } from "@/lib/calendar-date";
@@ -210,7 +211,7 @@ function CountryStat({
  *   date           → solo confrontato (`entry.date === day.date`): stringa, obbligatoria
  *   name           → figlio JSX diretto: stringa, obbligatoria
  *   comment        → figlio JSX diretto: stringa, obbligatoria
- *   distanceMeters → dentro un template literal in `meta`: stringifica, non lancia
+ *   distanceMeters → dentro un template literal nella pastiglia: stringifica, non lancia
  *   street         → elemento di `meta`, reso con `.join()`: stringifica, non lancia
  *   openingHours   → elemento di `meta`, reso con `.join()`: stringifica, non lancia
  *   lat, lon       → dentro l'href del collegamento alla mappa: non lancia, ma un valore
@@ -236,13 +237,21 @@ function accettaConsigli(value: unknown): DinnerSuggestion[] | null {
 
 /**
  * Il posto del consiglio sulla cena, in coda alla giornata. L'altezza è riservata fin
- * dall'attesa — 7rem è l'ingombro del blocco con un commento su una riga — così quando il
+ * dall'attesa — l'ingombro del blocco con un commento su una riga — così quando il
  * consiglio arriva non spinge in giù ciò che sta sotto. Un contenitore solo per tutti e tre
  * gli stati: separarli farebbe divergere le misure alla prima modifica.
+ *
+ * 9rem, non le 7 di prima: misurato con una chiamata vera (build di produzione, blocco
+ * reso alle larghezze vere della card della giornata, 574px da desktop e 245px da
+ * telefono) il blocco è alto **143px** con un commento su una riga — 139 prima che il
+ * nome passasse da `text-sm` a `text-base` — quindi 7rem (112px) era già sotto misura e
+ * lasciava scattare il contenuto di una trentina di pixel. 9rem = 144px lo copre.
+ * Un commento su due righe arriva a 163px e sfora: la riserva è tarata sulla riga sola,
+ * come è sempre stata. Toccando il corpo del blocco, rimisurare.
  */
 function DinnerSlot({ children }: { children: React.ReactNode }) {
   return (
-    <div data-dinner-slot className="min-h-[7rem] border-t border-border py-3">
+    <div data-dinner-slot className="min-h-[9rem] border-t border-border py-3">
       {children}
     </div>
   );
@@ -257,11 +266,8 @@ function DinnerNote({ children }: { children: React.ReactNode }) {
  * dettaglio. È un riquadro a sé, staccato dall'elenco delle attività.
  */
 function DinnerSuggestionBlock({ suggestion }: { suggestion: DinnerSuggestion }) {
-  const meta = [
-    `${suggestion.distanceMeters} m a piedi`,
-    suggestion.street,
-    suggestion.openingHours,
-  ].filter(Boolean);
+  // La distanza è uscita di qui: sta nella pastiglia accanto al nome.
+  const meta = [suggestion.street, suggestion.openingHours].filter(Boolean);
 
   // Senza coordinate non si costruisce un collegamento: `@undefined,undefined` porterebbe
   // l'utente da nessuna parte, e un link rotto è peggio di un nome semplice.
@@ -272,32 +278,52 @@ function DinnerSuggestionBlock({ suggestion }: { suggestion: DinnerSuggestion })
 
   return (
     <>
-      <p className="mb-2 text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">
+      <p className="mb-2 flex items-center gap-1.5 text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">
+        {/* Decorativa: dice quel che dice già il testo accanto, quindi nascosta. */}
+        <Utensils aria-hidden="true" className="size-3.5" />
         Dove cenare
       </p>
       <div className="rounded-lg border border-border bg-accent p-3">
-        <p className="text-sm font-medium text-primary">
-          {mapUrl ? (
-            <a
-              href={mapUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              // Il testo visibile è il solo nome, che è quello che serve leggendo la
-              // scheda; ad alta voce servirebbe anche dove porta e che apre altrove.
-              aria-label={`${suggestion.name} su Google Maps (si apre in una nuova scheda)`}
-              // Sottolineato come gli altri collegamenti esterni del progetto (footer,
-              // "Verifica i prezzi reali"): niente ombre, niente gradienti, e nessun
-              // colore proprio — il nome resta Bosco com'era.
-              className="underline underline-offset-2 hover:decoration-2"
-            >
-              {suggestion.name}
-            </a>
-          ) : (
-            suggestion.name
-          )}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          {/* Il nome è l'unica cosa che l'utente cerca: cresce di un gradino e prende
+              il peso, così non pesa quanto il commento e gli orari. */}
+          <p className="text-base font-semibold text-primary">
+            {mapUrl ? (
+              <a
+                href={mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                // Il testo visibile è il solo nome, che è quello che serve leggendo la
+                // scheda; ad alta voce servirebbe anche dove porta e che apre altrove.
+                aria-label={`${suggestion.name} su Google Maps (si apre in una nuova scheda)`}
+                // Sottolineato come gli altri collegamenti esterni del progetto (footer,
+                // "Verifica i prezzi reali"): niente ombre, niente gradienti, e nessun
+                // colore proprio — il nome resta Bosco com'era.
+                className="underline underline-offset-2 hover:decoration-2"
+              >
+                {suggestion.name}
+              </a>
+            ) : (
+              suggestion.name
+            )}
+          </p>
+          {/* «180 m» da solo non dice di che misura si tratti: il complemento resta
+              per chi ascolta, e a schermo la pastiglia sta accanto al nome. */}
+          <span
+            data-dinner-distance
+            className="mt-0.5 shrink-0 rounded-full border border-input bg-card px-2 py-0.5 text-xs tabular-nums text-muted-foreground"
+          >
+            {/* Template literal, non `{suggestion.distanceMeters} m`: così il valore
+                stringifica come faceva dentro `meta` e resta fuori dal censimento dei
+                campi resi come figli JSX diretti (vedi accettaConsigli). */}
+            {`${suggestion.distanceMeters} m`}
+            <span className="sr-only"> a piedi</span>
+          </span>
+        </div>
         <p className="mt-0.5 text-sm text-muted-foreground">{suggestion.comment}</p>
-        <p className="mt-1.5 text-xs tabular-nums text-muted-foreground">{meta.join(" · ")}</p>
+        <p data-dinner-meta className="mt-1.5 text-xs tabular-nums text-muted-foreground">
+          {meta.join(" · ")}
+        </p>
       </div>
     </>
   );
