@@ -1,9 +1,21 @@
+import type { Riquadro } from "./dinner-bounding-box";
+
 // Dodici bastano a dare scelta reale entro dieci minuti a piedi. Misurato a Porto: 161
 // locali entro 500 m — mandarli tutti al modello, su un viaggio di 14 giorni, significa
 // duemila voci in un prompt solo, e un modello che sceglie peggio perché annega.
 export const MAX_CANDIDATES = 12;
 
-const SEARCH_RADIUS_METERS = 600;
+/**
+ * Il raggio entro cui si cerca la cena di una sera, attorno alla sua tappa d'ancoraggio.
+ *
+ * Fino al 2026-08-26 era Overpass a farlo rispettare, perché ogni sera aveva la propria
+ * interrogazione `around`. Ora la risposta è **una sola** per tutto l'itinerario e copre
+ * un rettangolo largo chilometri: il raggio lo applica `selectNearbyCandidates`, in casa e
+ * senza toccare la rete. È un filtro che non si può togliere credendolo ridondante — senza,
+ * una sera si vedrebbe consigliato un locale dall'altra parte dell'itinerario.
+ */
+export const SEARCH_RADIUS_METERS = 600;
+
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 
 // Overpass rifiuta con **406 Not Acceptable** le richieste che arrivano con lo
@@ -15,6 +27,17 @@ const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 // vuota: è l'unica cosa che separa questa funzionalità dal non funzionare affatto.
 const USER_AGENT = "TripTailor/1.0 (https://trip-tailor-ten.vercel.app)";
 
+/** Un locale come arriva da OSM: senza distanza, perché non c'è un solo punto da cui misurarla. */
+export interface OverpassPlace {
+  name: string;
+  lat: number;
+  lon: number;
+  cuisine?: string;
+  openingHours?: string;
+  street?: string;
+}
+
+/** Un locale già riferito alla tappa di una sera: ha una distanza e un identificativo. */
 export interface DinnerCandidate {
   id: number;
   name: string;
@@ -42,46 +65,62 @@ function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number):
   return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
-export function parseOverpassRestaurants(json: unknown, lat: number, lon: number): DinnerCandidate[] {
+export function parseOverpassPlaces(json: unknown): OverpassPlace[] {
   const elements = (json as { elements?: unknown })?.elements;
   if (!Array.isArray(elements)) return [];
 
   return elements
-    .map((raw): Omit<DinnerCandidate, "id"> | null => {
+    .map((raw): OverpassPlace | null => {
       const el = raw as OverpassElement;
       const name = el.tags?.name;
-      const elLat = el.lat ?? el.center?.lat;
-      const elLon = el.lon ?? el.center?.lon;
-      if (!name || typeof elLat !== "number" || typeof elLon !== "number") return null;
+      const lat = el.lat ?? el.center?.lat;
+      const lon = el.lon ?? el.center?.lon;
+      if (!name || typeof lat !== "number" || typeof lon !== "number") return null;
 
       return {
         name,
-        distanceMeters: distanceMeters(lat, lon, elLat, elLon),
+        lat,
+        lon,
         cuisine: el.tags?.cuisine,
         openingHours: el.tags?.opening_hours,
         street: el.tags?.["addr:street"],
       };
     })
-    .filter((c): c is Omit<DinnerCandidate, "id"> => c !== null)
+    .filter((p): p is OverpassPlace => p !== null);
+}
+
+/**
+ * I candidati di una sera, scelti in casa dall'elenco condiviso: nessuna rete, solo
+ * aritmetica. È questo passo a rendere possibile una sola interrogazione per l'itinerario.
+ */
+export function selectNearbyCandidates(
+  places: OverpassPlace[],
+  lat: number,
+  lon: number
+): DinnerCandidate[] {
+  return places
+    .map((p) => ({
+      name: p.name,
+      distanceMeters: distanceMeters(lat, lon, p.lat, p.lon),
+      cuisine: p.cuisine,
+      openingHours: p.openingHours,
+      street: p.street,
+    }))
+    .filter((c) => c.distanceMeters <= SEARCH_RADIUS_METERS)
     .sort((a, b) => a.distanceMeters - b.distanceMeters)
     .slice(0, MAX_CANDIDATES)
     .map((c, index) => ({ id: index + 1, ...c }));
 }
 
 /**
- * Overpass pubblico ha tempi di risposta molto variabili: quattro interrogazioni vere
- * attorno a Bologna, il 2026-08-25, hanno dato 1,0s, 8,4s (504), 10,6s (504) e 17,3s. I
- * fallimenti sono frequenti e possono essere costosi: misurate anche risposte 500/504 dopo
- * 46-55 secondi. Il timeout e la rinuncia silenziosa sono la protezione: una giornata senza
- * consiglio è accettabile, mezzo minuto di attesa per un errore no. Il tetto vero lo decide
- * il chiamante (OVERPASS_TIMEOUT_MS nella route), che deve stare nel proprio budget.
+ * Overpass pubblico ha tempi di risposta molto variabili e i fallimenti sono frequenti:
+ * misurate risposte fra 0,8s e 27s, più `429` che arrivano dopo 12-14 secondi di attesa. Il
+ * timeout e la rinuncia silenziosa sono la protezione: una giornata senza consiglio è
+ * accettabile, mezzo minuto di attesa per un errore no. Il tetto vero lo decide il chiamante
+ * (`OVERPASS_TIMEOUT_MS` nella route), che deve stare nel proprio budget.
  */
-export async function fetchDinnerCandidates(
-  lat: number,
-  lon: number,
-  timeoutMs: number
-): Promise<DinnerCandidate[]> {
-  const query = `[out:json][timeout:10];(node["amenity"="restaurant"](around:${SEARCH_RADIUS_METERS},${lat},${lon});way["amenity"="restaurant"](around:${SEARCH_RADIUS_METERS},${lat},${lon}););out center tags;`;
+async function interroga(filtro: string, timeoutMs: number): Promise<OverpassPlace[]> {
+  const query = `[out:json][timeout:25];(node["amenity"="restaurant"]${filtro};way["amenity"="restaurant"]${filtro};);out center tags;`;
 
   try {
     const response = await fetch(OVERPASS_URL, {
@@ -96,9 +135,24 @@ export async function fetchDinnerCandidates(
       return [];
     }
 
-    return parseOverpassRestaurants(await response.json(), lat, lon);
+    return parseOverpassPlaces(await response.json());
   } catch (error) {
     console.error("Consigli cena: interrogazione Overpass fallita", error);
     return [];
   }
+}
+
+/**
+ * L'interrogazione che serve tutto l'itinerario: un rettangolo, una richiesta. Le sei
+ * richieste `around` ravvicinate misurate il 2026-08-26 producevano due `429` per pura
+ * autolimitazione; una sola non ha nessuno con cui competere.
+ */
+export function fetchPlacesInBoundingBox(riquadro: Riquadro, timeoutMs: number): Promise<OverpassPlace[]> {
+  const { sud, ovest, nord, est } = riquadro;
+  return interroga(`(${sud},${ovest},${nord},${est})`, timeoutMs);
+}
+
+/** Il ripiego per la gita fuori porta, troppo lontana per entrare nel rettangolo comune. */
+export function fetchPlacesAround(lat: number, lon: number, timeoutMs: number): Promise<OverpassPlace[]> {
+  return interroga(`(around:${SEARCH_RADIUS_METERS},${lat},${lon})`, timeoutMs);
 }

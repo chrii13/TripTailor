@@ -13,6 +13,14 @@ vi.mock("@google/genai", async (importOriginal) => ({
   },
 }));
 
+// Il distanziamento fra i gruppi di geocodifica è vero solo in produzione: qui aspettare
+// davvero un secondo per gruppo costerebbe secondi di suite per non verificare nulla. Che
+// la pausa ci sia, e fra un gruppo e l'altro, lo verifica il test dedicato più sotto.
+const { attendi } = vi.hoisted(() => ({
+  attendi: vi.fn<(ms: number) => Promise<void>>(async () => {}),
+}));
+vi.mock("@/lib/attesa", () => ({ attendi }));
+
 // Il centro della destinazione e il punto della tappa coincidono: le distanze dei
 // candidati sono così calcolate da un punto noto e restano prevedibili.
 const CENTRO = { lat: 41.9, lon: 12.5 };
@@ -38,9 +46,22 @@ const RISPOSTA_OVERPASS = {
   ],
 };
 
-let rispostaLocationIq: unknown = RISPOSTA_LOCATIONIQ;
-let rispostaLocationIqTappa: unknown = RISPOSTA_LOCATIONIQ;
-let rispostaOverpass: unknown = RISPOSTA_OVERPASS;
+// Le due risposte simulate possono essere un valore fisso oppure una funzione della
+// richiesta: serve ai test in cui le tappe stanno in punti diversi (la gita fuori porta) o
+// in cui conta distinguere l'interrogazione sul rettangolo da quella attorno a un punto.
+type Simulata<T = string> = unknown | ((richiesta: T) => unknown);
+const risolvi = <T,>(v: Simulata<T>, richiesta: T) =>
+  typeof v === "function" ? (v as (r: T) => unknown)(richiesta) : v;
+
+let rispostaLocationIq: Simulata = RISPOSTA_LOCATIONIQ;
+let rispostaLocationIqTappa: Simulata = RISPOSTA_LOCATIONIQ;
+let rispostaOverpass: Simulata = RISPOSTA_OVERPASS;
+
+/** Le sole interrogazioni Overpass fatte, nel testo che è davvero partito. */
+const interrogazioniOverpass = () =>
+  fetchMock.mock.calls
+    .filter(([input]) => String(input).includes("overpass"))
+    .map(([, init]) => String((init as { body: URLSearchParams }).body.get("data")));
 
 // Quanto "invecchia" l'orologio a ogni chiamata di rete. A zero il tempo non conta e i
 // test si comportano come se la fase fosse istantanea; alzandolo si simulano servizi lenti
@@ -48,14 +69,14 @@ let rispostaOverpass: unknown = RISPOSTA_OVERPASS;
 let avanzamentoPerChiamataMs = 0;
 let scartoOrologioMs = 0;
 
-const fetchMock = vi.fn(async (input: unknown) => {
+const fetchMock = vi.fn(async (input: unknown, init?: unknown) => {
   scartoOrologioMs += avanzamentoPerChiamataMs;
   const url = String(input);
   const corpo = url.includes("overpass")
-    ? rispostaOverpass
+    ? risolvi(rispostaOverpass, String((init as { body: URLSearchParams }).body.get("data")))
     : url.includes("bounded=1")
-      ? rispostaLocationIqTappa
-      : rispostaLocationIq;
+      ? risolvi(rispostaLocationIqTappa, url)
+      : risolvi(rispostaLocationIq, url);
 
   return { ok: true, status: 200, json: async () => corpo } as unknown as Response;
 });
@@ -88,6 +109,7 @@ function rispostaGemini(text: string) {
 
 beforeEach(() => {
   generateContent.mockReset();
+  attendi.mockClear();
   fetchMock.mockClear();
   vi.stubGlobal("fetch", fetchMock);
   rispostaLocationIq = RISPOSTA_LOCATIONIQ;
@@ -265,17 +287,72 @@ describe("POST /api/dinner-suggestions", () => {
     expect(body.suggestions[0].comment).toBe("La prima scelta.");
   });
 
-  it("interrompe la ricerca dei candidati al tetto di fase e lascia le ultime giornate senza consiglio", async () => {
-    // Ogni chiamata di rete fa invecchiare l'orologio di 3 secondi, e le conta tutte, anche
-    // quelle che nella route partono insieme (l'orologio qui è finto: il parallelismo non
-    // fa risparmiare tempo). I gruppi sono da due giornate e ogni giornata costa due
-    // chiamate — geocodifica e Overpass — cioè 12 secondi a gruppo, più i 3 della
-    // geocodifica della destinazione: i controlli sul tetto di 30 secondi cadono a 3, 15 e
-    // 27, poi a 39, quindi passano i primi tre gruppi — sei giornate — e il quarto non
-    // parte nemmeno.
-    avanzamentoPerChiamataMs = 3_000;
+  // Il test che vale il lavoro del 2026-08-26. Fino ad allora ogni sera aveva la propria
+  // interrogazione Overpass: la fase si esauriva attorno alla sesta e un viaggio di due
+  // settimane riceveva sei consigli, non quattordici. Se qualcuno rimettesse una
+  // interrogazione per giornata, il conteggio qui sotto salirebbe a quattordici.
+  it("interroga Overpass una volta sola e consiglia tutte le sere di un viaggio di due settimane", async () => {
+    const giornate = Array.from({ length: 14 }, (_, i) => ({
+      date: `2026-09-${String(10 + i).padStart(2, "0")}`,
+      anchorTitle: `Tappa ${i + 1}`,
+    }));
 
-    const giornate = ["10", "11", "12", "13", "14", "15", "16", "17"].map((giorno) => ({
+    generateContent.mockResolvedValue(
+      rispostaGemini(
+        JSON.stringify({
+          days: giornate.map((g) => ({ date: g.date, chosenId: 1, comment: "Un consiglio." })),
+        })
+      )
+    );
+
+    const response = await POST(richiesta({ ...corpoValido, days: giornate }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(interrogazioniOverpass()).toHaveLength(1);
+    expect(body.suggestions).toHaveLength(14);
+  });
+
+  it("interroga un rettangolo, non un raggio, quando le tappe stanno insieme", async () => {
+    generateContent.mockResolvedValue(
+      rispostaGemini(JSON.stringify({ days: [{ date: "2026-09-10", chosenId: 1, comment: "Ok." }] }))
+    );
+
+    await POST(richiesta(corpoValido));
+
+    const [query] = interrogazioniOverpass();
+    expect(query).not.toContain("around:");
+    expect(query).toMatch(/\(-?\d+\.\d+,-?\d+\.\d+,-?\d+\.\d+,-?\d+\.\d+\)/);
+  });
+
+  // Senza la pausa, LocationIQ (2 richieste al secondo) rifiuta: misurate 10 risposte 429
+  // su 14 tappe. Prima del 2026-08-26 il distanziatore era la chiamata a Overpass che
+  // seguiva ogni giornata; tolta quella, la pausa va messa a mano.
+  it("distanzia i gruppi di geocodifica: LocationIQ regge due richieste al secondo", async () => {
+    generateContent.mockResolvedValue(rispostaGemini(JSON.stringify({ days: [] })));
+
+    const giornate = ["10", "11", "12", "13"].map((giorno) => ({
+      date: `2026-09-${giorno}`,
+      anchorTitle: `Tappa del ${giorno}`,
+    }));
+
+    await POST(richiesta({ ...corpoValido, days: giornate }));
+
+    // Quattro giornate, due gruppi, un'attesa in apertura di ciascuno.
+    expect(attendi).toHaveBeenCalledTimes(2);
+    expect(attendi.mock.calls.every(([ms]) => typeof ms === "number")).toBe(true);
+  });
+
+  it("interrompe la geocodifica al tetto di fase e lascia le ultime giornate senza consiglio", async () => {
+    // Ogni chiamata di rete fa invecchiare l'orologio di 6 secondi, e le conta tutte, anche
+    // quelle che nella route partono insieme (l'orologio qui è finto: il parallelismo non
+    // fa risparmiare tempo). Un gruppo di due giornate costa quindi 12 secondi. Il tetto
+    // della geocodifica è 20s e si controlla con l'anticipo di una geocodifica intera
+    // (2,5s): dopo i 6s della destinazione il primo gruppo passa (6 + 2,5 ≤ 20) e finisce a
+    // 18, il secondo no (18 + 2,5 > 20). Restano due giornate su sei.
+    avanzamentoPerChiamataMs = 6_000;
+
+    const giornate = ["10", "11", "12", "13", "14", "15"].map((giorno) => ({
       date: `2026-09-${giorno}`,
       anchorTitle: `Tappa del ${giorno}`,
     }));
@@ -292,14 +369,51 @@ describe("POST /api/dinner-suggestions", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.suggestions).toHaveLength(6);
     expect(body.suggestions.map((s: { date: string }) => s.date)).toEqual([
       "2026-09-10",
       "2026-09-11",
-      "2026-09-12",
-      "2026-09-13",
-      "2026-09-14",
-      "2026-09-15",
+    ]);
+  });
+
+  // La gita fuori porta: una tappa a decine di chilometri allargherebbe il rettangolo a
+  // dismisura, e il costo di una risposta cresce con l'area. Le si dedica un'interrogazione
+  // propria invece di far pagare a tutti il suo raggio.
+  it("dedica un'interrogazione a raggio alla tappa troppo lontana per il rettangolo", async () => {
+    const LONTANO = { lat: CENTRO.lat + 0.7, lon: CENTRO.lon + 0.7 };
+
+    rispostaLocationIqTappa = (url: string) =>
+      url.includes("Gita") ? [{ lat: String(LONTANO.lat), lon: String(LONTANO.lon) }] : RISPOSTA_LOCATIONIQ;
+
+    // Overpass risponde con un locale sul punto interrogato, così ogni sera ha il proprio.
+    rispostaOverpass = (query: string) =>
+      query.includes("around:")
+        ? { elements: [{ lat: LONTANO.lat, lon: LONTANO.lon, tags: { name: "Locanda di Campagna" } }] }
+        : RISPOSTA_OVERPASS;
+
+    const giornate = [
+      { date: "2026-09-10", anchorTitle: "Colosseo" },
+      { date: "2026-09-11", anchorTitle: "Gita fuori porta" },
+    ];
+
+    generateContent.mockResolvedValue(
+      rispostaGemini(
+        JSON.stringify({
+          days: giornate.map((g) => ({ date: g.date, chosenId: 1, comment: "Un consiglio." })),
+        })
+      )
+    );
+
+    const response = await POST(richiesta({ ...corpoValido, days: giornate }));
+    const body = await response.json();
+
+    const query = interrogazioniOverpass();
+    expect(query).toHaveLength(2);
+    expect(query.filter((q) => q.includes("around:"))).toHaveLength(1);
+
+    expect(response.status).toBe(200);
+    expect(body.suggestions.map((s: { date: string; name: string }) => [s.date, s.name])).toEqual([
+      ["2026-09-10", "Osteria Vicina"],
+      ["2026-09-11", "Locanda di Campagna"],
     ]);
   });
 

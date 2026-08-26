@@ -4,7 +4,15 @@ import { z } from "zod";
 import { dinnerSuggestionsRequestSchema } from "@/lib/dinner-suggestions-request";
 import { dinnerSuggestionsResponseSchema } from "@/lib/dinner-suggestions-schema";
 import { buildDinnerSuggestionsPrompt } from "@/lib/dinner-suggestions-prompt";
-import { fetchDinnerCandidates, type DinnerCandidate } from "@/lib/dinner-candidates";
+import {
+  fetchPlacesAround,
+  fetchPlacesInBoundingBox,
+  selectNearbyCandidates,
+  type DinnerCandidate,
+  type OverpassPlace,
+} from "@/lib/dinner-candidates";
+import { dividiPerRiquadro } from "@/lib/dinner-bounding-box";
+import { attendi } from "@/lib/attesa";
 import { resolveDinnerChoice } from "@/lib/verify-dinner-choice";
 import { geocodeDestination, geocodePlaceNear } from "@/lib/geocode-destination";
 import { getGeminiApiKeys } from "@/lib/gemini-api-keys";
@@ -19,59 +27,65 @@ export const maxDuration = 60;
 const RESPONSE_HEADROOM_MS = 5_000;
 const USABLE_BUDGET_MS = maxDuration * 1_000 - RESPONSE_HEADROOM_MS;
 
-// Geocodifica delle tappe e Overpass hanno un tetto condiviso: sono la fase che precede
-// il modello, e senza un tetto un Overpass appeso si mangerebbe il budget della scelta.
+// ── Il budget di tempo della fase che precede il modello ────────────────────────────────
 //
-// I due numeri sono stati **misurati** il 2026-08-25, non stimati, e valgono insieme:
-// trenta secondi di fase con otto di tetto per singola interrogazione. Prima erano venti e
-// cinque, tarati sull'idea che Overpass rispondesse in 1-2 secondi; quattro interrogazioni
-// vere attorno a Bologna hanno invece dato 1,0s, 8,4s (504), 10,6s (504) e 17,3s. Con il
-// tetto a cinque secondi *tutte* le giornate finivano in timeout e la risposta era un
-// elenco vuoto anche in pieno centro di una città grande.
+// Dal 2026-08-26 la fase ha due tempi ben separati, e ciascuno il proprio tetto:
 //
-// Otto secondi prendono la parte buona di quella distribuzione senza inseguire la coda
-// lunga.
+//   1. la geocodifica delle tappe, a gruppi di due (LocationIQ), entro GEOCODE_PHASE_MS;
+//   2. **una sola** interrogazione Overpass sul rettangolo che le contiene tutte, entro
+//      PRE_MODEL_PHASE_MS.
 //
-// **PRE_MODEL_PHASE_MS non è una partizione del budget, ed è facile crederlo.** Il tetto si
-// controlla *solo fra un gruppo e l'altro*, mai dentro: un gruppo che parte a 29,999s
-// arriva a ~40,5s (2,5 di geocodifica più 8 di Overpass), cioè la fase può sforare il
-// proprio tetto **di un gruppo intero**. Non esiste quindi nessun "30 + 25 + 5 = 60": a
-// quel punto al modello non restano i 25 di PER_CALL_CAP_MS ma `deadline - now`, cioè
-// ~14,5s.
+// Prima l'interrogazione era una per sera, e le misure del 2026-08-26 hanno mostrato che
+// era proprio quello il problema: sei richieste `around` identiche alle stesse coordinate
+// di Bologna hanno dato 1,0s, 1,0s, 16,5s, 10,3s e poi due `429` (dopo 10,5s e 10,3s). I
+// rifiuti arrivavano *dopo* le prime richieste ravvicinate, cioè ci stavamo autolimitando,
+// e più lungo era il viaggio peggio andava. Allargare l'area invece costa poco: vedi la
+// tabella delle misure in `lib/dinner-bounding-box.ts`.
 //
-// A garantire i 60 secondi è il residuo che `getCallAttemptBudget` calcola per la chiamata
-// al modello — il minimo fra PER_CALL_CAP_MS e quel che resta fino alla scadenza — non la
-// somma dei tetti. Il che vuol dire che alzare OVERPASS_TIMEOUT_MS non fa sforare
-// maxDuration, ma **strozza in silenzio la chiamata al modello**: sotto MIN_CALL_TIMEOUT_MS
-// il tentativo non parte nemmeno e l'itinerario resta senza consigli. È l'effetto da
-// misurare prima di toccare questi numeri, non lo sforamento del tetto di piattaforma.
-const PRE_MODEL_PHASE_MS = 30_000;
+// **I tetti ora si sommano davvero**, ed è un cambiamento rispetto a com'era prima. Il
+// vecchio commento avvertiva giustamente che `PRE_MODEL_PHASE_MS` non era una partizione
+// del budget, perché il controllo cadeva solo *fra* un gruppo e l'altro e una fase poteva
+// sforare di un gruppo intero. Adesso non può: il numero di gruppi di geocodifica è
+// limitato dal controllo con anticipo di GEOCODE_TIMEOUT_MS, e il timeout dell'unica
+// interrogazione Overpass è **ritagliato sul residuo** invece che fisso. Il conto del caso
+// peggiore torna:
+//
+//   20s (geocodifica) + 20s (Overpass) + 15s (modello, residuo) + 5s (margine) = 60s
+//
+// A garantire il tetto di piattaforma resta comunque `getCallAttemptBudget`, che prende il
+// minimo fra PER_CALL_CAP_MS e quel che manca alla scadenza: nel caso normale la fase
+// costa ~9s e al modello restano i 25s pieni.
+const PRE_MODEL_PHASE_MS = 40_000;
+const GEOCODE_PHASE_MS = 20_000;
 const GEOCODE_TIMEOUT_MS = 2_500;
-const OVERPASS_TIMEOUT_MS = 8_000;
 
-// Quante giornate si lavorano insieme. Non è illimitata perché LocationIQ e Overpass sono
-// servizi pubblici e gratuiti che limitano a poche richieste al secondo: un viaggio di 14
-// giorni tutto in parallelo sono 14 geocodifiche e 14 POST simultanei, cioè un rifiuto per
-// eccesso di richieste come esito *normale*, con tutte le sere che finiscono a pescare
-// dall'elenco attorno al centro città.
-//
-// Il numero era **quattro**, scelto a intuito, ed è stato corretto a due il 2026-08-25
-// dopo averlo misurato: quattro geocodifiche LocationIQ in parallelo tornano
-// `[200, 429, 429, 200]`, cioè metà delle sere perde la propria tappa e ripiega sul centro
-// città. Due in parallelo tornano `[200, 200]` (il piano gratuito consente 2 richieste al
-// secondo). È il difetto peggiore del genere, perché non produce nessun errore: i consigli
-// arrivano lo stesso, solo attorno al posto sbagliato. **Non rialzarlo senza rimisurare.**
-// La chiamata a Overpass che segue ogni geocodifica dura qualche secondo e fa da
-// distanziatore naturale fra un gruppo e il successivo.
-//
-// **Conseguenza da conoscere: la funzionalità si ferma attorno alla sesta sera.** Un gruppo
-// costa ~10,5s nel caso peggiore (2,5 di geocodifica + 8 di Overpass), quindi dentro i 30s
-// di fase entrano tre gruppi — sei giornate — e il quarto trova il tetto già superato.
-// Vale *indipendentemente dalla lunghezza del viaggio*: un viaggio di quattordici giorni
-// riceve consigli per sei sere, non per quattordici. È un compromesso accettato, non una
-// svista: meglio sei sere giuste e otto assenti che quattordici prese attorno al centro
-// città perché i servizi pubblici ci hanno risposto "troppe richieste".
+// Una sola interrogazione può permettersi di aspettare molto più di quando erano una per
+// sera (erano 8s). Misure del 2026-08-26 su rettangoli veri attorno a Bologna: 0,8s a 4 km²,
+// 1,0-1,4s a 900 km², 2,3s a 2.500 km². I `429`, invece, arrivano *lenti*, dopo 11,9s e
+// 14,3s: venti secondi lasciano passare anche una risposta buona ma tardiva senza inseguire
+// la coda dei fallimenti. Sotto MIN_OVERPASS_TIMEOUT_MS non si parte nemmeno: una richiesta
+// che sappiamo di dover abortire è tempo tolto al modello.
+const OVERPASS_TIMEOUT_MS = 20_000;
+const MIN_OVERPASS_TIMEOUT_MS = 3_000;
+
+// Quante tappe si geocodificano insieme. Il piano gratuito di LocationIQ consente **2
+// richieste al secondo**: il numero era quattro, scelto a intuito, ed è stato corretto a due
+// il 2026-08-25 dopo averlo misurato — quattro in parallelo tornano `[200, 429, 429, 200]`,
+// cioè metà delle sere perde la propria tappa e ripiega sul centro città. È il difetto
+// peggiore del genere, perché non produce nessun errore: i consigli arrivano lo stesso, solo
+// attorno al posto sbagliato. **Non rialzarlo senza rimisurare.**
 const GIORNATE_PER_GRUPPO = 2;
+
+// Il distanziamento fra un gruppo e il successivo, ed è **nuovo**: prima non serviva perché
+// la chiamata a Overpass che seguiva ogni giornata durava secondi e faceva da distanziatore
+// naturale. Toglierla ha tolto anche quello, e la misura del 2026-08-26 lo mostra senza
+// ambiguità — 14 tappe di Bologna a gruppi di due, senza pausa, hanno dato 10 risposte
+// `429` su 14 (in 1,5s totali); con una finestra di un secondo, 14 su 14 a 200 in 7,2s.
+// Non è una pausa fissa ma una finestra: si aspetta solo il tempo che manca al secondo
+// *dall'inizio delle richieste precedenti*, quindi un gruppo lento non paga nulla e il
+// costo per gruppo resta al massimo GEOCODE_TIMEOUT_MS. La finestra parte dalla
+// geocodifica della destinazione, che è una richiesta come le altre.
+const FINESTRA_LOCATIONIQ_MS = 1_000;
 
 const PER_CALL_CAP_MS = 25_000;
 const MIN_CALL_TIMEOUT_MS = 8_000;
@@ -104,6 +118,14 @@ interface GiornataConCandidati {
   date: string;
   anchorTitle: string;
   candidates: DinnerCandidate[];
+}
+
+/** Una giornata con le coordinate della sua tappa: il passo intermedio fra le due fasi. */
+interface GiornataAncorata {
+  date: string;
+  anchorTitle: string;
+  lat: number;
+  lon: number;
 }
 
 export async function POST(request: Request) {
@@ -141,10 +163,17 @@ export async function POST(request: Request) {
 
   try {
     const preModelDeadline = Math.min(deadline, startTime + PRE_MODEL_PHASE_MS);
+    const geocodeDeadline = Math.min(deadline, startTime + GEOCODE_PHASE_MS);
 
     // La route si geocodifica la destinazione da sé: il client non ha le coordinate, e
     // /api/generate-itinerary non le restituisce. Sono anche il ripiego quando la
     // geocodifica di una singola tappa fallisce.
+    //
+    // Questa chiamata apre anche la finestra di distanziamento di LocationIQ:
+    // è una richiesta come le altre, e senza contarla il primo gruppo di tappe ne farebbe
+    // tre nello stesso secondo. Nella prova sul campo del 2026-08-26 era l'unico `429`
+    // rimasto, cioè una sera cercata attorno al centro città invece che alla sua tappa.
+    let inizioFinestra = Date.now();
     const centro = await geocodeDestination(destination);
     if (centro?.lat == null || centro.lon == null) {
       console.error(`Consigli cena: destinazione "${destination}" non geocodificata, nessun consiglio`);
@@ -152,43 +181,82 @@ export async function POST(request: Request) {
     }
     const coordinate = { lat: centro.lat, lon: centro.lon };
 
-    // Fase 1 — i candidati. Le giornate sono indipendenti, quindi in parallelo, ma a
-    // gruppi: il tetto di fase si controlla prima di ogni gruppo, e le giornate non
-    // raggiunte entro il tetto restano semplicemente senza consiglio — un'assenza onesta
-    // è meglio di un consiglio preso attorno al centro città perché il servizio pubblico
-    // ci ha risposto "troppe richieste".
-    const conCandidati: GiornataConCandidati[] = [];
+    // Fase 1a — dove si cena. Le tappe sono indipendenti, quindi in parallelo, ma a
+    // gruppi distanziati: il tetto si controlla prima di ogni gruppo, con l'anticipo di
+    // una geocodifica intera, così la fase non può sforarlo. Le tappe non raggiunte entro
+    // il tetto restano senza consiglio — un'assenza onesta è meglio di un consiglio preso
+    // attorno al centro città perché il servizio pubblico ci ha risposto "troppe richieste".
+    const ancorate: GiornataAncorata[] = [];
 
     for (let inizio = 0; inizio < days.length; inizio += GIORNATE_PER_GRUPPO) {
-      if (Date.now() >= preModelDeadline) {
+      const attesa = FINESTRA_LOCATIONIQ_MS - (Date.now() - inizioFinestra);
+
+      if (Date.now() + Math.max(attesa, 0) + GEOCODE_TIMEOUT_MS > geocodeDeadline) {
         console.error(
-          `Consigli cena: tetto della fase di ricerca superato, ${days.length - inizio} giornate restano senza candidati`
+          `Consigli cena: tetto della geocodifica superato, ${days.length - inizio} giornate restano senza tappa`
         );
         break;
       }
 
+      await attendi(attesa);
+      inizioFinestra = Date.now();
+
       const gruppo = await Promise.all(
         days.slice(inizio, inizio + GIORNATE_PER_GRUPPO).map(
-          async (day): Promise<GiornataConCandidati | null> => {
-            const punto =
-              (await geocodePlaceNear(
-                `${day.anchorTitle}, ${destination}`,
-                coordinate,
-                GEOCODE_TIMEOUT_MS
-              )) ?? coordinate;
-
-            const candidates = await fetchDinnerCandidates(
-              punto.lat,
-              punto.lon,
-              OVERPASS_TIMEOUT_MS
-            );
-            return candidates.length > 0 ? { ...day, candidates } : null;
-          }
+          async (day): Promise<GiornataAncorata> => ({
+            ...day,
+            // Il centro della destinazione è il ripiego quando la tappa non si geocodifica.
+            ...((await geocodePlaceNear(
+              `${day.anchorTitle}, ${destination}`,
+              coordinate,
+              GEOCODE_TIMEOUT_MS
+            )) ?? coordinate),
+          })
         )
       );
-
-      conCandidati.push(...gruppo.filter((g): g is GiornataConCandidati => g !== null));
+      ancorate.push(...gruppo);
     }
+
+    // Fase 1b — i locali. Una sola interrogazione per tutto l'itinerario, sul rettangolo
+    // che contiene ogni tappa; le distanze di ciascuna sera si ricavano poi in casa, senza
+    // toccare la rete. Le tappe troppo lontane per starci dentro (la gita fuori porta)
+    // ricadono su un'interrogazione propria, finché il budget lo consente.
+    const { dentro, fuori, riquadro } = dividiPerRiquadro(ancorate, coordinate);
+    const conCandidati: GiornataConCandidati[] = [];
+
+    const raccogli = (giornata: GiornataAncorata, luoghi: OverpassPlace[]) => {
+      const candidates = selectNearbyCandidates(luoghi, giornata.lat, giornata.lon);
+      if (candidates.length > 0) {
+        conCandidati.push({ date: giornata.date, anchorTitle: giornata.anchorTitle, candidates });
+      }
+    };
+
+    // Il timeout non è fisso: è il minimo fra il tetto per interrogazione e quel che resta
+    // della fase. È così che i tetti tornano a sommarsi (vedi il conto sopra).
+    const timeoutResiduo = () => Math.min(OVERPASS_TIMEOUT_MS, preModelDeadline - Date.now());
+
+    if (riquadro && dentro.length > 0) {
+      const timeout = timeoutResiduo();
+      if (timeout >= MIN_OVERPASS_TIMEOUT_MS) {
+        const luoghi = await fetchPlacesInBoundingBox(riquadro, timeout);
+        for (const giornata of dentro) raccogli(giornata, luoghi);
+      } else {
+        console.error("Consigli cena: tempo insufficiente per interrogare Overpass, nessun candidato");
+      }
+    }
+
+    for (const giornata of fuori) {
+      const timeout = timeoutResiduo();
+      if (timeout < MIN_OVERPASS_TIMEOUT_MS) {
+        console.error(`Consigli cena: tempo esaurito, ${giornata.date} resta senza candidati`);
+        break;
+      }
+      raccogli(giornata, await fetchPlacesAround(giornata.lat, giornata.lon, timeout));
+    }
+
+    // Le giornate fuori rettangolo sono state raccolte in coda: il prompt le vuole in
+    // ordine di calendario, come le legge l'utente.
+    conCandidati.sort((a, b) => a.date.localeCompare(b.date));
 
     // Nessun candidato da nessuna parte: non è un errore, è una risposta onesta.
     if (conCandidati.length === 0) {
@@ -228,11 +296,11 @@ export async function POST(request: Request) {
             config: {
               responseMimeType: "application/json",
               responseJsonSchema: z.toJSONSchema(dinnerSuggestionsResponseSchema),
-              // Largo per quel che serve: `GIORNATE_PER_GRUPPO` e `PRE_MODEL_PHASE_MS`
-              // limitano la risposta a circa sei voci (vedi il conto sopra), non a una per
-              // giornata di viaggio. Un itinerario di quattordici giorni non produce
-              // quattordici scelte, quindi il caso lungo non è mai stato un rischio di
-              // troncamento.
+              // Ora la risposta può davvero avere **una voce per giornata di viaggio**:
+              // fino al 2026-08-26 il tetto di fase la fermava attorno alla sesta, ed è
+              // proprio il limite che l'interrogazione unica ha rimosso. Quattordici voci
+              // da un identificativo e una frase stanno larghe in ottomila token, ma il
+              // margine non va più giustificato con "tanto sono sei".
               maxOutputTokens: 8000,
               thinkingConfig: { thinkingBudget: 512 },
               httpOptions: { timeout: callTimeoutMs, retryOptions: { attempts: 1 } },
