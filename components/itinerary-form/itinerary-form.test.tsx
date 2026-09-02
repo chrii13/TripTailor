@@ -64,6 +64,9 @@ const ACTIVITY = {
 };
 
 beforeEach(() => {
+  // Il risultato viene salvato in sessionStorage, che in jsdom sopravvive fra un
+  // test e l'altro: senza questa riga un test troverebbe l'itinerario del precedente.
+  sessionStorage.clear();
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(TODAY);
   fetchMock = pendingFetch();
@@ -225,6 +228,66 @@ describe("ItineraryForm — errori di validazione", () => {
     expect(document.getElementById(messageId!)).toHaveTextContent(
       "Completa i dati di ogni viaggiatore"
     );
+  });
+});
+
+describe("ItineraryForm — itinerario ripreso dalla sessione", () => {
+  /** Genera un itinerario e restituisce il numero di chiamate fatte alla route. */
+  async function generaItinerario(user: UserEvent) {
+    await fillValidForm(user, { from: new Date(2026, 4, 20), to: new Date(2026, 4, 24) });
+    await user.click(screen.getByRole("button", { name: "Genera itinerario" }));
+    await screen.findByRole("heading", { name: /Si parte per Roma, Italia/ });
+  }
+
+  function generateCalls(): unknown[][] {
+    return fetchMock.mock.calls.filter(([url]) => String(url) === "/api/generate-itinerary");
+  }
+
+  beforeEach(() => {
+    fetchMock = respondingFetch(200, {
+      itinerary: {
+        days: [
+          { date: "2026-05-20", mattina: [ACTIVITY], pomeriggio: [], sera: [] },
+          { date: "2026-05-21", mattina: [], pomeriggio: [], sera: [] },
+        ],
+      },
+      weather: null,
+      countryInfo: null,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  it("dopo un rimontaggio l'itinerario torna, senza rigenerarlo", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+    const { unmount } = render(<ItineraryForm />);
+    await generaItinerario(user);
+    unmount();
+
+    // Il ricaricamento della pagina, visto da qui: stesso componente, stato azzerato.
+    render(<ItineraryForm />);
+
+    expect(
+      await screen.findByRole("heading", { name: /Si parte per Roma, Italia/ })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Colosseo")).toBeInTheDocument();
+    // Rigenerare costerebbe mezzo minuto, quota Gemini, e darebbe un itinerario diverso.
+    expect(generateCalls()).toHaveLength(1);
+  });
+
+  it("con una destinazione nuova nella query string non ripristina niente", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+    const { unmount } = render(<ItineraryForm />);
+    await generaItinerario(user);
+    unmount();
+
+    render(<ItineraryForm prefill={decodeCreaPrefill({ destination: "Lisbona, Portogallo" })} />);
+
+    // Chi arriva da /crea?destination=Lisbona ha espresso un'intenzione nuova:
+    // ritrovarsi l'itinerario di Roma sarebbe peggio che perderlo.
+    expect(screen.queryByRole("heading", { name: /Si parte per Roma/ })).toBeNull();
+    expect(screen.getByLabelText("Destinazione")).toHaveValue("Lisbona, Portogallo");
   });
 });
 

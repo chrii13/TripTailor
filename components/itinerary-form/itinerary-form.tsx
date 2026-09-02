@@ -30,6 +30,8 @@ import type { ErrorCode } from "@/lib/generate-itinerary-errors";
 import type { ItineraryResponse } from "@/lib/itinerary-schema";
 import type { DailyClimateAverage } from "@/lib/climate-forecast";
 import type { CountryInfo } from "@/lib/country-info";
+import type { DinnerSuggestion } from "@/app/api/dinner-suggestions/route";
+import { loadCreaSession, saveCreaSession } from "@/lib/crea-session-storage";
 import { ParticipantRow } from "./participant-row";
 import { ItineraryResult } from "./itinerary-result";
 import { DestinationAutocomplete } from "./destination-autocomplete";
@@ -86,6 +88,9 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
   const [itinerary, setItinerary] = useState<ItineraryResponse | null>(null);
   const [weather, setWeather] = useState<DailyClimateAverage[] | null>(null);
   const [countryInfo, setCountryInfo] = useState<CountryInfo | null>(null);
+  // Tenuti qui e non solo dentro il risultato: sono ciò che va salvato con il resto
+  // della sessione, altrimenti dopo un ricaricamento verrebbero richiesti da capo.
+  const [dinner, setDinner] = useState<DinnerSuggestion[] | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [participantsPopoverOpen, setParticipantsPopoverOpen] = useState(false);
@@ -115,6 +120,7 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
     watch,
     setValue,
     trigger,
+    reset,
     formState: { errors },
   } = useForm<TripFormValues>({
     resolver: zodResolver(tripFormSchema),
@@ -133,6 +139,37 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
   const participantsError = Array.isArray(errors.participants)
     ? "Completa i dati di ogni viaggiatore"
     : errors.participants?.message;
+
+  // Arrivare con dei parametri in query string è esprimere un'intenzione nuova:
+  // ritrovarsi l'itinerario di Roma dopo aver chiesto /crea?destination=Lisbona
+  // è peggio che perderlo. In quel caso la sessione salvata non si riprende.
+  const hasPrefill = !!prefill && Object.keys(prefill).length > 0;
+
+  useEffect(() => {
+    if (hasPrefill) return;
+
+    const stored = loadCreaSession();
+    if (!stored) return;
+
+    setSubmittedData(stored.submitted);
+    setItinerary(stored.itinerary);
+    setWeather(stored.weather);
+    setCountryInfo(stored.countryInfo);
+    setDinner(stored.dinner);
+    setMode(stored.mode);
+    // Il form dietro al risultato deve corrispondere a ciò che è a schermo: chi
+    // preme «Modifica» deve ritrovare la sua richiesta, non il form vuoto.
+    reset(stored.submitted);
+  }, [hasPrefill, reset]);
+
+  // Un salvataggio solo, che copre da sé i tre momenti che contano: la generazione
+  // riuscita, il ritorno al form con «Modifica» (cambia il modo) e l'arrivo dei
+  // consigli sulla cena. Durante il caricamento non si tocca niente, perché la
+  // sessione precedente è ancora quella valida finché la nuova non è arrivata.
+  useEffect(() => {
+    if (mode === "loading" || !submittedData || !itinerary) return;
+    saveCreaSession({ mode, submitted: submittedData, itinerary, weather, countryInfo, dinner });
+  }, [mode, submittedData, itinerary, weather, countryInfo, dinner]);
 
   useEffect(() => {
     if (mode !== "loading") return;
@@ -176,6 +213,9 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
       setItinerary(body.itinerary);
       setWeather(body.weather ?? null);
       setCountryInfo(body.countryInfo ?? null);
+      // I consigli di un itinerario precedente non valgono per questo: si riparte
+      // da zero, altrimenti il risultato nuovo nascerebbe con le cene di quello vecchio.
+      setDinner(null);
       setMode("result");
     } catch (error) {
       const code = error instanceof Error && isErrorCode(error.message) ? error.message : "invalid_response";
@@ -196,6 +236,8 @@ export function ItineraryForm({ prefill }: ItineraryFormProps) {
         weather={weather}
         countryInfo={countryInfo}
         onEdit={handleEdit}
+        initialDinner={dinner}
+        onDinnerLoaded={setDinner}
       />
     );
   }
