@@ -2,6 +2,7 @@
 // calendario e con TZ=UTC lo slittamento di un giorno non si riprodurrebbe.
 process.env.TZ = "Europe/Rome";
 
+import type { ComponentProps } from "react";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -52,7 +53,7 @@ const SUGGESTION = {
   lon: 12.4768,
 };
 
-function renderResult() {
+function renderResult(extra: Partial<ComponentProps<typeof ItineraryResult>> = {}) {
   return render(
     <ItineraryResult
       tripData={TRIP}
@@ -60,6 +61,7 @@ function renderResult() {
       weather={null}
       countryInfo={null}
       onEdit={() => {}}
+      {...extra}
     />
   );
 }
@@ -355,5 +357,53 @@ describe("ItineraryResult — consiglio sulla cena", () => {
     const slot = dayCard("2026-05-21").querySelector("[data-dinner-slot]") as HTMLElement;
     expect(within(slot).queryByRole("link")).toBeNull();
     expect(slot.textContent).toContain(SUGGESTION.name);
+  });
+});
+
+describe("ItineraryResult — consigli ripresi dalla sessione", () => {
+  it("con i consigli già in mano non tocca la rete", () => {
+    renderResult({ initialDinner: [SUGGESTION] });
+
+    // Rifarli costerebbe otto secondi, un'interrogazione a Overpass e una chiamata
+    // a Gemini, e una giornata storta di Overpass li farebbe sparire.
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(within(dayCard("2026-05-21")).getByText(SUGGESTION.name)).toBeInTheDocument();
+  });
+
+  it("con un elenco vuoto salvato li richiede lo stesso: un guasto non è una risposta", async () => {
+    // La route risponde `200 { suggestions: [] }` anche quando Overpass va in timeout
+    // o il modello fallisce. Trattarlo come "già ottenuti" congelerebbe un guasto
+    // passeggero per tutta la sessione, mentre prima della persistenza un F5 riprovava.
+    renderResult({ initialDinner: [] });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(
+      fetchMock.mock.calls.filter(([url]) => String(url) === "/api/dinner-suggestions")
+    ).toHaveLength(1);
+  });
+
+  it("un elenco vuoto in arrivo non viene passato al genitore da salvare", async () => {
+    fetchMock = respondingFetch({ suggestions: [] });
+    vi.stubGlobal("fetch", fetchMock);
+    const onDinnerLoaded = vi.fn();
+
+    renderResult({ onDinnerLoaded });
+
+    // L'attesa è finita: la riga della giornata senza consiglio è già a schermo.
+    await within(dayCard("2026-05-20")).findByText("Per questa sera non abbiamo un consiglio.");
+    // L'altro lato della stessa regola: quel che non è una risposta non si salva.
+    expect(onDinnerLoaded).not.toHaveBeenCalled();
+  });
+
+  it("i consigli arrivati risalgono al genitore, che è chi li salva", async () => {
+    fetchMock = respondingFetch({ suggestions: [SUGGESTION] });
+    vi.stubGlobal("fetch", fetchMock);
+    const onDinnerLoaded = vi.fn();
+
+    renderResult({ onDinnerLoaded });
+
+    await screen.findByText(SUGGESTION.name);
+    expect(onDinnerLoaded).toHaveBeenCalledTimes(1);
+    expect(onDinnerLoaded.mock.calls[0][0]).toEqual([SUGGESTION]);
   });
 });

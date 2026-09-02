@@ -84,6 +84,22 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// La forma **come sta scritta in sessionStorage**: le date sono stringhe "yyyy-MM-dd",
+// perché è così che saveCreaSession le serializza. I test che scrivono a mano devono
+// partire da qui e non da SESSIONE, che tiene oggetti Date: JSON.stringify li
+// renderebbe "2026-05-19T22:00:00.000Z", che lo schema rifiuta — e ognuno di questi
+// test finirebbe per verificare quello invece del difetto che dice di proteggere.
+function grezza(patch: Record<string, unknown> = {}): string {
+  return JSON.stringify({
+    ...SESSIONE,
+    submitted: {
+      ...SESSIONE.submitted,
+      dateRange: { from: "2026-05-20", to: "2026-05-21" },
+    },
+    ...patch,
+  });
+}
+
 describe("crea-session-storage — andata e ritorno", () => {
   it("restituisce intera la sessione salvata", () => {
     saveCreaSession(SESSIONE);
@@ -97,6 +113,9 @@ describe("crea-session-storage — andata e ritorno", () => {
     expect(letta!.submitted.dateRange.from).toBeInstanceOf(Date);
     expect(letta!.submitted.dateRange.from!.getTime()).toBe(new Date(2026, 4, 20).getTime());
     expect(letta!.submitted.dateRange.to!.getDate()).toBe(21);
+    // Sul filo ci sono andate come date di calendario, senza fuso: niente "T", niente "Z".
+    const grezzo = JSON.parse(sessionStorage.getItem(CHIAVE)!);
+    expect(grezzo.submitted.dateRange).toEqual({ from: "2026-05-20", to: "2026-05-21" });
     expect(letta!.itinerary.days).toHaveLength(2);
     expect(letta!.itinerary.days[0].mattina[0].title).toBe("Colosseo");
     expect(letta!.weather).toHaveLength(1);
@@ -114,6 +133,24 @@ describe("crea-session-storage — andata e ritorno", () => {
   it("senza niente in memoria restituisce null", () => {
     expect(loadCreaSession()).toBeNull();
   });
+
+  it("il giorno del viaggio non slitta se il fuso cambia a scheda aperta", () => {
+    // Non è un caso di scuola in un'app di viaggi: un portatile che atterra altrove e
+    // ricarica la pagina cambia fuso senza chiudere la scheda. Con un Date serializzato
+    // in UTC l'istante sopravvivrebbe e il giorno reso scivolerebbe indietro di uno —
+    // lo stesso difetto del 2026-08-21, dentro casa nostra.
+    saveCreaSession(SESSIONE);
+
+    process.env.TZ = "America/New_York";
+    try {
+      const letta = loadCreaSession();
+      expect(letta!.submitted.dateRange.from!.getFullYear()).toBe(2026);
+      expect(letta!.submitted.dateRange.from!.getMonth()).toBe(4);
+      expect(letta!.submitted.dateRange.from!.getDate()).toBe(20);
+    } finally {
+      process.env.TZ = "Europe/Rome";
+    }
+  });
 });
 
 describe("crea-session-storage — contenuto non valido", () => {
@@ -123,29 +160,38 @@ describe("crea-session-storage — contenuto non valido", () => {
   });
 
   it("scarta una sessione con un campo mancante", () => {
-    const senzaItinerario = { ...SESSIONE, itinerary: undefined };
-    sessionStorage.setItem(CHIAVE, JSON.stringify(senzaItinerario));
+    sessionStorage.setItem(CHIAVE, grezza({ itinerary: undefined }));
     expect(loadCreaSession()).toBeNull();
   });
 
   it("scarta una sessione con un campo del tipo sbagliato", () => {
-    const budgetSbagliato = {
-      ...SESSIONE,
-      submitted: { ...SESSIONE.submitted, budget: "molti soldi" },
-    };
-    sessionStorage.setItem(CHIAVE, JSON.stringify(budgetSbagliato));
+    const grezzo = JSON.parse(grezza());
+    grezzo.submitted.budget = "molti soldi";
+    sessionStorage.setItem(CHIAVE, JSON.stringify(grezzo));
     expect(loadCreaSession()).toBeNull();
   });
 
   it("scarta un modo che non esiste", () => {
-    sessionStorage.setItem(CHIAVE, JSON.stringify({ ...SESSIONE, mode: "risultato" }));
+    sessionStorage.setItem(CHIAVE, grezza({ mode: "risultato" }));
     expect(loadCreaSession()).toBeNull();
   });
 
-  it("scarta un consiglio sulla cena malformato senza far cadere il resto", () => {
-    const cenaSbagliata = { ...SESSIONE, dinner: [null] };
-    sessionStorage.setItem(CHIAVE, JSON.stringify(cenaSbagliata));
+  it("scarta un periodo incompleto: un itinerario senza date sarebbe monco", () => {
+    const grezzo = JSON.parse(grezza());
+    grezzo.submitted.dateRange = {};
+    sessionStorage.setItem(CHIAVE, JSON.stringify(grezzo));
     expect(loadCreaSession()).toBeNull();
+  });
+
+  it("con i consigli sulla cena malformati tiene l'itinerario e butta solo la cena", () => {
+    // Il guasto resta confinato al campo meno importante: la cena si rigenera in otto
+    // secondi, l'itinerario costa trenta secondi di Gemini e non deve cadere con lei.
+    sessionStorage.setItem(CHIAVE, grezza({ dinner: [null] }));
+
+    const letta = loadCreaSession();
+    expect(letta).not.toBeNull();
+    expect(letta!.itinerary.days).toHaveLength(2);
+    expect(letta!.dinner).toBeNull();
   });
 });
 

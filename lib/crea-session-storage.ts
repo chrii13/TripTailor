@@ -8,6 +8,7 @@ import {
   type TripFormValues,
 } from "./schema";
 import { itineraryResponseSchema, type ItineraryResponse } from "./itinerary-schema";
+import { calendarDateSchema, toCalendarDate } from "./calendar-date";
 import type { DailyClimateAverage } from "./climate-forecast";
 import type { CountryInfo } from "./country-info";
 // Solo il tipo, cancellato in compilazione: la forma del consiglio è quella che la
@@ -33,16 +34,22 @@ export interface CreaSession {
   dinner: DinnerSuggestion[] | null;
 }
 
-// Le date del form sono oggetti Date e JSON.stringify le serializza in UTC
-// ("...T22:00:00Z" per una mezzanotte italiana). Qui **non** slitta niente, ed è
-// il motivo per cui questa è l'unica deroga alla regola del "solo yyyy-MM-dd sul
-// filo" scritta in CLAUDE.md: quella regola esiste perché il *server* rilegge in
-// UTC ciò che il *browser* ha scritto nel proprio fuso, mentre questo valore non
-// lascia mai il dispositivo — lo rileggiamo noi, nello stesso fuso, e l'istante
-// torna identico. È anche ciò che /scopri già fa con le sue proposte.
+// Le date del viaggio restano date di *calendario* anche qui dentro, cioè stringhe
+// "yyyy-MM-dd" ricostruite come mezzanotte locale: la regola di lib/calendar-date.ts
+// vale su questo filo come su quello verso il server. Sembrerebbe superfluo — il
+// valore non lascia mai il dispositivo, e un `Date` serializzato in UTC tornerebbe
+// identico purché il fuso non cambi. Ma questa è un'app di viaggi: un portatile che
+// atterra in un altro fuso e ricarica la pagina cambia il fuso **a scheda aperta**,
+// e allora l'istante sopravvive mentre il giorno di calendario reso slitta — lo
+// stesso difetto del 2026-08-21, in casa nostra. L'assunzione "stesso fuso" non
+// regge proprio nel dominio di quest'app.
+//
+// Le due date sono obbligatorie e non opzionali: un itinerario senza date non esiste,
+// e ripristinare un risultato con il periodo mancante darebbe una pagina monca invece
+// del form vuoto. È lo stesso motivo del .refine sul periodo in discover-form.tsx.
 const storedDateRangeSchema = z.object({
-  from: z.coerce.date().optional(),
-  to: z.coerce.date().optional(),
+  from: calendarDateSchema,
+  to: calendarDateSchema,
 });
 
 // La forma va validata, non dedotta con un cast: sessionStorage è scrivibile da
@@ -77,9 +84,13 @@ const storedCountryInfoSchema = z.object({
   timezones: z.array(z.string()),
 });
 
-// Gli stessi campi che il client controlla su ciò che arriva dalla route (vedi
-// accettaConsigli in itinerary-result.tsx): quelli resi come figli JSX diretti
-// devono esserci ed essere stringhe, o la resa lancia.
+// Più severo di accettaConsigli in itinerary-result.tsx, che si limita ai tre campi
+// resi come figli JSX diretti (date, name, comment) perché deve accettare quel che la
+// route manda davvero, campi facoltativi compresi. Qui invece il contenuto lo abbiamo
+// scritto noi, e sappiamo esattamente com'era: pretendere anche i campi che la resa
+// stringifica costa nulla, e uno che non torna vuol dire che quel valore non è nostro.
+// La severità non è un rischio proprio perché il campo è isolato (vedi il .catch(null)
+// qui sotto): quel che non torna toglie di mezzo la cena, non la sessione.
 const storedDinnerSchema = z.array(
   z.object({
     date: z.string(),
@@ -99,12 +110,27 @@ const storedSessionSchema = z.object({
   itinerary: itineraryResponseSchema,
   weather: storedWeatherSchema.nullable(),
   countryInfo: storedCountryInfoSchema.nullable(),
-  dinner: storedDinnerSchema.nullable(),
+  // Il guasto si isola sul campo meno importante: la cena si rigenera in otto secondi,
+  // l'itinerario costa trenta secondi di Gemini e non deve cadere per colpa sua. Senza
+  // il .catch il campo più fragile della sessione butterebbe via il più prezioso.
+  dinner: storedDinnerSchema.nullable().catch(null),
 });
 
 export function saveCreaSession(session: CreaSession): void {
+  const { from, to } = session.submitted.dateRange;
+  // Senza le date non c'è un itinerario da riprendere: si evita di scrivere una
+  // sessione che la rilettura scarterebbe comunque.
+  if (!from || !to) return;
+
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    const payload = {
+      ...session,
+      submitted: {
+        ...session.submitted,
+        dateRange: { from: toCalendarDate(from), to: toCalendarDate(to) },
+      },
+    };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch {
     // sessionStorage non disponibile (es. navigazione privata): non blocca il flusso
   }
