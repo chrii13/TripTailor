@@ -20,7 +20,7 @@
   - **Test:** `npm test` (vitest, 520 tests across 49 test files; due ambienti — vedi "Test dei componenti" più sotto; `.claude/**` è escluso in `vitest.config.ts`, il comando semplice basta)
   - **Lint/Typecheck:** `npm run lint`
 - **Architecture & Conventions:**
-  - **Stato:** Fase 1 in corso — scaffold Next.js + landing page informativa + form di input utente su route dedicata. Nessuna logica AI/meteo/calendario/mobile ancora implementata (fasi successive).
+  - **Stato (aggiornato 2026-09-03):** in produzione con generazione AI dell'itinerario, ricerca inversa dal budget, medie climatiche storiche, consigli sulla cena da OpenStreetMap, consigli sulla valigia calcolati, export PDF e file calendario, e persistenza di sessione su /crea e /scopri. **Restano non fatti** l'export verso Google Calendar (oggi si scarica un file .ics) e l'app mobile. La dicitura «Fase 1» che compare più sotto è storica: descrive i vincoli sotto cui sono nate le prime schermate, non lo stato attuale.
   - **Struttura:**
     ```
     app/
@@ -37,6 +37,10 @@
       scopri/
         page.tsx             # intestazione sticky + <DiscoverForm>
       api/
+        generate-itinerary/
+          route.ts           # form -> itinerario (geocodifica + meteo + Gemini)
+        geocode-autocomplete/
+          route.ts           # suggerimenti di destinazione mentre si scrive (LocationIQ)
         discover-trips/
           route.ts           # budget+viaggiatori+date+partenza → proposte costificate
         dinner-suggestions/
@@ -98,12 +102,26 @@
       dinner-suggestions-prompt.ts  # prompt (funzione pura)
       verify-dinner-choice.ts    # l'id scelto dal modello deve essere in elenco, altrimenti niente consiglio
       consigli-valigia.ts        # dalle medie climatiche alla lista di cosa portare (funzione pura, niente modello)
+      itinerary-schema.ts        # schema della risposta AI dell'itinerario (giorni, attività, titoli)
+      itinerary-prompt.ts        # prompt dell'itinerario (funzione pura)
+      generate-itinerary-request.ts  # schema del corpo della richiesta, date passate rifiutate
+      generate-itinerary-errors.ts   # codici d'errore condivisi + classifyFinishReason
+      gemini-client.ts           # chiamata a Gemini con cascata di modelli e di chiavi
+      gemini-api-keys.ts         # chiave primaria e di riserva
+      gemini-call-budget.ts      # quanto tempo resta a un tentativo (getCallAttemptBudget)
+      climate-forecast.ts        # medie climatiche storiche da Open-Meteo (degrada a meno anni se il tempo stringe)
+      geocode-destination.ts     # coordinate della destinazione (LocationIQ)
+      country-info.ts            # valuta, lingua, fuso del paese di destinazione
+      itinerary-pdf.tsx          # il documento PDF (@react-pdf/renderer)
+      itinerary-to-ics.ts        # l'itinerario come file calendario
+      dinner-map-link.ts         # link alla mappa del locale (nome + coordinate)
+      use-media-query.ts         # hook per le soglie di larghezza (vedi la nota sul calendario)
     ```
   - Landing page (`/`) separata dal form (`/crea`), aggiunta 2026-08-17: hero con bottone centrale "Crea il tuo itinerario", sezione mete più gettonate (solo testo/icone, niente foto — coerente con "niente backend extra" di Fase 1), sezione identità del sito, sezione "Come funziona" (numerata perché descrive una sequenza reale del processo). Palette e font invariati rispetto al resto dell'app. Animazioni con framer-motion (fade/stagger in hero, reveal on-scroll nelle sezioni), `useReducedMotion` rispettato ovunque.
   - Le card delle mete gettonate sono cliccabili (aggiunto 2026-08-18): portano a `/crea?destination=<nome, paese>`, `app/crea/page.tsx` legge i query param `destination`, `from`, `to`, `budget` e `p` (server component async, Next.js 15+/16 `searchParams` è una Promise) tramite `decodeCreaPrefill` (`lib/crea-query-params.ts`) e passa il risultato come prop `prefill` (`CreaPrefill`) a `<ItineraryForm>`, che lo usa per precompilare destinazione, date, budget e partecipanti.
   - Header di `/crea` (rifatto 2026-08-18): sticky, logo a sinistra + link "← Home" a destra (prima era solo il logo, striscia vuota).
   - Barra sticky della landing (`site-nav.tsx`, 2026-08-19): le voci in riga compaiono solo da `lg` (1024px) in su — sotto vanno in overflow orizzontale, perché logo + pill delle quattro voci + CTA chiedono 827px. Sotto `lg` le stesse voci vivono in un menu a comparsa (Popover) aperto da un bottone pill con icona a destra; le etichette restano intere (non accorciarle) e "Dal budget" non è più nascosta sotto `sm`, sta nel menu come le altre. Il bottone "Crea itinerario" resta `hidden sm:inline-flex`, ma sotto `sm` la stessa azione vive in fondo al menu a comparsa (`sm:hidden`), altrimenti da telefono la barra non porterebbe a `/crea` in nessun modo. Aggiungendo una voce si aggiorna solo `NAV_LINKS`, ma va rimisurata la larghezza minima della riga: se supera 1024px serve alzare la soglia.
-  - Nessun backend/API route nella Fase 1 oltre a quelle già esistenti (generate-itinerary, geocode-autocomplete): tutto client-side, dati tenuti in stato React (nessuna persistenza).
+  - **Le route API sono quattro** (aggiornato 2026-09-03): generate-itinerary, geocode-autocomplete, discover-trips, dinner-suggestions. La regola originaria «niente backend, nessuna persistenza, tutto in stato React» **non vale più**: è stata superata di proposito prima dalla generazione AI, poi dalla ricerca inversa, poi dalla persistenza di sessione. Resta però vero lo spirito: **nessun database, nessun account, nessun dato utente conservato sui nostri server** — quel che si salva vive in sessionStorage, nel browser di chi naviga, e muore con la scheda.
   - Il riepilogo post-invio del form appare nella stessa pagina (il form si trasforma in riepilogo), non su una route separata. Bottone "Modifica" riporta al form con i dati precompilati.
   - Composizione gruppo: righe dinamiche per partecipante (tipo + età), non semplice conteggio.
   - Date viaggio: date range picker (check-in/check-out).
@@ -115,7 +133,7 @@
     **Scala dei titoli della landing (2026-08-23):** `h1` `clamp(2.5rem,5.5vw,4rem)`, `h2` `clamp(2rem,4.6vw,3rem)`, `h2` della CTA finale `clamp(2.375rem,5.2vw,3.75rem)`. Tutti fluidi con pendenze decrescenti, così l'h1 resta il testo più grande a **ogni** larghezza (rapporto h1/h2 di sezione 1,20-1,25; h1/h2 della CTA 1,05-1,06). Le pendenze non vanno abbassate ancora: un primo tentativo (`4vw` per le sezioni, `4.6vw` per la CTA) correggeva sì la gerarchia, ma faceva collassare i titoli di sezione su tutta la fascia 640-1280px — 30,7px a 768px, cioè il 2% in più che a 375px con un contenitore quasi doppio. Non reintrodurre gradini fissi tipo `text-3xl sm:text-5xl`: saltando di netto a 640px rendevano gli h2 più grandi dell'h1 su tutta la fascia 640–873px. Analisi comparativa e razionale in `docs/design/wise-breakdown.html`.
   - Design docs dettagliate per fase in `docs/superpowers/specs/`.
   - Composizione gruppo: 3 tipi (Bambino/a 0-12, Ragazzo/a 13-25, Adulto/a 26-100), età obbligatoria da selezionare esplicitamente (nessun default) tramite menu a tendina, non input numerico libero.
-  - Decisione (2026-08-11): l'autocompletamento della Destinazione (suggerimenti città mentre l'utente scrive) è rimandato alla Fase 2, da introdurre insieme al backend per la generazione AI — richiede una API route (es. proxy verso OpenStreetMap Nominatim) e quindi rompe la regola "niente backend" della Fase 1, meglio farlo in un colpo solo con l'altro backend.
+  - L'autocompletamento della Destinazione **è stato fatto** e vive in app/api/geocode-autocomplete/route.ts (LocationIQ, non Nominatim come si era ipotizzato il 2026-08-11). Fu rimandato allora per non rompere la regola «niente backend», ed è arrivato insieme alla generazione AI come previsto.
   - Pattern "Date del viaggio" e "Chi viaggia": bottone compatto con icona + testo auto-esplicativo che apre un Popover (stile Booking.com), senza etichetta separata sopra (evita la ridondanza label+testo). "Chi viaggia" apre un Popover con le righe tipo+età per persona (età individuale mantenuta, non un contatore aggregato come Booking) e un bottone "Fatto" per chiudere. **Riconfermato il 2026-08-18**: questi due restano gli unici campi senza etichetta sopra, mentre Destinazione, Budget, Stile e "Cosa non vuoi perderti" ce l'hanno. L'asimmetria è consapevole, non una dimenticanza — non "correggerla" aggiungendo le etichette senza chiedere. Nota per chi rivaluterà la scelta: la motivazione originale (evitare la ridondanza etichetta+testo) di fatto non vale più, perché gli altri campi hanno già etichetta sopra e placeholder dentro; l'utente ha comunque scelto di tenere l'asimmetria.
   - Il design crema/smeraldo della prima versione è stato abbandonato il 2026-08-17 in favore del sistema descritto sopra: la landing è passata a Canvas bianco + Bosco + Sole. La pagina `/crea` eredita i nuovi token (card del form ora `shadow-none border-border`, niente più gradiente/ombra).
   - Enfasi sulle parole chiave (aggiunta 2026-08-19, ristretta ai titoli il 2026-08-19): classe utility `.emphasis-mark-display` in `app/globals.css`, solo per i titoli Fraunces — una barra Sole come `background-image` dietro la parola, non colore del testo, perché il giallo su testo misura 1.9:1 (sotto la soglia 4.5:1) mentre come sfondo passa dietro ai discendenti e resta a norma. Applicata a 1-2 parole per titolo in `components/landing/` (mai vicino a un bottone CTA): "itinerario" e "su misura" in hero.tsx, "gettonate" in popular-destinations.tsx, "budget" in reverse-search.tsx. Non più usata sul corpo testo: rimossa da "si parte dal budget" (how-it-works.tsx) e "5 possibili proposte di viaggio" (reverse-search.tsx), e con essa la classe `.emphasis-mark` (corpo testo), eliminata da `app/globals.css` perché rimasta senza usi. Saltate volutamente site-identity.tsx (il titolo è già tutto in `text-voltage`, un'altra parola sottolineata affollerebbe la sezione) e final-cta.tsx (è la fascia della CTA stessa, che già usa `bg-voltage` sul bottone).
