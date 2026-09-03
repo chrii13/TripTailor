@@ -333,9 +333,12 @@ export function ItineraryDocument({ tripData, itinerary, weather, countryInfo }:
                 </Text>
                 <Text style={s.dayDate}>{dayDate}</Text>
               </View>
+              {/* "Media storica" e non "degli ultimi 5 anni": getClimateAverages
+                  degrada di proposito a meno anni quando il tempo stringe, quindi il
+                  numero sarebbe falso proprio nel caso in cui il servizio è lento. */}
               <Text style={s.climate}>
                 {dayWeather
-                  ? `Media degli ultimi 5 anni: ${dayWeather.tempMaxAvg}° / ${dayWeather.tempMinAvg}°, pioggia ${dayWeather.precipitationChance}%`
+                  ? `Media storica: ${dayWeather.tempMaxAvg}° / ${dayWeather.tempMinAvg}°, pioggia ${dayWeather.precipitationChance}%`
                   : "Media climatica non disponibile per questa data."}
               </Text>
 
@@ -365,9 +368,15 @@ export function ItineraryDocument({ tripData, itinerary, weather, countryInfo }:
             <View style={s.packing} wrap={false}>
               <Text style={s.packingTitle}>Cosa mettere in valigia</Text>
               {/* La provenienza del dato viene prima della lista: sono medie
-                  storiche, non una previsione, e chi legge deve saperlo prima. */}
+                  storiche, non una previsione, e chi legge deve saperlo prima.
+
+                  "medie storiche" e non "degli ultimi cinque anni": getClimateAverages
+                  degrada di proposito a meno anni quando il tempo stringe, quindi il
+                  numero sarebbe un dettaglio verificabile che non abbiamo verificato —
+                  la stessa classe di affermazione che ha già portato a sostituire "a
+                  piedi" con "in linea d'aria". */}
               <Text style={s.packingNote}>
-                Dalle medie degli ultimi cinque anni per queste date: da {consigli.minima}° a{" "}
+                Dalle medie storiche per queste date: da {consigli.minima}° a{" "}
                 {consigli.massima}°. Non è una previsione.
               </Text>
               {consigli.voci.map((voce) => (

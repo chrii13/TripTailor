@@ -127,7 +127,7 @@ describe("ItineraryDocument — lista della valigia", () => {
     expect(cercaTesto(FREDDO, "cappotto pesante")).toHaveLength(1);
     // La provenienza del dato viaggia con la lista: senza, il documento che ci si
     // porta dietro leggerebbe come una previsione.
-    expect(cercaTesto(FREDDO, "medie degli ultimi cinque anni")).toHaveLength(1);
+    expect(cercaTesto(FREDDO, "Dalle medie storiche")).toHaveLength(1);
   });
 
   it("senza dati climatici il documento non ha la lista", () => {
