@@ -15,7 +15,7 @@
 - **Leggere `CLAUDE.md` prima di toccare qualsiasi cosa.** Contiene regole non derogabili del progetto.
 - **Interfaccia in italiano.** Ogni stringa mostrata all'utente è in italiano.
 - **Commenti in italiano che spiegano il *perché*, non il *cosa*.** È lo stile di tutto il progetto.
-- **Nessun linguaggio da previsione.** Le cifre sono medie storiche degli ultimi 5 anni: la resa deve dirlo, e non deve mai suggerire che sia una previsione.
+- **Nessun linguaggio da previsione, e nessun numero di anni.** Le cifre sono medie storiche: la resa deve dire che sono storiche e che non sono una previsione, ma **non** deve promettere «gli ultimi cinque anni» — `getClimateAverages` degrada a meno anni quando il servizio è lento, quindi quel numero non è garantito.
 - **Sistema visivo (CLAUDE.md):** Nebbia `#ecefe9` per le superfici, Bosco `#1a4d33`, Inchiostro `#3d423c`, Sole `#f0b429`; `--border` `#d4dad1` è il filetto decorativo, `--input` `#7f8a7c` è **solo** il bordo dei controlli e non va usato su elementi non interattivi. Niente ombre, niente gradienti come superficie, `rounded-lg` (10px) per le card.
 - **Nessuna dipendenza nuova.** Non modificare `package.json`, `tsconfig.json`, `vitest.config.ts` o `eslint.config.mjs`.
 - **Modifiche chirurgiche.** Non rifattorizzare codice adiacente, non toccare codice morto preesistente.

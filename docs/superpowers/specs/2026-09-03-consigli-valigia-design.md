@@ -101,8 +101,10 @@ Due parole compaiono **in una fascia sola**, e non è una svista da riallineare:
 - **Nessuna quantità** («quattro magliette»): dipende da quanto si lava durante il viaggio,
   che non sappiamo. Un numero inventato è peggio di nessun numero.
 - **Nessun capo legato alle attività**: vedi il limite dichiarato sopra.
-- **Nessun linguaggio da previsione.** La riga di apertura dice che sono medie degli ultimi
-  cinque anni per quelle date. È la stessa classe di cautela già applicata al passaggio da
+- **Nessun linguaggio da previsione.** La riga di apertura dice che sono medie
+  **storiche** per quelle date, e non promette un numero di anni: la media si accontenta
+  degli anni raccolti quando il servizio è lento, quindi «cinque» sarebbe una promessa che
+  non possiamo mantenere. È la stessa classe di cautela già applicata al passaggio da
   «a piedi» a «in linea d'aria» sulla distanza del ristorante: non affermare ciò che non
   abbiamo verificato.
 

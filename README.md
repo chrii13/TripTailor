@@ -13,7 +13,7 @@ Non serve registrarsi e non viene salvato nulla: i dati vivono nello stato della
 Dal momento in cui premi *Genera itinerario*, in ordine:
 
 1. **La destinazione viene geolocalizzata** con LocationIQ, per ricavare coordinate e codice paese.
-2. **Si recuperano le medie climatiche** da Open-Meteo: per ciascun giorno del viaggio, la media delle stesse date nei cinque anni precedenti.
+2. **Si recuperano le medie climatiche** da Open-Meteo: per ciascun giorno del viaggio, la media delle stesse date negli anni precedenti — fino a cinque, meno se il servizio risponde lento.
 3. **Si compone il prompt** con destinazione, date, composizione del gruppo, budget, stile, tappa imperdibile e i dati climatici.
 4. **Gemini genera il piano**, che viene validato contro uno schema Zod: se la risposta non è conforme, la richiesta fallisce invece di mostrare dati incompleti.
 5. **Il risultato viene arricchito** con valuta, lingue e fusi orari del paese, ricavati offline da `world-countries`.
@@ -111,7 +111,7 @@ lib/
 
 ## Scelte tecniche
 
-**Il meteo è una media storica, non una previsione.** Un itinerario si pianifica con mesi di anticipo, quando nessuna previsione esiste. Open-Meteo viene interrogato sull'archivio degli ultimi cinque anni per le stesse date: dice cosa è ragionevole aspettarsi, non cosa succederà. Nell'interfaccia è scritto ovunque compaia il dato.
+**Il meteo è una media storica, non una previsione.** Un itinerario si pianifica con mesi di anticipo, quando nessuna previsione esiste. Open-Meteo viene interrogato sull'archivio degli anni precedenti per le stesse date: dice cosa è ragionevole aspettarsi, non cosa succederà. Nell'interfaccia il dato è etichettato come «media storica» ovunque compaia — **senza** promettere un numero di anni, perché quando il servizio è lento la media si accontenta di quelli raccolti.
 
 **Le chiamate climatiche sono sequenziali, non parallele.** Cinque richieste simultanee alla stessa API gratuita possono essere strozzate tutte insieme, e in quel caso l'itinerario esce senza meteo. In sequenza, con un ritentativo su 429 e 5xx, un anno che fallisce non compromette gli altri: la media si calcola su quelli riusciti.
 
