@@ -30,6 +30,7 @@ import type { Activity, ItineraryResponse } from "@/lib/itinerary-schema";
 import type { DailyClimateAverage } from "@/lib/climate-forecast";
 import type { CountryInfo } from "@/lib/country-info";
 import { buildItineraryIcs } from "@/lib/itinerary-to-ics";
+import { costruisciConsigliValigia } from "@/lib/consigli-valigia";
 import { pickDinnerAnchor } from "@/lib/dinner-anchor";
 import { buildDinnerMapUrl } from "@/lib/dinner-map-link";
 // Solo il tipo, cancellato in compilazione: la forma del consiglio è quella che la
@@ -373,6 +374,41 @@ function DinnerSuggestionBlock({ suggestion }: { suggestion: DinnerSuggestion })
   );
 }
 
+/**
+ * La lista di cosa portare, in fondo all'itinerario. Non ha stato e non chiede
+ * niente alla rete: si ricalcola dalle medie climatiche che il componente ha già
+ * fra le prop, ed è la ragione per cui — a differenza dei consigli sulla cena —
+ * qui non c'è persistenza, nessuno stato di attesa e nessun caso di guasto.
+ */
+function PackingList({ weather }: { weather: DailyClimateAverage[] | null }) {
+  const consigli = costruisciConsigliValigia(weather);
+  if (!consigli) return null;
+
+  return (
+    <section data-packing-list className="rounded-lg border border-border bg-secondary p-6">
+      <h3 className="font-display text-lg font-[725] tracking-[-0.01em] text-primary uppercase">
+        Cosa mettere in valigia
+      </h3>
+      {/* La riga di contesto viene prima della lista, non dopo: chi legge deve
+          sapere su cosa poggia il consiglio prima di leggerlo. E dice "medie degli
+          ultimi cinque anni" e non "previsioni", perché è quello che il dato è. */}
+      <p className="mt-1 text-sm text-muted-foreground">
+        Dalle medie degli ultimi cinque anni per queste date: da{" "}
+        <span className="tabular-nums">{consigli.minima}°</span> a{" "}
+        <span className="tabular-nums">{consigli.massima}°</span>. Non è una previsione.
+      </p>
+      <ul className="mt-4 space-y-2">
+        {consigli.voci.map((voce) => (
+          <li key={voce} className="flex gap-2 text-sm">
+            <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+            <span>{voce}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function ItineraryResult({
   tripData,
   itinerary,
@@ -687,6 +723,8 @@ export function ItineraryResult({
             );
           })}
         </motion.div>
+
+        <PackingList weather={weather} />
 
         <div className="flex flex-wrap items-center gap-3">
           <Button type="button" onClick={handleDownloadPdf} disabled={pdfState === "loading"} className="gap-2">

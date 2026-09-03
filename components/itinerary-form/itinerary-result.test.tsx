@@ -407,3 +407,37 @@ describe("ItineraryResult — consigli ripresi dalla sessione", () => {
     expect(onDinnerLoaded.mock.calls[0][0]).toEqual([SUGGESTION]);
   });
 });
+
+describe("ItineraryResult — consigli sulla valigia", () => {
+  it("con i dati climatici mostra la lista di cosa portare", () => {
+    // 3° di minima e 22° di massima: due fasce, e un'escursione che supera la soglia.
+    renderResult({
+      weather: [
+        { date: "2026-05-20", tempMinAvg: 3, tempMaxAvg: 8, precipitationChance: 0 },
+        { date: "2026-05-21", tempMinAvg: 15, tempMaxAvg: 22, precipitationChance: 0 },
+      ],
+    });
+
+    const blocco = document.querySelector("[data-packing-list]");
+    expect(blocco).not.toBeNull();
+    expect(blocco!.textContent).toContain("cappotto pesante");
+    expect(blocco!.textContent).toContain("Abbigliamento leggero");
+  });
+
+  it("dichiara che sono medie storiche e non una previsione", () => {
+    // La riga di contesto non è decorativa: senza di essa la lista si legge come
+    // una promessa sul tempo che farà, che non abbiamo modo di sostenere.
+    renderResult({
+      weather: [{ date: "2026-05-20", tempMinAvg: 14, tempMaxAvg: 20, precipitationChance: 0 }],
+    });
+
+    const blocco = document.querySelector("[data-packing-list]");
+    expect(blocco!.textContent).toMatch(/medi[ae]/i);
+    expect(blocco!.textContent).toContain("cinque anni");
+  });
+
+  it("senza dati climatici il blocco non compare affatto", () => {
+    renderResult({ weather: null });
+    expect(document.querySelector("[data-packing-list]")).toBeNull();
+  });
+});
