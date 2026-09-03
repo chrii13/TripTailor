@@ -104,3 +104,33 @@ describe("PDF dell'itinerario", () => {
     expect(blocchi).toBeGreaterThan(0);
   });
 });
+
+describe("ItineraryDocument — lista della valigia", () => {
+  // Il PDF è ciò che si porta dietro chi sta facendo la valigia col telefono
+  // appoggiato al letto: una lista che vive solo a schermo lì non serve.
+  const FREDDO = [{ date: "2026-09-12", tempMinAvg: 3, tempMaxAvg: 8, precipitationChance: 0 }];
+
+  /**
+   * Si passa il componente **chiamato**, non l'elemento JSX: `findElements` percorre
+   * i soli `children` e non esegue i componenti annidati, quindi da un elemento
+   * `<ItineraryDocument />` non troverebbe mai niente e il secondo test passerebbe
+   * per la ragione sbagliata.
+   */
+  function cercaTesto(weather: typeof FREDDO | null, atteso: string) {
+    return findElements(ItineraryDocument({ ...PDF_FIXTURE, weather }), (_stile, testoDiretto) =>
+      testoDiretto.includes(atteso)
+    );
+  }
+
+  it("la lista finisce nel documento", () => {
+    expect(cercaTesto(FREDDO, "Cosa mettere in valigia")).toHaveLength(1);
+    expect(cercaTesto(FREDDO, "cappotto pesante")).toHaveLength(1);
+    // La provenienza del dato viaggia con la lista: senza, il documento che ci si
+    // porta dietro leggerebbe come una previsione.
+    expect(cercaTesto(FREDDO, "medie degli ultimi cinque anni")).toHaveLength(1);
+  });
+
+  it("senza dati climatici il documento non ha la lista", () => {
+    expect(cercaTesto(null, "Cosa mettere in valigia")).toHaveLength(0);
+  });
+});
