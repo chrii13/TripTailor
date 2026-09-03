@@ -42,6 +42,13 @@ interface ItineraryResultProps {
   weather: DailyClimateAverage[] | null;
   countryInfo: CountryInfo | null;
   onEdit: () => void;
+  /** I consigli già ottenuti in una vita precedente della pagina (ripresi da
+   *  sessionStorage): con questi la richiesta non riparte affatto. Un elenco
+   *  **vuoto** non conta come "già ottenuti" — vedi consigliIniziali. */
+  initialDinner?: DinnerSuggestion[] | null;
+  /** Avvisa il genitore quando i consigli arrivano, così può salvarli. Deve essere
+   *  una funzione stabile (un setter di stato): finisce nelle dipendenze dell'effetto. */
+  onDinnerLoaded?: (suggestions: DinnerSuggestion[]) => void;
 }
 
 const SLOTS = [
@@ -366,7 +373,15 @@ function DinnerSuggestionBlock({ suggestion }: { suggestion: DinnerSuggestion })
   );
 }
 
-export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onEdit }: ItineraryResultProps) {
+export function ItineraryResult({
+  tripData,
+  itinerary,
+  weather,
+  countryInfo,
+  onEdit,
+  initialDinner,
+  onDinnerLoaded,
+}: ItineraryResultProps) {
   const [open, setOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [pdfState, setPdfState] = useState<"idle" | "loading" | "error">("idle");
@@ -374,8 +389,24 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
   // `null` vuol dire "nessun dato": è lo stato iniziale ed è anche quello in cui si resta
   // se la richiesta fallisce, perché in quel caso la giornata deve restare com'era.
   // Un array (anche vuoto) vuol dire che la route ha risposto.
-  const [dinner, setDinner] = useState<DinnerSuggestion[] | null>(null);
-  const [dinnerAnswered, setDinnerAnswered] = useState(false);
+  // Un ref e non la prop: il valore va letto **una volta sola**. Appena i consigli
+  // arrivano risalgono al genitore, che li rimanda giù come initialDinner — averlo
+  // fra le dipendenze farebbe rimontare l'effetto proprio nell'istante in cui sta
+  // finendo, e a salvarlo sarebbe solo l'ordine fra un microtask e lo scheduler di
+  // React. Letto una volta, quel giro non esiste.
+  //
+  // Un elenco **vuoto** vale come "niente in mano", e la differenza è sostanziale:
+  // la route risponde `200 { suggestions: [] }` anche quando Overpass va in timeout,
+  // il modello fallisce o la destinazione non si geocodifica (quattro casi che dal
+  // client sono indistinguibili). Trattarlo come una risposta buona vorrebbe dire
+  // congelare un guasto passeggero per tutta la sessione: prima della persistenza un
+  // F5 riprovava, e deve continuare a riprovare.
+  // Inizializzatore di useState e non un ref: il valore va letto una volta sola, e
+  // leggere .current durante il render viola react-hooks/refs. Qui l'inizializzatore
+  // gira al primo render e basta, che è esattamente la semantica che serve.
+  const [consigliIniziali] = useState(() => (initialDinner?.length ? initialDinner : null));
+  const [dinner, setDinner] = useState<DinnerSuggestion[] | null>(consigliIniziali);
+  const [dinnerAnswered, setDinnerAnswered] = useState(consigliIniziali !== null);
   const reduceMotion = useReducedMotion();
   const titleRef = useRef<HTMLHeadingElement>(null);
 
@@ -410,6 +441,10 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
     let annullato = false;
 
     if (dinnerDays.length === 0) return;
+    // Consigli già in mano: rifarli costerebbe otto secondi, un'interrogazione a
+    // Overpass e una chiamata a Gemini, e una giornata storta di Overpass li
+    // farebbe sparire — cioè la perdita che la persistenza esiste per evitare.
+    if (consigliIniziali) return;
 
     fetch("/api/dinner-suggestions", {
       method: "POST",
@@ -426,7 +461,13 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
       .then((data) => {
         // La forma si verifica, non si dà per buona: quel che arriva dal filo non può
         // essere lasciato raggiungere la resa senza un controllo (vedi accettaConsigli).
-        if (!annullato) setDinner(accettaConsigli(data?.suggestions));
+        if (annullato) return;
+        const consigli = accettaConsigli(data?.suggestions);
+        setDinner(consigli);
+        // Solo quel che è davvero arrivato viene passato su: un elenco vuoto è
+        // indistinguibile da un guasto della route, e salvarlo lo renderebbe
+        // definitivo per tutta la sessione invece di riprovare al ricaricamento.
+        if (consigli?.length) onDinnerLoaded?.(consigli);
       })
       .catch(() => {})
       .finally(() => {
@@ -436,7 +477,7 @@ export function ItineraryResult({ tripData, itinerary, weather, countryInfo, onE
     return () => {
       annullato = true;
     };
-  }, [dinnerDays, tripData]);
+  }, [dinnerDays, tripData, consigliIniziali, onDinnerLoaded]);
 
   const handleExportCalendar = () => {
     try {
