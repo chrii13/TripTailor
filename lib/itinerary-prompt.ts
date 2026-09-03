@@ -47,7 +47,7 @@ Inseriscila come attività vera e propria in uno dei giorni, con orario e costo 
 
   const climateSection =
     climate && climate.length > 0
-      ? `\nClima tipico atteso (media degli ultimi 5 anni per queste date — non è una previsione esatta, ma un'indicazione di massima):\n${climate
+      ? `\nClima tipico atteso (media storica per queste date — non è una previsione esatta, ma un'indicazione di massima):\n${climate
           .map(
             (day) =>
               `- ${day.date}: ~${day.tempMaxAvg}°C/${day.tempMinAvg}°C, pioggia in circa ${day.precipitationChance}% degli anni passati`

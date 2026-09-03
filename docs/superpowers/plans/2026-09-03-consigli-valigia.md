@@ -15,7 +15,7 @@
 - **Leggere `CLAUDE.md` prima di toccare qualsiasi cosa.** Contiene regole non derogabili del progetto.
 - **Interfaccia in italiano.** Ogni stringa mostrata all'utente è in italiano.
 - **Commenti in italiano che spiegano il *perché*, non il *cosa*.** È lo stile di tutto il progetto.
-- **Nessun linguaggio da previsione.** Le cifre sono medie storiche degli ultimi 5 anni: la resa deve dirlo, e non deve mai suggerire che sia una previsione.
+- **Nessun linguaggio da previsione, e nessun numero di anni.** Le cifre sono medie storiche: la resa deve dire che sono storiche e che non sono una previsione, ma **non** deve promettere «gli ultimi cinque anni» — `getClimateAverages` degrada a meno anni quando il servizio è lento, quindi quel numero non è garantito.
 - **Sistema visivo (CLAUDE.md):** Nebbia `#ecefe9` per le superfici, Bosco `#1a4d33`, Inchiostro `#3d423c`, Sole `#f0b429`; `--border` `#d4dad1` è il filetto decorativo, `--input` `#7f8a7c` è **solo** il bordo dei controlli e non va usato su elementi non interattivi. Niente ombre, niente gradienti come superficie, `rounded-lg` (10px) per le card.
 - **Nessuna dipendenza nuova.** Non modificare `package.json`, `tsconfig.json`, `vitest.config.ts` o `eslint.config.mjs`.
 - **Modifiche chirurgiche.** Non rifattorizzare codice adiacente, non toccare codice morto preesistente.
@@ -53,21 +53,27 @@ Tre task, uno per consumatore più uno per il motore. Il primo è indipendente; 
 - Produces:
   - `export interface ConsigliValigia { voci: string[]; massima: number; minima: number }`
   - `export function costruisciConsigliValigia(clima: DailyClimateAverage[] | null): ConsigliValigia | null`
-  - `export const SOGLIA_PIOGGIA = 30`
-  - `export const SOGLIA_ESCURSIONE = 10`
+  - `SOGLIA_PIOGGIA = 30` e `SOGLIA_ESCURSIONE = 10` restano **costanti di modulo, non esportate**: nessuno le importa, e i test scrivono i valori a mano di proposito. Un export che nessuno usa è impalcatura speculativa.
 
 Le fasce, dalla spec (confini **inclusivi a sinistra**, e un viaggio può farne scattare **due** — una per la minima più bassa, una per la massima più alta):
 
 | fascia | capi |
 |---|---|
-| sotto 5° | cappotto pesante, guanti, berretto e sciarpa |
-| 5-12° | una giacca calda, maglioni da mettere a strati, scarpe chiuse |
-| 13-19° | maglie a maniche lunghe, una felpa o un cardigan per la sera |
-| 20-26° | abbigliamento leggero, una maglia a maniche lunghe per la sera |
-| 27° e oltre | tessuti leggeri e traspiranti, un cappello, protezione solare |
+| sotto 5° | Un cappotto pesante, guanti, berretto e sciarpa |
+| 5-12° | Una giacca calda, un maglione, scarpe chiuse |
+| 13-19° | Maglie a maniche lunghe, una felpa o un cardigan per la sera |
+| 20-26° | Abbigliamento leggero e comodo |
+| 27° e oltre | Tessuti leggeri e traspiranti, un cappello, protezione solare |
+
+Due parole stanno **in una fascia sola**, e non vanno rimesse nell'altra credendole
+dimenticate: gli **strati** non sono nella 5-12 perché rispondono alla differenza fra
+giorno e notte e non al freddo, e li dice già la regola dell'escursione; **«per la sera»**
+non è nella 20-26 perché con minima 15° e massima 22° — il viaggio più comune che esista —
+scattano due fasce adiacenti insieme, e la lista finiva per dire quasi la stessa frase due
+volte. La deduplicazione non intercetta il caso, perché le due stringhe differiscono.
 
 Regole indipendenti dalla fascia (soglie **strette**: 10° esatti e 30% esatto **non** fanno scattare):
-- escursione massima **maggiore di** `SOGLIA_ESCURSIONE` → «vestiti a strati: fra il giorno e la notte ci sono circa N gradi di differenza»
+- escursione massima **maggiore di** `SOGLIA_ESCURSIONE` → «in media ci sono circa N gradi fra il giorno e la notte: vestiti a strati» (la frase parte dal dato, non dall'ordine: sono medie storiche)
 - almeno una giornata con `precipitationChance` **maggiore di** `SOGLIA_PIOGGIA` → «una giacca impermeabile leggera»
 - **più della metà** delle giornate oltre `SOGLIA_PIOGGIA` → anche «scarpe che tengano l'acqua»
 
@@ -109,7 +115,7 @@ describe("costruisciConsigliValigia — fasce di temperatura", () => {
     expect(risultato).not.toBeNull();
     expect(risultato!.minima).toBe(14);
     expect(risultato!.massima).toBe(18);
-    expect(risultato!.voci.join(" ")).toContain("maniche lunghe");
+    expect(risultato!.voci.join(" ")).toContain("Maglie a maniche lunghe");
   });
 
   it("12 e 13 gradi cadono in due fasce diverse", () => {
@@ -117,7 +123,7 @@ describe("costruisciConsigliValigia — fasce di temperatura", () => {
     const tredici = costruisciConsigliValigia([giornata(13, 13)]);
     expect(dodici!.voci.join(" ")).toContain("giacca calda");
     expect(tredici!.voci.join(" ")).not.toContain("giacca calda");
-    expect(tredici!.voci.join(" ")).toContain("maniche lunghe");
+    expect(tredici!.voci.join(" ")).toContain("Maglie a maniche lunghe");
   });
 
   it("4 e 5 gradi cadono in due fasce diverse", () => {
@@ -141,19 +147,21 @@ describe("costruisciConsigliValigia — fasce di temperatura", () => {
     const risultato = costruisciConsigliValigia([giornata(3, 8), giornata(15, 22)]);
     const testo = risultato!.voci.join(" ");
     expect(testo).toContain("cappotto pesante");
-    expect(testo).toContain("abbigliamento leggero");
+    expect(testo).toContain("Abbigliamento leggero");
   });
 });
 
 describe("costruisciConsigliValigia — escursione", () => {
+  // Si cerca la voce per come **comincia**: un marcatore deve identificare la voce,
+  // non capitare dentro un'altra. "In media" è l'unico incipit che non nomina un capo.
   it("dieci gradi esatti non fanno scattare gli strati", () => {
     const risultato = costruisciConsigliValigia([giornata(10, 20)]);
-    expect(risultato!.voci.join(" ")).not.toContain("a strati");
+    expect(risultato!.voci.some((v) => v.startsWith("In media"))).toBe(false);
   });
 
   it("undici gradi sì, e la differenza è detta in cifre", () => {
     const risultato = costruisciConsigliValigia([giornata(10, 21)]);
-    const strati = risultato!.voci.find((v) => v.includes("a strati"));
+    const strati = risultato!.voci.find((v) => v.startsWith("In media"));
     expect(strati).toBeDefined();
     expect(strati).toContain("11");
   });
@@ -212,14 +220,14 @@ import type { DailyClimateAverage } from "./climate-forecast";
  * La soglia è stretta (`>`, non `>=`): 30% esatto non fa scattare niente, perché
  * un anno su tre non è una ragione per portarsi la giacca.
  */
-export const SOGLIA_PIOGGIA = 30;
+const SOGLIA_PIOGGIA = 30;
 
 /**
  * Oltre questa differenza fra massima e minima nella stessa giornata si consiglia
  * di vestirsi a strati: la stessa giornata chiede due cose diverse. Anche qui la
  * soglia è stretta.
  */
-export const SOGLIA_ESCURSIONE = 10;
+const SOGLIA_ESCURSIONE = 10;
 
 export interface ConsigliValigia {
   voci: string[];
@@ -239,9 +247,11 @@ export interface ConsigliValigia {
  */
 const FASCE = [
   { minimo: -Infinity, capi: ["Un cappotto pesante, guanti, berretto e sciarpa"] },
-  { minimo: 5, capi: ["Una giacca calda, maglioni da mettere a strati, scarpe chiuse"] },
+  // Niente "strati" qui: li dice la regola dell'escursione, una volta sola.
+  { minimo: 5, capi: ["Una giacca calda, un maglione, scarpe chiuse"] },
   { minimo: 13, capi: ["Maglie a maniche lunghe, una felpa o un cardigan per la sera"] },
-  { minimo: 20, capi: ["Abbigliamento leggero, una maglia a maniche lunghe per la sera"] },
+  // Niente "per la sera" qui: con 15°/22° scattano due fasce adiacenti insieme.
+  { minimo: 20, capi: ["Abbigliamento leggero e comodo"] },
   { minimo: 27, capi: ["Tessuti leggeri e traspiranti, un cappello, protezione solare"] },
 ] as const;
 
@@ -281,8 +291,10 @@ export function costruisciConsigliValigia(
 
   const escursione = Math.max(...clima.map((g) => g.tempMaxAvg - g.tempMinAvg));
   if (escursione > SOGLIA_ESCURSIONE) {
+    // Si parte dal dato: sono medie storiche, e l'ordine al presente suonerebbe
+    // come una promessa sul tempo che farà.
     voci.add(
-      `Vestiti a strati: fra il giorno e la notte ci sono circa ${Math.round(escursione)} gradi di differenza`
+      `In media ci sono circa ${Math.round(escursione)} gradi fra il giorno e la notte: vestiti a strati`
     );
   }
 
@@ -301,7 +313,8 @@ export function costruisciConsigliValigia(
 - [ ] **Step 4: Eseguire i test e verificare che passino**
 
 Run: `npx vitest run lib/consigli-valigia.test.ts`
-Expected: PASS, 13 test.
+Expected: PASS, 16 test (la revisione ne ha aggiunti tre ai 13 iniziali: due fasce
+adiacenti, il confine 19/20, e la pioggia su una giornata sola).
 
 Poi la suite intera e i controlli:
 ```bash
@@ -309,7 +322,7 @@ npm test
 npx tsc --noEmit
 npm run lint
 ```
-Expected: **512 test su 49 file** (499 + 13), tsc pulito, lint 0 errori / 6 warning.
+Expected: **515 test su 49 file** (499 + 16), tsc pulito, lint 0 errori / 6 warning.
 
 - [ ] **Step 5: Provare i test al contrario**
 
@@ -322,6 +335,8 @@ Per ciascuna di queste modifiche: applicarla, eseguire `npx vitest run lib/consi
 | `giornatePiovose > clima.length / 2` → `>=` | «esattamente metà delle giornate non basta per le scarpe» |
 | togliere `fasciaDi(massima)` dal ciclo | «un viaggio che va dal freddo al caldo fa scattare entrambe le fasce» |
 | `if (!clima \|\| clima.length === 0)` → `if (!clima)` | «con un elenco vuoto non produce nulla» |
+| sostituire il `Set` di `voci` con un array | «una giornata sola basta» (l'assert sull'unicità) |
+| rimettere «per la sera» nella fascia 20-26 | «due fasce adiacenti non ripetono lo stesso consiglio» |
 
 - [ ] **Step 6: Commit**
 
@@ -467,7 +482,7 @@ npm test
 npx tsc --noEmit
 npm run lint
 ```
-Expected: **515 test su 49 file** (512 + 3), tsc pulito, lint 0 errori / 6 warning.
+Expected: **518 test su 49 file** (515 + 3), tsc pulito, lint 0 errori / 6 warning.
 
 - [ ] **Step 5: Provare i test al contrario**
 
@@ -602,7 +617,7 @@ npx tsc --noEmit
 npm run lint
 npm run build
 ```
-Expected: **517 test su 49 file** (515 + 2), tsc pulito, lint 0 errori / 6 warning, build riuscita.
+Expected: **520 test su 49 file** (518 + 2), tsc pulito, lint 0 errori / 6 warning, build riuscita.
 
 - [ ] **Step 5: Provare i test al contrario**
 
@@ -645,7 +660,7 @@ scomoda di un po' di spazio bianco."
 
 - [ ] **Step 1: Aggiornare la Sezione 1**
 
-Aggiungere alla struttura dei file `lib/consigli-valigia.ts` con una riga di descrizione, aggiornare il conteggio dei test (**517 su 49 file**), e aggiungere una voce che spieghi:
+Aggiungere alla struttura dei file `lib/consigli-valigia.ts` con una riga di descrizione, aggiornare il conteggio dei test (**520 su 49 file**), e aggiungere una voce che spieghi:
 
 - che il consiglio è **calcolato**, non generato, e perché: da una massima di 24° a «strati leggeri» non c'è un salto di conoscenza, quindi una chiamata al modello aggiungerebbe latenza, quota e rischio in cambio di niente. È la scelta **opposta** ai consigli sulla cena, e il contrasto va scritto perché è la cosa che un lettore futuro troverà incoerente;
 - che le fasce sono decise sui **due estremi** del periodo e non su una media, con l'esempio dei 3°/22° che darebbero 12°;
@@ -667,7 +682,7 @@ git commit -m "docs: la valigia si calcola, e il contrasto con la cena e' voluto
 
 ## Verifica finale
 
-- [ ] `npm test` → **517 test su 49 file**, tutti verdi (leggere la riga per intero, non con `| tail`)
+- [ ] `npm test` → **520 test su 49 file**, tutti verdi (leggere la riga per intero, non con `| tail`)
 - [ ] `npx tsc --noEmit` → nessun errore
 - [ ] `npm run lint` → 0 errori, 6 warning (baseline)
 - [ ] `npm run build` → riuscita

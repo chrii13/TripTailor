@@ -30,6 +30,7 @@ import type { Activity, ItineraryResponse } from "@/lib/itinerary-schema";
 import type { DailyClimateAverage } from "@/lib/climate-forecast";
 import type { CountryInfo } from "@/lib/country-info";
 import { buildItineraryIcs } from "@/lib/itinerary-to-ics";
+import { costruisciConsigliValigia } from "@/lib/consigli-valigia";
 import { pickDinnerAnchor } from "@/lib/dinner-anchor";
 import { buildDinnerMapUrl } from "@/lib/dinner-map-link";
 // Solo il tipo, cancellato in compilazione: la forma del consiglio è quella che la
@@ -373,6 +374,49 @@ function DinnerSuggestionBlock({ suggestion }: { suggestion: DinnerSuggestion })
   );
 }
 
+/**
+ * La lista di cosa portare, in fondo all'itinerario. Non ha stato e non chiede
+ * niente alla rete: si ricalcola dalle medie climatiche che il componente ha già
+ * fra le prop, ed è la ragione per cui — a differenza dei consigli sulla cena —
+ * qui non c'è persistenza, nessuno stato di attesa e nessun caso di guasto.
+ */
+function PackingList({ weather }: { weather: DailyClimateAverage[] | null }) {
+  const consigli = costruisciConsigliValigia(weather);
+  if (!consigli) return null;
+
+  return (
+    <section data-packing-list className="rounded-lg border border-border bg-secondary p-6">
+      {/* h2 e non h3: l'unica altra intestazione della vista è l'h1 del titolo, e
+          saltare un livello è una segnalazione heading-order. La resa non cambia. */}
+      <h2 className="font-display text-lg font-[725] tracking-[-0.01em] text-primary uppercase">
+        Cosa mettere in valigia
+      </h2>
+      {/* La riga di contesto viene prima della lista, non dopo: chi legge deve
+          sapere su cosa poggia il consiglio prima di leggerlo.
+
+          "medie storiche" e non "medie degli ultimi cinque anni": getClimateAverages
+          degrada di proposito a meno anni quando il tempo stringe (climate-forecast.ts,
+          "procedo con la media parziale"), quindi il numero sarebbe un dettaglio
+          verificabile che non abbiamo verificato — la stessa classe di affermazione che
+          ha già portato a sostituire "a piedi" con "in linea d'aria". Quel che deve
+          passare è che il dato è storico, non una previsione. */}
+      <p className="mt-1 text-sm text-muted-foreground">
+        Dalle medie storiche per queste date: da{" "}
+        <span className="tabular-nums">{consigli.minima}°</span> a{" "}
+        <span className="tabular-nums">{consigli.massima}°</span>. Non è una previsione.
+      </p>
+      <ul className="mt-4 space-y-2">
+        {consigli.voci.map((voce) => (
+          <li key={voce} className="flex gap-2 text-sm">
+            <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+            <span>{voce}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function ItineraryResult({
   tripData,
   itinerary,
@@ -614,8 +658,11 @@ export function ItineraryResult({
                         />
                       </span>
                     </span>
+                    {/* "storica" e non "degli ultimi 5 anni": getClimateAverages
+                        degrada a meno anni quando il tempo stringe, quindi il numero
+                        sarebbe falso proprio nel caso in cui il servizio è lento. */}
                     <span className="ml-auto text-xs text-muted-foreground">
-                      media degli ultimi 5 anni
+                      media storica
                     </span>
                   </div>
                 )}
@@ -687,6 +734,8 @@ export function ItineraryResult({
             );
           })}
         </motion.div>
+
+        <PackingList weather={weather} />
 
         <div className="flex flex-wrap items-center gap-3">
           <Button type="button" onClick={handleDownloadPdf} disabled={pdfState === "loading"} className="gap-2">
