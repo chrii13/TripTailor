@@ -8,7 +8,7 @@
 // conta solo che sia impostato prima che i test costruiscano le loro date.
 process.env.TZ = "Europe/Rome";
 
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { format } from "date-fns";
 import { it as itLocale } from "date-fns/locale";
@@ -110,8 +110,19 @@ describe("ItineraryForm — invio", () => {
     await fillValidForm(user, { from, to });
     await user.click(screen.getByRole("button", { name: "Genera itinerario" }));
 
-    const call = fetchMock.mock.calls.find(([url]) => String(url) === "/api/generate-itinerary");
-    expect(call).toBeDefined();
+    // waitFor e non una lettura secca: user.click attende l'evento, non la catena
+    // asincrona che segue — react-hook-form valida con zod prima di arrivare a fetch.
+    // Sotto carico quella catena non ha ancora raggiunto la chiamata, e il test falliva
+    // una volta ogni tanto con "expected undefined to be defined", mandando a cercare un
+    // difetto nelle date che non c'era. Ogni altro test di questo file che guarda lo
+    // stato dopo l'invio usa gia' findBy*, che riprova: questa riga era l'unica sincrona.
+    const call = await waitFor(() => {
+      const trovata = fetchMock.mock.calls.find(
+        ([url]) => String(url) === "/api/generate-itinerary"
+      );
+      expect(trovata).toBeDefined();
+      return trovata;
+    });
 
     const body = requestBody(call!);
     // Il giorno scelto arriva intatto: niente "T", niente "Z", niente slittamento.
