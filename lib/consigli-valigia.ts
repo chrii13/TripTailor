@@ -5,14 +5,14 @@ import type { DailyClimateAverage } from "./climate-forecast";
  * La soglia è stretta (`>`, non `>=`): 30% esatto non fa scattare niente, perché
  * un anno su tre non è una ragione per portarsi la giacca.
  */
-export const SOGLIA_PIOGGIA = 30;
+const SOGLIA_PIOGGIA = 30;
 
 /**
  * Oltre questa differenza fra massima e minima nella stessa giornata si consiglia
  * di vestirsi a strati: la stessa giornata chiede due cose diverse. Anche qui la
  * soglia è stretta.
  */
-export const SOGLIA_ESCURSIONE = 10;
+const SOGLIA_ESCURSIONE = 10;
 
 export interface ConsigliValigia {
   voci: string[];
@@ -37,7 +37,12 @@ const FASCE = [
   // dell'escursione a dirlo — una volta sola e solo quando serve davvero.
   { minimo: 5, capi: ["Una giacca calda, un maglione, scarpe chiuse"] },
   { minimo: 13, capi: ["Maglie a maniche lunghe, una felpa o un cardigan per la sera"] },
-  { minimo: 20, capi: ["Abbigliamento leggero, una maglia a maniche lunghe per la sera"] },
+  // La sera fresca è nominata **solo** dalla fascia 13-19. Dirla anche qui faceva
+  // sì che il viaggio più comune che esista — minima 15°, massima 22°, cioè due
+  // fasce adiacenti insieme — leggesse quasi la stessa frase due volte, e il Set
+  // non poteva accorgersene perché le due stringhe differiscono. Quando la sera
+  // conta davvero, o scatta la fascia inferiore o scatta la regola dell'escursione.
+  { minimo: 20, capi: ["Abbigliamento leggero e comodo"] },
   { minimo: 27, capi: ["Tessuti leggeri e traspiranti, un cappello, protezione solare"] },
 ] as const;
 
@@ -77,8 +82,12 @@ export function costruisciConsigliValigia(
 
   const escursione = Math.max(...clima.map((g) => g.tempMaxAvg - g.tempMinAvg));
   if (escursione > SOGLIA_ESCURSIONE) {
+    // La frase parte dal dato e non dall'ordine: sono medie storiche, e "fra il
+    // giorno e la notte ci sono N gradi" al presente suonerebbe come una promessa
+    // sul tempo che farà. È l'unica voce che si apre con un fatto invece che con
+    // un capo, ed è per questo che "In media" la identifica da sola.
     voci.add(
-      `Vestiti a strati: fra il giorno e la notte ci sono circa ${Math.round(escursione)} gradi di differenza`
+      `In media ci sono circa ${Math.round(escursione)} gradi fra il giorno e la notte: vestiti a strati`
     );
   }
 

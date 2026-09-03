@@ -65,13 +65,27 @@ può quindi far scattare **due** fasce, e in quel caso valgono entrambe.
 
 | fascia | capi |
 |---|---|
-| sotto 5° | cappotto pesante, guanti, berretto, sciarpa |
-| 5-12° | giacca, strati, scarpe chiuse |
-| 13-19° | maniche lunghe, qualcosa di più caldo per la sera |
-| 20-26° | abbigliamento leggero |
-| 27° e oltre | tessuti traspiranti, cappello, protezione solare |
+| sotto 5° | «Un cappotto pesante, guanti, berretto e sciarpa» |
+| 5-12° | «Una giacca calda, un maglione, scarpe chiuse» |
+| 13-19° | «Maglie a maniche lunghe, una felpa o un cardigan per la sera» |
+| 20-26° | «Abbigliamento leggero e comodo» |
+| 27° e oltre | «Tessuti leggeri e traspiranti, un cappello, protezione solare» |
 
 I confini sono **inclusivi a sinistra**: 12° cade nella seconda fascia, 13° nella terza.
+
+Due parole compaiono **in una fascia sola**, e non è una svista da riallineare:
+
+- **gli «strati» non stanno nella fascia 5-12.** Sovrapporre i capi risponde alla
+  differenza fra giorno e notte, non a una temperatura bassa: lo dice la regola
+  dell'escursione, una volta sola e solo quando serve davvero. Detto da entrambe, una
+  montagna a primavera si sentiva ripetere la stessa cosa nella stessa lista.
+- **«per la sera» sta solo nella fascia 13-19.** Poiché le fasce sono due, il viaggio
+  più comune che esista — minima 15°, massima 22° — le fa scattare tutte e due insieme:
+  con la sera nominata anche nella 20-26 la lista mostrava «una felpa o un cardigan per
+  la sera» e «una maglia a maniche lunghe per la sera», cioè quasi la stessa frase due
+  volte. La deduplicazione non può intercettarlo, perché le due stringhe differiscono.
+  Su un viaggio fra i 20 e i 26 gradi la sera fresca è già coperta dalla fascia
+  inferiore quando scatta, e dall'escursione quando conta davvero.
 
 ### Le due regole indipendenti dalla fascia
 
@@ -151,7 +165,11 @@ risolve qui.
 
 - i confini esatti delle fasce: 12° e 13° devono cadere da parti diverse, e così 4/5, 19/20,
   26/27;
-- un viaggio che fa scattare **due** fasce (minima sotto 5°, massima sopra 20°);
+- un viaggio che fa scattare **due** fasce (minima sotto 5°, massima sopra 20°), **e** uno
+  che ne fa scattare due **adiacenti** (minima 15°, massima 22°): il secondo è il caso
+  comune, ed è l'unico in cui due voci possono somigliarsi al punto da ripetersi;
+- che una voce non compaia **due volte** quando minima e massima cadono nella stessa
+  fascia: senza un assert sull'unicità, togliere la deduplicazione lascerebbe tutto verde;
 - l'escursione a 10° esatti (non scatta) e a 11° (scatta);
 - la pioggia al 30% esatto (non scatta) e al 31%; e la soglia «più della metà delle
   giornate» con un numero pari e uno dispari di giornate;

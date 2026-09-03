@@ -31,10 +31,23 @@ describe("costruisciConsigliValigia — fasce di temperatura", () => {
     expect(risultato).not.toBeNull();
     expect(risultato!.minima).toBe(14);
     expect(risultato!.massima).toBe(18);
-    // "Maglie a maniche lunghe" e non il solo "maniche lunghe": quel frammento
-    // vive anche nella fascia 20-26, e userebbe la stessa parola per due fasce
-    // diverse — cioè non distinguerebbe ciò che il test esiste per distinguere.
     expect(risultato!.voci.join(" ")).toContain("Maglie a maniche lunghe");
+    // Minima e massima cadono nella stessa fascia, quindi il capo viene aggiunto
+    // due volte e a tenerlo unico è solo il Set: senza questo assert, sostituire
+    // il Set con un array lascerebbe la suite verde e la lista ripetuta.
+    expect(risultato!.voci).toHaveLength(new Set(risultato!.voci).size);
+  });
+
+  it("due fasce adiacenti non ripetono lo stesso consiglio", () => {
+    // Minima 15° e massima 22° è il viaggio più comune che esista, non un estremo:
+    // fa scattare 13-19 e 20-26 insieme. Il caso a fasce lontane (3°/22°) non
+    // copre questo, perché quelle due voci non si somigliano abbastanza da
+    // ripetersi. Qui invece si somigliavano, e il Set non poteva accorgersene.
+    const risultato = costruisciConsigliValigia([giornata(15, 22)]);
+    const testo = risultato!.voci.join(" ");
+    expect(testo).toContain("Maglie a maniche lunghe");
+    expect(testo).toContain("Abbigliamento leggero");
+    expect(testo.match(/per la sera/g)).toHaveLength(1);
   });
 
   it("12 e 13 gradi cadono in due fasce diverse", () => {
@@ -50,6 +63,16 @@ describe("costruisciConsigliValigia — fasce di temperatura", () => {
     const cinque = costruisciConsigliValigia([giornata(5, 5)]);
     expect(quattro!.voci.join(" ")).toContain("cappotto pesante");
     expect(cinque!.voci.join(" ")).not.toContain("cappotto pesante");
+    expect(cinque!.voci.join(" ")).toContain("giacca calda");
+  });
+
+  it("19 e 20 gradi cadono in due fasce diverse", () => {
+    const diciannove = costruisciConsigliValigia([giornata(19, 19)]);
+    const venti = costruisciConsigliValigia([giornata(20, 20)]);
+    expect(diciannove!.voci.join(" ")).toContain("Maglie a maniche lunghe");
+    expect(diciannove!.voci.join(" ")).not.toContain("Abbigliamento leggero");
+    expect(venti!.voci.join(" ")).toContain("Abbigliamento leggero");
+    expect(venti!.voci.join(" ")).not.toContain("Maglie a maniche lunghe");
   });
 
   it("26 e 27 gradi cadono in due fasce diverse", () => {
@@ -76,14 +99,15 @@ describe("costruisciConsigliValigia — escursione", () => {
   // un'altra. Cercare "a strati" dentro le voci unite ha già dato un falso rosso
   // quando la fascia 5-12 nominava gli strati a sua volta, e un frammento tornato
   // ambiguo per una modifica futura al copy lascerebbe il test verde e inutile.
+  // "In media" è l'unico incipit che non nomina un capo, quindi è univoco.
   it("dieci gradi esatti non fanno scattare gli strati", () => {
     const risultato = costruisciConsigliValigia([giornata(10, 20)]);
-    expect(risultato!.voci.some((v) => v.startsWith("Vestiti"))).toBe(false);
+    expect(risultato!.voci.some((v) => v.startsWith("In media"))).toBe(false);
   });
 
   it("undici gradi sì, e la differenza è detta in cifre", () => {
     const risultato = costruisciConsigliValigia([giornata(10, 21)]);
-    const strati = risultato!.voci.find((v) => v.startsWith("Vestiti a strati"));
+    const strati = risultato!.voci.find((v) => v.startsWith("In media"));
     expect(strati).toBeDefined();
     expect(strati).toContain("11");
   });
@@ -107,6 +131,15 @@ describe("costruisciConsigliValigia — pioggia", () => {
       giornata(15, 20, 0),
     ]);
     expect(risultato!.voci.join(" ")).toContain("tengano l'acqua");
+  });
+
+  it("una giornata sola e piovosa fa scattare anche le scarpe", () => {
+    // Una su una è più della metà: è l'unico modo in cui la soglia delle scarpe
+    // scatta su un viaggio di un giorno solo, e l'altro test a giornata singola
+    // ha pioggia a zero, quindi non passa mai di qui.
+    const testo = costruisciConsigliValigia([giornata(15, 20, 60)])!.voci.join(" ");
+    expect(testo).toContain("impermeabile");
+    expect(testo).toContain("tengano l'acqua");
   });
 
   it("esattamente metà delle giornate non basta per le scarpe", () => {
