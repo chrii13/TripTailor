@@ -410,10 +410,12 @@ describe("ItineraryResult — consigli ripresi dalla sessione", () => {
 
 describe("ItineraryResult — consigli sulla valigia", () => {
   it("con i dati climatici mostra la lista di cosa portare", () => {
-    // 3° di minima e 22° di massima: due fasce, e un'escursione che supera la soglia.
+    // 3° di minima e 22° di massima: due fasce. L'escursione si calcola **per
+    // giornata**, non fra i due estremi del periodo, quindi per superare la soglia
+    // di 10 serve una giornata che la contenga tutta: 3°/16° fa 13.
     renderResult({
       weather: [
-        { date: "2026-05-20", tempMinAvg: 3, tempMaxAvg: 8, precipitationChance: 0 },
+        { date: "2026-05-20", tempMinAvg: 3, tempMaxAvg: 16, precipitationChance: 0 },
         { date: "2026-05-21", tempMinAvg: 15, tempMaxAvg: 22, precipitationChance: 0 },
       ],
     });
@@ -422,21 +424,37 @@ describe("ItineraryResult — consigli sulla valigia", () => {
     expect(blocco).not.toBeNull();
     expect(blocco!.textContent).toContain("cappotto pesante");
     expect(blocco!.textContent).toContain("Abbigliamento leggero");
+    // La voce dell'escursione: è l'unica calcolata con una cifra dentro, e senza
+    // questo assert quel ramo non sarebbe reso da nessun test dei componenti.
+    expect(blocco!.textContent).toContain("13 gradi fra il giorno e la notte");
   });
 
-  it("dichiara che sono medie storiche e non una previsione", () => {
+  it("dichiara che il dato è storico e non una previsione, prima di elencare i capi", () => {
     // La riga di contesto non è decorativa: senza di essa la lista si legge come
-    // una promessa sul tempo che farà, che non abbiamo modo di sostenere.
+    // una promessa sul tempo che farà, che non abbiamo modo di sostenere. E non
+    // dice "cinque anni": getClimateAverages degrada a meno anni quando il tempo
+    // stringe, quindi il numero sarebbe un dettaglio non verificato.
     renderResult({
       weather: [{ date: "2026-05-20", tempMinAvg: 14, tempMaxAvg: 20, precipitationChance: 0 }],
     });
 
     const blocco = document.querySelector("[data-packing-list]");
-    expect(blocco!.textContent).toMatch(/medi[ae]/i);
-    expect(blocco!.textContent).toContain("cinque anni");
+    expect(blocco!.textContent).toContain("medie storiche");
+    expect(blocco!.textContent).toContain("Non è una previsione");
+    expect(blocco!.textContent).not.toContain("cinque anni");
+
+    // L'ordine e la struttura, che textContent da solo non vede: la riga di contesto
+    // sta **prima** dell'elenco — chi legge deve sapere su cosa poggia il consiglio
+    // prima di leggerlo — e i capi sono una lista vera, una voce per elemento.
+    const figli = Array.from((blocco as HTMLElement).children);
+    expect(figli.map((el) => el.tagName)).toEqual(["H2", "P", "UL"]);
+    expect(figli[2].querySelectorAll("li")).toHaveLength(2);
   });
 
   it("senza dati climatici il blocco non compare affatto", () => {
+    // Nota per chi lo vedrà rosso: togliendo la guardia su `null` questo test
+    // fallisce con un TypeError su `consigli.minima`, non trovando il blocco. È la
+    // via storta ma protegge lo stesso — non cercare un difetto diverso.
     renderResult({ weather: null });
     expect(document.querySelector("[data-packing-list]")).toBeNull();
   });
