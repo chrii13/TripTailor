@@ -11,7 +11,7 @@ const NAVIGA = [
 
 const FONTI = [
   { cosa: "Itinerari", chi: "Google Gemini" },
-  { cosa: "Clima", chi: "Open-Meteo", nota: "media degli ultimi 5 anni, non una previsione" },
+  { cosa: "Clima", chi: "Open-Meteo", nota: "media storica, non una previsione" },
   { cosa: "Luoghi", chi: "LocationIQ" },
   // Il collegamento a openstreetmap.org/copyright non è decorativo: le linee guida
   // sull'attribuzione ODbL lo richiedono esplicitamente. Non trasformarlo in testo semplice.
