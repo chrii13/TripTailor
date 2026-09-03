@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterAll, beforeAll, describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { POST } from "./route";
 
 // La risposta di Gemini è simulata a livello di SDK: il resto del modulo (ApiError,
@@ -42,6 +42,22 @@ function jsonRequest(body: unknown) {
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 }
+
+/**
+ * Da quando gli schemi rifiutano le date passate, le date fisse dei casi di prova
+ * hanno una scadenza: senza orologio fermo questi test diventano rossi da soli il
+ * giorno in cui il fixture invecchia, e il rosso parla di corpo malformato (400)
+ * invece del comportamento in prova. È già successo il 2026-09-03. Stesso rimedio
+ * dei test degli schemi in lib/, che infatti non si sono mai rotti.
+ */
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-08-01T12:00:00.000Z"));
+});
+
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 describe("POST /api/discover-trips", () => {
   it("rifiuta un Content-Type non JSON con 400 prima di chiamare Gemini", async () => {

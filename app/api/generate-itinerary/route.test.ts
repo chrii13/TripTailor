@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterAll, beforeAll, describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { addDays } from "date-fns";
 import { startOfToday, toCalendarDate } from "@/lib/calendar-date";
 import { POST } from "./route";
@@ -67,6 +67,22 @@ function jsonRequest(body: unknown) {
     body: JSON.stringify(body),
   });
 }
+
+/**
+ * Da quando gli schemi rifiutano le date passate, le date fisse dei casi di prova
+ * hanno una scadenza: senza orologio fermo questi test diventano rossi da soli il
+ * giorno in cui il fixture invecchia, e il rosso parla di corpo malformato (400)
+ * invece del comportamento in prova. È già successo il 2026-09-03. Stesso rimedio
+ * dei test degli schemi in lib/, che infatti non si sono mai rotti.
+ */
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-08-01T12:00:00.000Z"));
+});
+
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 describe("POST /api/generate-itinerary", () => {
   it("rifiuta un corpo non valido con 400 prima di chiamare Gemini", async () => {
