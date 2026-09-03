@@ -174,6 +174,32 @@ const s = StyleSheet.create({
     alignItems: "baseline",
   },
   footerLink: { color: BOSCO, fontWeight: 500, textDecoration: "none" },
+  /**
+   * `lineHeight: ""` non è un vezzo: senza, il footer sparisce dall'ultima pagina.
+   *
+   * `@react-pdf/renderer` 4.6.1 risolve gli stili di una pagina **ripartendo dallo
+   * stile già risolto** (`computeStyle` legge `node.style`, non le props originali), e
+   * un `lineHeight` senza unità viene tradotto in punti moltiplicandolo per la
+   * dimensione del carattere (`transformLineHeight`). Una seconda risoluzione lo
+   * moltiplica di nuovo. Normalmente non si vede, perché ogni testo tiene in cache le
+   * proprie righe e non viene rimisurato; ma un nodo con `render` viene azzerato e
+   * rimisurato **una volta per pagina**, e un nodo `fixed` è lo *stesso oggetto*
+   * infilato in tutte le pagine, quindi accumula. Misurato: `lineHeight: 1.5` del
+   * `s.page` diventa 15 punti, poi 15 × 9.5 = 142,5 (footer alto 152,5 invece di 25),
+   * poi 12.870, poi 1.160.681. Alla quarta pagina il footer, ancorato con `bottom: 26`
+   * al fondo di una scatola ormai gigantesca, finisce 224 punti **sotto** il foglio.
+   *
+   * La stringa vuota è il sentinella della libreria stessa: `transformLineHeight`
+   * esce subito su `value === ''`, quindi è l'unico valore che sopravvive identico a
+   * un numero qualsiasi di risoluzioni. Un numero (anche `1`) continua a moltiplicarsi.
+   * Serve **su questo nodo** — quello dinamico — non sul footer: così l'altezza del
+   * footer resta quella dettata dal testo di sinistra, e l'impaginazione è identica,
+   * punto per punto, a quella di un footer senza numero di pagina.
+   *
+   * Se un domani si aggiunge un altro `render` dentro il footer, gli serve lo stesso
+   * trattamento.
+   */
+  footerPageNumber: { lineHeight: "" },
 });
 
 const SITO = "https://trip-tailor-ten.vercel.app";
@@ -395,7 +421,10 @@ export function ItineraryDocument({ tripData, itinerary, weather, countryInfo }:
               trip-tailor-ten.vercel.app
             </Link>
           </Text>
-          <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
+          <Text
+            style={s.footerPageNumber}
+            render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`}
+          />
         </View>
       </Page>
     </Document>

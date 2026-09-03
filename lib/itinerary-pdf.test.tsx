@@ -77,6 +77,43 @@ describe("PDF dell'itinerario", () => {
   });
 
   /**
+   * Il conteggio delle annotazioni qui sopra non basta: il footer può essere *presente*
+   * e stare **fuori dal foglio**. Prima della correzione era esattamente così — sulla
+   * quarta pagina il link cadeva a y = -194, cioè 224 punti sotto il bordo inferiore, e
+   * la pagina risultava senza footer pur avendo la sua annotazione regolare. Il test
+   * guarda quindi la *posizione*: il rettangolo dell'annotazione, che è in coordinate
+   * assolute di pagina e in chiaro dentro il PDF (il testo invece è compresso).
+   *
+   * Si confrontano le pagine fra loro invece di fissare un numero: il footer è lo stesso
+   * su tutte, quindi deve stare alla stessa altezza su tutte. Così il test non va
+   * riscritto se un domani cambia il `bottom` del footer.
+   */
+  it("tiene il footer alla stessa altezza su tutte le pagine, dentro il foglio", () => {
+    const oggetti = new Map<number, string>();
+    const re = /(\d+) 0 obj([\s\S]*?)endobj/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(raw))) oggetti.set(+m[1], m[2]);
+
+    const pagine = [...oggetti.values()].filter((corpo) => /\/Type\s*\/Page[^s]/.test(corpo));
+    expect(pagine.length).toBe(PDF_FIXTURE.itinerary.days.length + 1);
+
+    const altezze = pagine.map((corpo) => {
+      const riferimento = corpo.match(/\/Annots\s*\[\s*(\d+) 0 R/);
+      expect(riferimento).not.toBeNull();
+      const rect = (oggetti.get(+riferimento![1]) || "").match(/\/Rect\s*\[([^\]]*)\]/);
+      expect(rect).not.toBeNull();
+      return Number(rect![1].trim().split(/\s+/)[1]);
+    });
+
+    // A4 in punti: il footer sta nella fascia bassa, non fuori né a metà pagina.
+    for (const y of altezze) {
+      expect(y).toBeGreaterThan(0);
+      expect(y).toBeLessThan(100);
+    }
+    expect(new Set(altezze).size).toBe(1);
+  });
+
+  /**
    * Il PDF non è raggiunto da `.display-numerals`: `@react-pdf/renderer` ha i propri
    * stili e i propri font registrati. La stessa richiesta ("le cifre nel carattere di
    * testo, non in Fraunces") va quindi applicata con gli strumenti di quella libreria —
