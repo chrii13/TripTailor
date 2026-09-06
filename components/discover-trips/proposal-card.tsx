@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Bed, CalendarDays, MapPin, Moon, Route, Wallet } from "lucide-react";
+import { ArrowRight, CalendarDays, MapPin, Moon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,6 +48,25 @@ export function derivePerPerson(total: number, travelerCount: number): number {
   return Math.round(total / travelerCount);
 }
 
+/**
+ * Quanta parte del budget usa la proposta, in percentuale intera.
+ *
+ * `total` è il totale **già arrotondato e già mostrato** (`roundProposalCosts`),
+ * mai il grezzo del modello: una percentuale calcolata su una cifra diversa da
+ * quella scritta accanto ricadrebbe nello stesso difetto che l'arrotondamento
+ * per voci esiste per evitare.
+ *
+ * Restituisce `null` quando il budget non è una cifra su cui si possa fare una
+ * proporzione (zero, negativo, NaN): la barra allora non si disegna affatto,
+ * invece di mostrare un NaN o una percentuale inventata. Il tetto a 100 è
+ * necessario perché una proposta al limite del budget arrotonda a 101 e il
+ * riempimento sforerebbe il binario.
+ */
+export function budgetUsagePercent(total: number, budget: number): number | null {
+  if (!Number.isFinite(budget) || budget <= 0) return null;
+  return Math.min(100, Math.round((total / budget) * 100));
+}
+
 export function ProposalCard({
   proposal,
   href,
@@ -63,6 +82,7 @@ export function ProposalCard({
   const roundedRemaining = remaining > 0 ? roundToNearestFifty(remaining) : 0;
   const travelPerPerson = derivePerPerson(costs.travelTotal, travelerCount);
   const perPerson = travelerCount > 1 ? derivePerPerson(costs.total, travelerCount) : null;
+  const usagePercent = budgetUsagePercent(costs.total, budget);
   const realPriceSearchUrl = departureDate
     ? buildRealPriceSearchUrl(departureCity, proposal.destination, departureDate, proposal.country)
     : null;
@@ -71,9 +91,26 @@ export function ProposalCard({
     <Card className="flex h-full flex-col border-border shadow-none">
       <CardContent className="flex flex-1 flex-col gap-4 pt-6">
         <div>
-          <h2 className="font-display text-xl font-[725] tracking-[-0.01em] text-primary uppercase">
-            {proposal.destination}
-          </h2>
+          {/* Nome e prezzo sulla stessa riga: sono le due cose che si
+              confrontano fra sei schede, e finora il totale era sepolto in
+              fondo alla tabella dei costi. */}
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="font-display text-xl font-[725] tracking-[-0.01em] text-primary uppercase">
+              {proposal.destination}
+            </h2>
+            <div className="shrink-0 text-right">
+              {/* formatApprox dà solo cifre e simboli ("~1.250 €"): nessuna
+                  lettera da tenere in Fraunces, la classe va sull'elemento. */}
+              <p className="display-numerals text-xl font-[725] text-primary">
+                {formatApprox(costs.total)}
+              </p>
+              {perPerson !== null && (
+                <p className="text-xs text-muted-foreground">
+                  {formatApprox(perPerson)} a persona
+                </p>
+              )}
+            </div>
+          </div>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <MapPin className="size-3.5" />
@@ -92,6 +129,41 @@ export function ProposalCard({
           </p>
         </div>
 
+        {/* La barra è Bosco per tutte le proposte, senza varianti di colore:
+            evidenziare chi sfiora il tetto sembrerebbe premiarla, e non abbiamo
+            nessuna ragione per dire che spendere tutto il budget sia meglio. Il
+            confronto lo fa la lunghezza, e "ti restano" dice già il resto. */}
+        {usagePercent !== null && (
+          <div>
+            <div className="flex items-center gap-3">
+              {/* border-border, non border-input: quello è il bordo dei
+                  controlli e farebbe sembrare toccabile una pastiglia che non
+                  lo è. */}
+              <span className="shrink-0 rounded-full border border-border bg-accent px-2.5 py-0.5 text-xs font-medium text-primary">
+                {usagePercent}% del budget
+              </span>
+              {/* Decorativa: la didascalia qui sotto dice già in testo tutto
+                  quello che la barra mostra (quanto si spende, su quanto, e
+                  quanto resta), e la percentuale è scritta nella pastiglia
+                  accanto. Un role="progressbar" con nome e valori ripeterebbe
+                  quelle stesse cifre una seconda volta a chi usa uno screen
+                  reader, moltiplicate per sei schede. */}
+              <div aria-hidden className="h-2 flex-1 overflow-hidden rounded-full bg-accent">
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: `${usagePercent}%` }}
+                />
+              </div>
+            </div>
+            <p className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 text-xs text-muted-foreground">
+              <span>
+                {formatApprox(costs.total)} su {euro.format(budget)}
+              </span>
+              {roundedRemaining > 0 && <span>ti restano {formatApprox(roundedRemaining)}</span>}
+            </p>
+          </div>
+        )}
+
         <p className="text-sm text-muted-foreground">{proposal.whyItFits}</p>
 
         <ul className="space-y-1.5 text-sm text-primary">
@@ -103,66 +175,30 @@ export function ProposalCard({
           ))}
         </ul>
 
-        <dl className="mt-auto space-y-2 border-t border-border pt-4 text-sm">
-          <div className="flex items-center justify-between gap-2">
-            <dt className="flex items-center gap-2 text-muted-foreground">
-              <Route className="size-4" />
-              Viaggio A/R ({formatApprox(travelPerPerson)} a persona)
-            </dt>
-            <dd className="font-medium text-primary">{formatApprox(costs.travelTotal)}</dd>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <dt className="flex items-center gap-2 text-muted-foreground">
-              <Bed className="size-4" />
-              Alloggio
-            </dt>
-            <dd className="font-medium text-primary">{formatApprox(costs.lodgingTotal)}</dd>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <dt className="flex items-center gap-2 text-muted-foreground">
-              <Wallet className="size-4" />
-              Spese in loco
-            </dt>
-            <dd className="font-medium text-primary">{formatApprox(costs.onSiteTotal)}</dd>
-          </div>
-          <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
-            <dt className="font-semibold text-primary">Totale</dt>
-            {/* formatApprox dà solo cifre e simboli ("~1.250 €"): nessuna lettera
-                da tenere in Fraunces, la classe va sull'elemento. */}
-            <dd className="display-numerals text-lg font-[725] text-primary">
-              {formatApprox(costs.total)}
-            </dd>
-          </div>
-          {perPerson !== null && (
-            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-              <dt>Per persona</dt>
-              <dd>{formatApprox(perPerson)}</dd>
-            </div>
-          )}
-          {roundedRemaining > 0 && (
-            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-              <dt>Ti restano</dt>
-              <dd>{formatApprox(roundedRemaining)}</dd>
-            </div>
-          )}
-        </dl>
-
-        <p className="text-sm text-muted-foreground">
-          Stime indicative generate dall&apos;AI, non prezzi prenotabili.
-          {realPriceSearchUrl && (
-            <>
-              {" "}
-              <a
-                href={realPriceSearchUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline underline-offset-2 hover:text-primary"
-              >
-                Verifica i prezzi reali
-              </a>
-            </>
-          )}
+        {/* Le tre voci su una riga sola: restano leggibili e smettono di essere
+            protagoniste, ora che il totale sta in cima. Nessuna informazione
+            persa rispetto alla tabella di prima, compreso il "a persona" del
+            viaggio A/R. */}
+        <p className="mt-auto border-t border-border pt-4 text-xs text-muted-foreground">
+          Viaggio A/R {formatApprox(costs.travelTotal)} ({formatApprox(travelPerPerson)} a persona) ·
+          Alloggio {formatApprox(costs.lodgingTotal)} · In loco {formatApprox(costs.onSiteTotal)}
         </p>
+
+        {/* La liberatoria sulle stime è salita una volta sola sopra la griglia
+            (discover-results.tsx): qui si ripeteva fino a sei volte sullo stesso
+            schermo. Questo link invece resta, perché è specifico della meta. */}
+        {realPriceSearchUrl && (
+          <p className="text-sm text-muted-foreground">
+            <a
+              href={realPriceSearchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-primary"
+            >
+              Verifica i prezzi reali
+            </a>
+          </p>
+        )}
 
         <Button asChild variant="outline" className="w-full gap-2 border-primary shadow-none">
           <Link href={href}>

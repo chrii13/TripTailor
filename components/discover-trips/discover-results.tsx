@@ -94,38 +94,47 @@ export function DiscoverResults({
           accorciare il viaggio o a spostare il periodo.
         </p>
       ) : (
-        /* Il numero di proposte mostrate non è quello richiesto: i filtri lato
+        <>
+          {/* Una volta sola per l'intera griglia: dentro la scheda si ripeteva
+              fino a sei volte sullo stesso schermo. Vale per tutte le cifre
+              qui sotto, quindi sta prima che si comincino a leggere. */}
+          <p className="text-sm text-muted-foreground">
+            Stime indicative generate dall&apos;AI, non prezzi prenotabili.
+          </p>
+
+          {/* Il numero di proposte mostrate non è quello richiesto: i filtri lato
            server ne scartano, quindi l'ultima riga può restare con una sola card.
            In quel caso la card occupa entrambe le colonne ma tiene la larghezza di
            una (metà della riga meno metà del gap di 1rem) e si centra, invece di
            appoggiarsi a sinistra con il vuoto accanto. Sotto `sm` la griglia è a
-           una colonna e la regola non si applica. */
-        <div className="grid gap-4 sm:grid-cols-2 sm:[&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:w-[calc(50%-0.5rem)] sm:[&>*:last-child:nth-child(odd)]:justify-self-center">
-          {proposals.map((proposal, index) => {
-            const proposalDates = resolveProposalDates(proposal, dateMode, dateRange);
-            return (
-              <ProposalCard
-                key={`${proposal.destination}-${proposal.country}-${index}`}
-                proposal={proposal}
-                budget={budget}
-                travelerCount={travelerCount}
-                nights={nights}
-                departureCity={departureCity}
-                // Le date "vere" della proposta, non solo quelle scelte a mano:
-                // in modalità flessibile `dateRange.from` è undefined e il link
-                // "Verifica i prezzi reali" sparirebbe proprio dove serve di più.
-                departureDate={proposalDates.from}
-                href={buildCreaHref({
-                  destination: `${proposal.destination}, ${proposal.country}`,
-                  from: proposalDates.from,
-                  to: proposalDates.to,
-                  budget: proposal.costs.onSiteTotal,
-                  participants,
-                })}
-              />
-            );
-          })}
-        </div>
+           una colonna e la regola non si applica. */}
+          <div className="grid gap-4 sm:grid-cols-2 sm:[&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:w-[calc(50%-0.5rem)] sm:[&>*:last-child:nth-child(odd)]:justify-self-center">
+            {proposals.map((proposal, index) => {
+              const proposalDates = resolveProposalDates(proposal, dateMode, dateRange);
+              return (
+                <ProposalCard
+                  key={`${proposal.destination}-${proposal.country}-${index}`}
+                  proposal={proposal}
+                  budget={budget}
+                  travelerCount={travelerCount}
+                  nights={nights}
+                  departureCity={departureCity}
+                  // Le date "vere" della proposta, non solo quelle scelte a mano:
+                  // in modalità flessibile `dateRange.from` è undefined e il link
+                  // "Verifica i prezzi reali" sparirebbe proprio dove serve di più.
+                  departureDate={proposalDates.from}
+                  href={buildCreaHref({
+                    destination: `${proposal.destination}, ${proposal.country}`,
+                    from: proposalDates.from,
+                    to: proposalDates.to,
+                    budget: proposal.costs.onSiteTotal,
+                    participants,
+                  })}
+                />
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
