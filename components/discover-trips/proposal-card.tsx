@@ -4,7 +4,7 @@ import { ArrowRight, CalendarDays, MapPin, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { TripProposal } from "@/lib/discover-trips-schema";
-import { roundProposalCosts, roundToNearestFifty } from "@/lib/round-proposal-costs";
+import { roundProposalCosts } from "@/lib/round-proposal-costs";
 import { buildRealPriceSearchUrl } from "@/lib/real-price-search-link";
 import { formatSuggestedWindowLabel } from "@/lib/discover-trips-suggested-window-label";
 
@@ -58,9 +58,13 @@ export function derivePerPerson(total: number, travelerCount: number): number {
  *
  * Restituisce `null` quando il budget non è una cifra su cui si possa fare una
  * proporzione (zero, negativo, NaN): la barra allora non si disegna affatto,
- * invece di mostrare un NaN o una percentuale inventata. Il tetto a 100 è
- * necessario perché una proposta al limite del budget arrotonda a 101 e il
- * riempimento sforerebbe il binario.
+ * invece di mostrare un NaN o una percentuale inventata.
+ *
+ * Il tetto a 100 non difende da un caso di oggi: `verifyProposalsAgainstBudget`
+ * filtra già sul totale arrotondato, quindi una proposta sopra il budget al
+ * client non arriva. È una difesa contro un'invariante che vive in un altro
+ * file e potrebbe cambiare lì: se cambiasse, il riempimento sforerebbe il
+ * binario invece di fermarsi al fondo.
  */
 export function budgetUsagePercent(total: number, budget: number): number | null {
   if (!Number.isFinite(budget) || budget <= 0) return null;
@@ -78,8 +82,13 @@ export function ProposalCard({
 }: ProposalCardProps) {
   const costs = roundProposalCosts(proposal.costs);
   const suggestedWindow = formatSuggestedWindowLabel(proposal);
+  // Nessun terzo arrotondamento su questa differenza: totale e budget sono
+  // entrambi scritti a schermo, uno accanto all'altro, e il lettore li sottrae.
+  // Riarrotondarla alla cinquantina rimetterebbe le due cifre in contraddizione
+  // ("~785 € su 1.200 €" con "ti restano ~400 €" fa 1.185), che è lo stesso
+  // difetto già corretto su `derivePerPerson`: una cifra già arrotondata non si
+  // arrotonda una seconda volta. Il "~" resta perché gli operandi sono stime.
   const remaining = budget - costs.total;
-  const roundedRemaining = remaining > 0 ? roundToNearestFifty(remaining) : 0;
   const travelPerPerson = derivePerPerson(costs.travelTotal, travelerCount);
   const perPerson = travelerCount > 1 ? derivePerPerson(costs.total, travelerCount) : null;
   const usagePercent = budgetUsagePercent(costs.total, budget);
@@ -99,9 +108,16 @@ export function ProposalCard({
               {proposal.destination}
             </h2>
             <div className="shrink-0 text-right">
-              {/* formatApprox dà solo cifre e simboli ("~1.250 €"): nessuna
-                  lettera da tenere in Fraunces, la classe va sull'elemento. */}
-              <p className="display-numerals text-xl font-[725] text-primary">
+              {/* Un gradino sotto il nome (text-lg contro text-xl): la cifra
+                  resta forte ma non contende il comando all'intestazione.
+                  formatApprox dà solo cifre e simboli ("~1.250 €"): nessuna
+                  lettera da tenere in Fraunces, la classe va sull'elemento.
+                  "Totale" era un <dt> nella tabella di prima ed è caduto con
+                  essa: a schermo lo dice la posizione, ma chi ascolta sentiva
+                  "Lisbona, circa mille euro" senza sapere di cosa — e quando la
+                  barra non si disegna sparisce anche il "su X €" accanto. */}
+              <p className="display-numerals text-lg font-[725] text-primary">
+                <span className="sr-only">Totale </span>
                 {formatApprox(costs.total)}
               </p>
               {perPerson !== null && (
@@ -159,7 +175,7 @@ export function ProposalCard({
               <span>
                 {formatApprox(costs.total)} su {euro.format(budget)}
               </span>
-              {roundedRemaining > 0 && <span>ti restano {formatApprox(roundedRemaining)}</span>}
+              {remaining > 0 && <span>ti restano {formatApprox(remaining)}</span>}
             </p>
           </div>
         )}
