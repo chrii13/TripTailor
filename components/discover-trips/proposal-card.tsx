@@ -180,7 +180,12 @@ export function ProposalCard({
             persa rispetto alla tabella di prima, compreso il "a persona" del
             viaggio A/R. */}
         <p className="mt-auto border-t border-border pt-4 text-xs text-muted-foreground">
-          Viaggio A/R {formatApprox(costs.travelTotal)} ({formatApprox(travelPerPerson)} a persona) ·
+          Viaggio A/R {formatApprox(costs.travelTotal)}
+          {/* Il "a persona" del viaggio solo con piu' di un viaggiatore: da soli
+              ripeterebbe la stessa cifra a due parole di distanza ("~85 € (~85 € a
+              persona)"), che e' rumore e fa dubitare di aver letto male. Stessa
+              condizione gia' in vigore per il totale a persona, qui sopra. */}
+          {travelerCount > 1 && ` (${formatApprox(travelPerPerson)} a persona)`} ·{" "}
           Alloggio {formatApprox(costs.lodgingTotal)} · In loco {formatApprox(costs.onSiteTotal)}
         </p>
 
