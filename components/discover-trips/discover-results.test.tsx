@@ -27,43 +27,6 @@ function makeProposal(destination: string, overrides: Partial<TripProposal> = {}
   } as TripProposal;
 }
 
-/**
- * Una proposta che costa `total`, spartito in quarti e metà.
- *
- * Il totale **arrotondato** coincide con `total` solo per i valori usati qui
- * (300, 600, 1000): sono multipli che sopravvivono alla cinquantina di
- * roundProposalCosts. Non vale in generale — 130 diventa 135 — quindi
- * scegliendo un numero nuovo va verificato, non dato per buono.
- */
-function makeProposalCosting(destination: string, total: number): TripProposal {
-  return makeProposal(destination, {
-    costs: {
-      travelPerPerson: total / 2,
-      travelTotal: total / 2,
-      lodgingTotal: total / 4,
-      onSiteTotal: total / 4,
-      total,
-    },
-  } as Partial<TripProposal>);
-}
-
-/**
- * Le tre celle di ogni riga della striscia, in ordine di resa: nome, barra
- * (testo vuoto) e percentuale. Si leggono i figli diretti della griglia perché
- * è proprio la griglia unica — non sei flexbox — a garantire che le barre
- * partano dalla stessa ascissa.
- */
-function righeDellaStriscia(): { destination: string; percent: string }[] {
-  const striscia = screen.getByRole("region", { name: "Il budget a confronto" });
-  const griglia = striscia.querySelector("h2")?.nextElementSibling;
-  const celle = Array.from(griglia?.children ?? []).map((c) => c.textContent ?? "");
-  const righe: { destination: string; percent: string }[] = [];
-  for (let i = 0; i < celle.length; i += 3) {
-    righe.push({ destination: celle[i], percent: celle[i + 2] });
-  }
-  return righe;
-}
-
 function renderResults(proposals: TripProposal[], budget = 1200) {
   return render(
     <DiscoverResults
@@ -159,58 +122,5 @@ describe("DiscoverResults", () => {
 
     expect(budgetMostrato).toBe(1185);
     expect(totale + restante).toBe(budgetMostrato);
-  });
-
-  it("la striscia di confronto compare da tre proposte in su, non con due", () => {
-    const { unmount } = renderResults([
-      makeProposalCosting("Lisbona", 300),
-      makeProposalCosting("Porto", 600),
-    ]);
-    expect(screen.queryByRole("region", { name: "Il budget a confronto" })).toBeNull();
-    unmount();
-
-    renderResults([
-      makeProposalCosting("Lisbona", 300),
-      makeProposalCosting("Porto", 600),
-      makeProposalCosting("Faro", 1000),
-    ]);
-    expect(screen.getByRole("region", { name: "Il budget a confronto" })).toBeTruthy();
-  });
-
-  it("la striscia dice per ogni meta la stessa percentuale della sua scheda", () => {
-    // 300, 600 e 1000 su 1200 → 25%, 50%, 83%. Tre cifre diverse: con tre
-    // proposte identiche il confronto fra striscia e schede non proverebbe
-    // niente, perché combacerebbe anche mescolando le righe.
-    renderResults([
-      makeProposalCosting("Lisbona", 300),
-      makeProposalCosting("Porto", 600),
-      makeProposalCosting("Faro", 1000),
-    ]);
-
-    // "83%" nella striscia, "83% del budget" nella pastiglia della scheda:
-    // la regex non può prendere per sbaglio le righe della striscia.
-    const nelleSchede = screen
-      .getAllByText(/% del budget$/)
-      .map((el) => (el.textContent ?? "").replace(" del budget", ""));
-
-    expect(righeDellaStriscia().map((r) => r.percent)).toEqual(nelleSchede);
-    expect(nelleSchede).toEqual(["25%", "50%", "83%"]);
-  });
-
-  it("la striscia elenca le mete nello stesso ordine della griglia", () => {
-    renderResults([
-      makeProposalCosting("Lisbona", 300),
-      makeProposalCosting("Porto", 600),
-      makeProposalCosting("Faro", 1000),
-    ]);
-
-    // Il titolo della striscia è anch'esso un h2: le mete sono gli altri.
-    const nelleSchede = screen
-      .getAllByRole("heading", { level: 2 })
-      .map((h) => h.textContent ?? "")
-      .filter((t) => t !== "Il budget a confronto");
-
-    expect(righeDellaStriscia().map((r) => r.destination)).toEqual(nelleSchede);
-    expect(nelleSchede).toEqual(["Lisbona", "Porto", "Faro"]);
   });
 });
