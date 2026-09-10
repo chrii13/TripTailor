@@ -27,7 +27,14 @@ function makeProposal(destination: string, overrides: Partial<TripProposal> = {}
   } as TripProposal;
 }
 
-/** Una proposta il cui totale arrotondato è esattamente `total`. */
+/**
+ * Una proposta che costa `total`, spartito in quarti e metà.
+ *
+ * Il totale **arrotondato** coincide con `total` solo per i valori usati qui
+ * (300, 600, 1000): sono multipli che sopravvivono alla cinquantina di
+ * roundProposalCosts. Non vale in generale — 130 diventa 135 — quindi
+ * scegliendo un numero nuovo va verificato, non dato per buono.
+ */
 function makeProposalCosting(destination: string, total: number): TripProposal {
   return makeProposal(destination, {
     costs: {

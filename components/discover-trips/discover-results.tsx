@@ -15,6 +15,11 @@ import { budgetUsagePercent, ProposalCard } from "./proposal-card";
 // guardandole, e un blocco in più costerebbe solo altezza in cima alla pagina.
 const MIN_PROPOSTE_CONFRONTO = 3;
 
+interface RigaConfronto {
+  destination: string;
+  percent: number;
+}
+
 const euro = new Intl.NumberFormat("it-IT", {
   style: "currency",
   currency: "EUR",
@@ -66,16 +71,24 @@ export function DiscoverResults({
   // arrotondato di `roundProposalCosts` e dalla stessa `budgetUsagePercent`.
   // Ricalcolarla qui con una formula propria farebbe dire alla striscia e alla
   // scheda della stessa proposta due percentuali diverse.
-  const righeConfronto = proposals.map((proposal) => ({
-    destination: proposal.destination,
-    percent: budgetUsagePercent(roundProposalCosts(proposal.costs).total, budget),
-  }));
+  // Il filtro tipizzato non è cerimonia: senza, `percent` resterebbe
+  // `number | null` dentro la resa — `every()` non restringe un array — e un
+  // domani `width: "null%"` con a fianco il testo "null%" passerebbe `tsc` in
+  // silenzio. Filtrando qui, la resa lavora su numeri e basta.
+  const righeConfronto: RigaConfronto[] = proposals
+    .map((proposal) => ({
+      destination: proposal.destination,
+      percent: budgetUsagePercent(roundProposalCosts(proposal.costs).total, budget),
+    }))
+    .filter((riga): riga is RigaConfronto => riga.percent !== null);
   // `percent` è null solo quando il budget non regge una proporzione, cioè per
   // tutte le righe insieme: in quel caso non c'è nessun confronto da mostrare,
-  // come già per la barra della scheda.
+  // come già per la barra della scheda. Il confronto con `proposals.length`
+  // conserva quel "o tutte o nessuna": una striscia parziale mentirebbe, perché
+  // mancherebbero proprio le mete che non si possono confrontare.
   const mostraConfronto =
-    righeConfronto.length >= MIN_PROPOSTE_CONFRONTO &&
-    righeConfronto.every((riga) => riga.percent !== null);
+    righeConfronto.length === proposals.length &&
+    righeConfronto.length >= MIN_PROPOSTE_CONFRONTO;
 
   return (
     <div className="space-y-6">
@@ -143,9 +156,17 @@ export function DiscoverResults({
                   ascissa e abbiano il binario largo uguale: sei flexbox
                   indipendenti darebbero sei binari di lunghezza diversa e il
                   confronto sparirebbe. Nessun separatore fra le righe: le
-                  proposte arrivano ordinate dalla più economica, quindi i
-                  riempimenti formano una scala che sale, e un filetto per riga
-                  la spezzerebbe in sei frammenti. */}
+                  proposte arrivano ordinate per costo crescente, quindi i
+                  riempimenti formano quasi sempre una scala che sale, e un
+                  filetto per riga la spezzerebbe in sei frammenti.
+
+                  «Quasi sempre» e non «sempre», ed e' voluto: verify-proposal-budget
+                  ordina sul totale **grezzo**, mentre qui si disegna quello
+                  **arrotondato**, quindi due proposte vicine possono invertirsi
+                  (1000 grezzo che arrotonda a 1050, prima di 1010 che arrotonda a
+                  1000). Un gradino all'indietro ogni tanto non rompe niente e non
+                  vale un riordino: riordinare qui farebbe divergere striscia e
+                  griglia, che devono corrispondere. */}
               <div className="mt-3 grid grid-cols-[minmax(0,auto)_minmax(2rem,1fr)_auto] items-center gap-x-3 gap-y-2">
                 {righeConfronto.map((riga, index) => (
                   <Fragment key={`${riga.destination}-${index}`}>
@@ -160,7 +181,11 @@ export function DiscoverResults({
                         style={{ width: `${riga.percent}%` }}
                       />
                     </span>
-                    <span className="text-sm text-muted-foreground tabular-nums">
+                    {/* Allineate a destra: in una colonna di numeri che si
+                        scorre, "8%" e "83%" con il simbolo disallineato si
+                        vedono. tabular-nums da solo non basta, perche' la cella
+                        e' larga quanto "100%" e il testo resterebbe a sinistra. */}
+                    <span className="justify-self-end text-sm text-muted-foreground tabular-nums">
                       {riga.percent}%
                     </span>
                   </Fragment>
