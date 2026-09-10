@@ -95,12 +95,10 @@ export function DiscoverResults({
         </p>
       ) : (
         <>
-          {/* Una volta sola per l'intera griglia: dentro la scheda si ripeteva
-              fino a sei volte sullo stesso schermo. Vale per tutte le cifre
-              qui sotto, quindi sta prima che si comincino a leggere. */}
-          <p className="text-sm text-muted-foreground">
-            Stime indicative generate dall&apos;AI, non prezzi prenotabili.
-          </p>
+          {/* Niente liberatoria sopra la griglia: è tornata dentro ogni scheda,
+              accanto alle cifre di cui parla. Ripeterla anche qui vorrebbe dire
+              sette copie sullo stesso schermo, cioè arredamento — il difetto
+              opposto a quello che averla portata quassù aveva corretto. */}
 
           {/* Il numero di proposte mostrate non è quello richiesto: i filtri lato
            server ne scartano, quindi l'ultima riga può restare con una sola card.

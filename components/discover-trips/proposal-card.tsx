@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, MapPin, Moon } from "lucide-react";
+import { ArrowRight, CalendarDays, Info, MapPin, Moon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -57,14 +57,16 @@ export function derivePerPerson(total: number, travelerCount: number): number {
  * per voci esiste per evitare.
  *
  * Restituisce `null` quando il budget non è una cifra su cui si possa fare una
- * proporzione (zero, negativo, NaN): la barra allora non si disegna affatto,
- * invece di mostrare un NaN o una percentuale inventata.
+ * proporzione (zero, negativo, NaN), ed è **questo** che la card usa oggi: la
+ * percentuale non è più scritta da nessuna parte — la barra che la disegnava è
+ * stata tolta perché leggeva come una barra di caricamento — ma il `null` resta
+ * il modo già scritto e già provato di dire "su questo budget non si può
+ * affermare niente", cioè di non scrivere "su NaN €" nella riga del budget.
  *
  * Il tetto a 100 non difende da un caso di oggi: `verifyProposalsAgainstBudget`
  * filtra già sul totale arrotondato, quindi una proposta sopra il budget al
- * client non arriva. È una difesa contro un'invariante che vive in un altro
- * file e potrebbe cambiare lì: se cambiasse, il riempimento sforerebbe il
- * binario invece di fermarsi al fondo.
+ * client non arriva. Resta a protezione di un'invariante che vive in un altro
+ * file e potrebbe cambiare lì.
  */
 export function budgetUsagePercent(total: number, budget: number): number | null {
   if (!Number.isFinite(budget) || budget <= 0) return null;
@@ -97,8 +99,8 @@ export function ProposalCard({
     : null;
 
   return (
-    <Card className="flex h-full flex-col border-border shadow-none">
-      <CardContent className="flex flex-1 flex-col gap-4 pt-6">
+    <Card className="flex h-full flex-col overflow-hidden border-border pb-0 shadow-none">
+      <CardContent className="flex flex-1 flex-col gap-4 pt-6 pb-6">
         <div>
           {/* Nome e prezzo sulla stessa riga: sono le due cose che si
               confrontano fra sei schede, e finora il totale era sepolto in
@@ -119,6 +121,13 @@ export function ProposalCard({
               <p className="display-numerals text-lg font-[725] text-primary">
                 <span className="sr-only">Totale </span>
                 {formatApprox(costs.total)}
+              </p>
+              {/* L'avvertenza per intero sta nel piede, ma il numero si legge
+                  qui, e chi salta al prezzo non arriva mai in fondo: due parole
+                  attaccate alla cifra dicono di che genere di numero si tratta.
+                  La tilde da sola non basta, quasi nessuno la decodifica. */}
+              <p className="font-display text-[10px] font-[725] tracking-[0.15em] text-muted-foreground uppercase">
+                Stima AI
               </p>
               {perPerson !== null && (
                 <p className="text-xs text-muted-foreground">
@@ -145,41 +154,6 @@ export function ProposalCard({
           </p>
         </div>
 
-        {/* La barra è Bosco per tutte le proposte, senza varianti di colore:
-            evidenziare chi sfiora il tetto sembrerebbe premiarla, e non abbiamo
-            nessuna ragione per dire che spendere tutto il budget sia meglio. Il
-            confronto lo fa la lunghezza, e "ti restano" dice già il resto. */}
-        {usagePercent !== null && (
-          <div>
-            <div className="flex items-center gap-3">
-              {/* border-border, non border-input: quello è il bordo dei
-                  controlli e farebbe sembrare toccabile una pastiglia che non
-                  lo è. */}
-              <span className="shrink-0 rounded-full border border-border bg-accent px-2.5 py-0.5 text-xs font-medium text-primary">
-                {usagePercent}% del budget
-              </span>
-              {/* Decorativa: la didascalia qui sotto dice già in testo tutto
-                  quello che la barra mostra (quanto si spende, su quanto, e
-                  quanto resta), e la percentuale è scritta nella pastiglia
-                  accanto. Un role="progressbar" con nome e valori ripeterebbe
-                  quelle stesse cifre una seconda volta a chi usa uno screen
-                  reader, moltiplicate per sei schede. */}
-              <div aria-hidden className="h-2 flex-1 overflow-hidden rounded-full bg-accent">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${usagePercent}%` }}
-                />
-              </div>
-            </div>
-            <p className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 text-xs text-muted-foreground">
-              <span>
-                {formatApprox(costs.total)} su {euro.format(budget)}
-              </span>
-              {remaining > 0 && <span>ti restano {formatApprox(remaining)}</span>}
-            </p>
-          </div>
-        )}
-
         <p className="text-sm text-muted-foreground">{proposal.whyItFits}</p>
 
         <ul className="space-y-1.5 text-sm text-primary">
@@ -191,42 +165,79 @@ export function ProposalCard({
           ))}
         </ul>
 
-        {/* Le tre voci su una riga sola: restano leggibili e smettono di essere
-            protagoniste, ora che il totale sta in cima. Nessuna informazione
-            persa rispetto alla tabella di prima, compreso il "a persona" del
-            viaggio A/R. */}
-        <p className="mt-auto border-t border-border pt-4 text-xs text-muted-foreground">
-          Viaggio A/R {formatApprox(costs.travelTotal)}
-          {/* Il "a persona" del viaggio solo con piu' di un viaggiatore: da soli
-              ripeterebbe la stessa cifra a due parole di distanza ("~85 € (~85 € a
-              persona)"), che e' rumore e fa dubitare di aver letto male. Stessa
-              condizione gia' in vigore per il totale a persona, qui sopra. */}
-          {travelerCount > 1 && ` (${formatApprox(travelPerPerson)} a persona)`} ·{" "}
-          Alloggio {formatApprox(costs.lodgingTotal)} · In loco {formatApprox(costs.onSiteTotal)}
-        </p>
+        {/* Fascia Nebbia che chiude la card, come la CTA di /crea e /scopri:
+            tutto quel che riguarda le cifre — quanto costa sul budget, come si
+            scompone, quanto vale la stima — sta insieme sotto il racconto della
+            meta, invece di essere sparso fra corpo e fondo. La barra che stava
+            qui sopra è sparita: leggeva come una barra di caricamento e diceva
+            in figura quello che la prima riga dice in parole. */}
+        <div className="-mx-6 -mb-6 mt-auto space-y-3 border-t border-border bg-secondary px-6 pt-4 pb-6">
+          {/* `usagePercent` non si scrive più da nessuna parte: qui serve solo
+              il suo `null`, che è il modo già provato di dire che su questo
+              budget non si può affermare niente — senza, la riga scriverebbe
+              "su NaN €". */}
+          {usagePercent !== null && (
+            <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+              <span>
+                {formatApprox(costs.total)} su {euro.format(budget)}
+              </span>
+              {remaining > 0 && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>ti restano {formatApprox(remaining)}</span>
+                </>
+              )}
+            </p>
+          )}
 
-        {/* La liberatoria sulle stime è salita una volta sola sopra la griglia
-            (discover-results.tsx): qui si ripeteva fino a sei volte sullo stesso
-            schermo. Questo link invece resta, perché è specifico della meta. */}
-        {realPriceSearchUrl && (
-          <p className="text-sm text-muted-foreground">
-            <a
-              href={realPriceSearchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-2 hover:text-primary"
-            >
-              Verifica i prezzi reali
-            </a>
+          {/* Le tre voci su una riga sola: restano leggibili e smettono di
+              essere protagoniste, ora che il totale sta in cima. Nessuna
+              informazione persa rispetto alla tabella di prima, compreso il
+              "a persona" del viaggio A/R. */}
+          <p className="text-xs text-muted-foreground">
+            Viaggio A/R {formatApprox(costs.travelTotal)}
+            {/* Il "a persona" del viaggio solo con piu' di un viaggiatore: da soli
+                ripeterebbe la stessa cifra a due parole di distanza ("~85 € (~85 € a
+                persona)"), che e' rumore e fa dubitare di aver letto male. Stessa
+                condizione gia' in vigore per il totale a persona, qui sopra. */}
+            {travelerCount > 1 && ` (${formatApprox(travelPerPerson)} a persona)`} ·{" "}
+            Alloggio {formatApprox(costs.lodgingTotal)} · In loco{" "}
+            {formatApprox(costs.onSiteTotal)}
           </p>
-        )}
 
-        <Button asChild variant="outline" className="w-full gap-2 border-primary shadow-none">
-          <Link href={href}>
-            Crea l&apos;itinerario
-            <ArrowRight className="size-4" />
-          </Link>
-        </Button>
+          {/* La liberatoria era salita una volta sola sopra la griglia, e da lì
+              chi scorre fino alla quarta scheda non la vede più: legge "~1.350 €"
+              come un prezzo. Torna nella scheda — dove stanno le cifre di cui
+              parla — e in cambio sparisce da sopra la griglia, così resta detta
+              una volta per ogni schermata di lettura e non sette volte insieme.
+              Il link è sempre stato qui, perché è specifico della meta. */}
+          <p className="flex gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
+            <Info aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+            <span>
+              Cifre stimate dall&apos;AI, non prezzi prenotabili.
+              {realPriceSearchUrl && (
+                <>
+                  {" "}
+                  <a
+                    href={realPriceSearchUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2 hover:text-primary"
+                  >
+                    Verifica i prezzi reali
+                  </a>
+                </>
+              )}
+            </span>
+          </p>
+
+          <Button asChild variant="outline" className="w-full gap-2 border-primary shadow-none">
+            <Link href={href}>
+              Crea l&apos;itinerario
+              <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
