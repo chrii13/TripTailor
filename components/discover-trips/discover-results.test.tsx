@@ -68,7 +68,7 @@ describe("DiscoverResults", () => {
     // griglia è proprio quella che è stata tolta.
     renderResults([makeProposal("Lisbona"), makeProposal("Porto"), makeProposal("Faro")]);
 
-    expect(screen.getAllByText(/non prezzi prenotabili/)).toHaveLength(3);
+    expect(screen.getAllByText(/possono discostarsi dai prezzi reali/)).toHaveLength(3);
   });
 
   it("non mostra la liberatoria quando non c'è nessuna proposta", () => {
@@ -76,7 +76,7 @@ describe("DiscoverResults", () => {
     // scritta a parte: senza proposte non c'è nessuna cifra da qualificare.
     renderResults([]);
 
-    expect(screen.queryByText(/non prezzi prenotabili/)).toBeNull();
+    expect(screen.queryByText(/possono discostarsi dai prezzi reali/)).toBeNull();
   });
 
   it("scrive nella scheda quanto costa sul budget e quanto resta, senza barra", () => {
@@ -98,7 +98,11 @@ describe("DiscoverResults", () => {
     renderResults([makeProposal("Lisbona")], 0);
 
     expect(screen.queryByText(/ su /)).toBeNull();
-    expect(screen.queryByText(/ti restano/)).toBeNull();
+    // Nessun assert su "ti restano": quella riga e' gia' esclusa da
+    // `remaining > 0` (con budget 0 o NaN il resto non e' positivo), quindi
+    // cercarla qui non potrebbe fallire togliendo la guardia in prova. Un
+    // assert che non puo' fallire e' peggio di un assert mancante: sembra
+    // protezione e non lo e'.
   });
 
   it("con un budget non numerico non scrive NaN nella riga del budget", () => {
@@ -110,7 +114,11 @@ describe("DiscoverResults", () => {
     renderResults([makeProposal("Lisbona")], Number.NaN);
 
     expect(screen.queryByText(/su NaN/)).toBeNull();
-    expect(screen.queryByText(/ti restano/)).toBeNull();
+    // Nessun assert su "ti restano": quella riga e' gia' esclusa da
+    // `remaining > 0` (con budget 0 o NaN il resto non e' positivo), quindi
+    // cercarla qui non potrebbe fallire togliendo la guardia in prova. Un
+    // assert che non puo' fallire e' peggio di un assert mancante: sembra
+    // protezione e non lo e'.
   });
 
   it("dice a chi ascolta che quella cifra in cima è il totale", () => {

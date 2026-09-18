@@ -112,16 +112,19 @@ export function ProposalCard({
                   essa: a schermo lo dice la posizione, ma chi ascolta sentiva
                   "Lisbona, circa mille euro" senza sapere di cosa — e quando la
                   barra non si disegna sparisce anche il "su X €" accanto. */}
+              {/* L'avvertenza per intero sta nel piede, ma il numero si legge
+                  qui, e chi salta al prezzo non arriva mai in fondo. La tilde da
+                  sola non basta: quasi nessuno la decodifica come 'stima'.
+
+                  Sta **prima** della cifra e non sotto: un maiuscoletto piccolo
+                  etichetta cio' che segue, e sotto avrebbe avuto due candidati
+                  (il totale e il 'a persona'), qualificandoli entrambi a meta'. */}
+              <p className="font-display text-[10px] font-[725] tracking-[0.16em] text-muted-foreground uppercase">
+                Stima AI
+              </p>
               <p className="display-numerals text-lg font-[725] text-primary">
                 <span className="sr-only">Totale </span>
                 {formatApprox(costs.total)}
-              </p>
-              {/* L'avvertenza per intero sta nel piede, ma il numero si legge
-                  qui, e chi salta al prezzo non arriva mai in fondo: due parole
-                  attaccate alla cifra dicono di che genere di numero si tratta.
-                  La tilde da sola non basta, quasi nessuno la decodifica. */}
-              <p className="font-display text-[10px] font-[725] tracking-[0.15em] text-muted-foreground uppercase">
-                Stima AI
               </p>
               {perPerson !== null && (
                 <p className="text-xs text-muted-foreground">
@@ -209,10 +212,10 @@ export function ProposalCard({
               parla — e in cambio sparisce da sopra la griglia, così resta detta
               una volta per ogni schermata di lettura e non sette volte insieme.
               Il link è sempre stato qui, perché è specifico della meta. */}
-          <p className="flex gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
+          <p className="flex gap-2 pt-1 text-xs text-muted-foreground">
             <Info aria-hidden className="mt-0.5 size-3.5 shrink-0" />
             <span>
-              Cifre stimate dall&apos;AI, non prezzi prenotabili.
+              Cifre stimate dall&apos;AI: possono discostarsi dai prezzi reali, che cambiano con la data e la disponibilità.
               {realPriceSearchUrl && (
                 <>
                   {" "}

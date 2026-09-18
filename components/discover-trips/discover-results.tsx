@@ -95,17 +95,19 @@ export function DiscoverResults({
         </p>
       ) : (
         <>
-          {/* Niente liberatoria sopra la griglia: è tornata dentro ogni scheda,
-              accanto alle cifre di cui parla. Ripeterla anche qui vorrebbe dire
-              sette copie sullo stesso schermo, cioè arredamento — il difetto
-              opposto a quello che averla portata quassù aveva corretto. */}
+          {/* Due note su questo blocco.
 
-          {/* Il numero di proposte mostrate non è quello richiesto: i filtri lato
-           server ne scartano, quindi l'ultima riga può restare con una sola card.
-           In quel caso la card occupa entrambe le colonne ma tiene la larghezza di
-           una (metà della riga meno metà del gap di 1rem) e si centra, invece di
-           appoggiarsi a sinistra con il vuoto accanto. Sotto `sm` la griglia è a
-           una colonna e la regola non si applica. */}
+              Niente liberatoria sopra la griglia: e' tornata dentro ogni scheda,
+              accanto alle cifre di cui parla. Ripeterla anche qui vorrebbe dire
+              sette copie sullo stesso schermo, cioe' arredamento — il difetto
+              opposto a quello che averla portata quassu' aveva corretto.
+
+              Il numero di proposte mostrate non e' quello richiesto: i filtri lato
+              server ne scartano, quindi l'ultima riga puo' restare con una sola card.
+              In quel caso la card occupa entrambe le colonne ma tiene la larghezza di
+              una (meta' della riga meno meta' del gap di 1rem) e si centra, invece di
+              appoggiarsi a sinistra con il vuoto accanto. Sotto `sm` la griglia e' a
+              una colonna e la regola non si applica. */}
           <div className="grid gap-4 sm:grid-cols-2 sm:[&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:w-[calc(50%-0.5rem)] sm:[&>*:last-child:nth-child(odd)]:justify-self-center">
             {proposals.map((proposal, index) => {
               const proposalDates = resolveProposalDates(proposal, dateMode, dateRange);
