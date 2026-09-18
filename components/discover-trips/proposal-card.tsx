@@ -49,28 +49,22 @@ export function derivePerPerson(total: number, travelerCount: number): number {
 }
 
 /**
- * Quanta parte del budget usa la proposta, in percentuale intera.
+ * Il budget regge un confronto? Un predicato, non una percentuale, ed e' un
+ * cambio voluto.
  *
- * `total` è il totale **già arrotondato e già mostrato** (`roundProposalCosts`),
- * mai il grezzo del modello: una percentuale calcolata su una cifra diversa da
- * quella scritta accanto ricadrebbe nello stesso difetto che l'arrotondamento
- * per voci esiste per evitare.
+ * Fino a oggi questa era `budgetUsagePercent`: calcolava la quota di budget, la
+ * arrotondava e la limitava a 100. Quel numero lo disegnava la barra dentro la
+ * scheda, e la barra e' stata tolta perche' leggeva come una barra di
+ * caricamento. Da allora **nessuno leggeva piu' il numero**: della risposta
+ * serviva solo il `null`. Arrotondamento e tetto erano diventati logica morta
+ * con sei test verdi addosso, che e' peggio di nessun test — danno credito a
+ * codice che non protegge niente di visibile.
  *
- * Restituisce `null` quando il budget non è una cifra su cui si possa fare una
- * proporzione (zero, negativo, NaN), ed è **questo** che la card usa oggi: la
- * percentuale non è più scritta da nessuna parte — la barra che la disegnava è
- * stata tolta perché leggeva come una barra di caricamento — ma il `null` resta
- * il modo già scritto e già provato di dire "su questo budget non si può
- * affermare niente", cioè di non scrivere "su NaN €" nella riga del budget.
- *
- * Il tetto a 100 non difende da un caso di oggi: `verifyProposalsAgainstBudget`
- * filtra già sul totale arrotondato, quindi una proposta sopra il budget al
- * client non arriva. Resta a protezione di un'invariante che vive in un altro
- * file e potrebbe cambiare lì.
+ * Ora dice quello che serve davvero, e serve a non scrivere "su NaN euro"
+ * nella riga dei conti.
  */
-export function budgetUsagePercent(total: number, budget: number): number | null {
-  if (!Number.isFinite(budget) || budget <= 0) return null;
-  return Math.min(100, Math.round((total / budget) * 100));
+export function budgetIsComparable(budget: number): boolean {
+  return Number.isFinite(budget) && budget > 0;
 }
 
 export function ProposalCard({
@@ -93,7 +87,7 @@ export function ProposalCard({
   const remaining = budget - costs.total;
   const travelPerPerson = derivePerPerson(costs.travelTotal, travelerCount);
   const perPerson = travelerCount > 1 ? derivePerPerson(costs.total, travelerCount) : null;
-  const usagePercent = budgetUsagePercent(costs.total, budget);
+  const budgetConfrontabile = budgetIsComparable(budget);
   const realPriceSearchUrl = departureDate
     ? buildRealPriceSearchUrl(departureCity, proposal.destination, departureDate, proposal.country)
     : null;
@@ -171,12 +165,16 @@ export function ProposalCard({
             meta, invece di essere sparso fra corpo e fondo. La barra che stava
             qui sopra è sparita: leggeva come una barra di caricamento e diceva
             in figura quello che la prima riga dice in parole. */}
-        <div className="-mx-6 -mb-6 mt-auto space-y-3 border-t border-border bg-secondary px-6 pt-4 pb-6">
-          {/* `usagePercent` non si scrive più da nessuna parte: qui serve solo
-              il suo `null`, che è il modo già provato di dire che su questo
-              budget non si può affermare niente — senza, la riga scriverebbe
-              "su NaN €". */}
-          {usagePercent !== null && (
+        {/* bg-accent e non bg-secondary: su /scopri il fondo della pagina E' gia'
+            Nebbia, misurato rgb(236,239,233) identico, quindi un piede Nebbia
+            faceva sparire meta' scheda nella pagina, tenuta solo da un bordo di
+            un pixel. Su /crea la stessa fascia funziona perche' li' il fondo e'
+            diverso: non copiare quella scelta qui senza guardare. */}
+        <div className="-mx-6 -mb-6 mt-auto space-y-3 border-t border-border bg-accent px-6 pt-4 pb-6">
+          {/* Senza questa guardia, con un budget a zero o non numerico la riga
+              scriverebbe "su NaN euro". Il predicato dice esattamente questo e
+              niente di piu': vedi budgetIsComparable. */}
+          {budgetConfrontabile && (
             <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
               <span>
                 {formatApprox(costs.total)} su {euro.format(budget)}

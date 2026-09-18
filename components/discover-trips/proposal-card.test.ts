@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { budgetUsagePercent, derivePerPerson } from "./proposal-card";
+import { budgetIsComparable, derivePerPerson } from "./proposal-card";
 
 describe("derivePerPerson", () => {
   it("ricava la cifra a persona dal totale mostrato, non da quella del modello", () => {
@@ -30,35 +30,22 @@ describe("derivePerPerson", () => {
   });
 });
 
-describe("budgetUsagePercent", () => {
-  it("arrotonda all'intero la quota di budget usata", () => {
-    // 850 / 1200 = 70,83%.
-    expect(budgetUsagePercent(850, 1200)).toBe(71);
+describe("budgetIsComparable", () => {
+  // Non resta niente dei sei test sull'arrotondamento e sul tetto a 100:
+  // proteggevano un numero che nessuno scrive piu' a schermo da quando la barra
+  // e' stata tolta. Qui restano i casi che contano davvero, cioe' quelli in cui
+  // la riga dei conti scriverebbe "su NaN euro".
+  it("un budget positivo regge il confronto", () => {
+    expect(budgetIsComparable(1200)).toBe(true);
   });
 
-  it("non supera mai 100, nemmeno per arrotondamento", () => {
-    // 1207 / 1200 = 100,58%: senza tetto l'arrotondamento darebbe 101 e il
-    // riempimento sforerebbe il binario. Il caso non è teorico: basta una
-    // proposta appena sopra il budget perché la cinquantina la faccia sfiorare.
-    expect(budgetUsagePercent(1207, 1200)).toBe(100);
-    // 1199 / 1200 = 99,92%: qui il tetto non c'entra, arrotonda a 100 da sé.
-    expect(budgetUsagePercent(1199, 1200)).toBe(100);
+  it("un budget a zero no: non ci si puo' rapportare niente", () => {
+    expect(budgetIsComparable(0)).toBe(false);
   });
 
-  it("blocca a 100 una proposta che sfora il budget", () => {
-    expect(budgetUsagePercent(1500, 1200)).toBe(100);
-  });
-
-  it("con budget a zero non divide e non disegna nulla", () => {
-    expect(budgetUsagePercent(850, 0)).toBeNull();
-  });
-
-  it("con budget mancante o non numerico non produce NaN", () => {
-    expect(budgetUsagePercent(850, Number.NaN)).toBeNull();
-    expect(budgetUsagePercent(850, -100)).toBeNull();
-  });
-
-  it("una proposta a costo zero usa zero per cento, non null", () => {
-    expect(budgetUsagePercent(0, 1200)).toBe(0);
+  it("un budget negativo o non numerico no", () => {
+    expect(budgetIsComparable(-100)).toBe(false);
+    expect(budgetIsComparable(Number.NaN)).toBe(false);
+    expect(budgetIsComparable(Number.POSITIVE_INFINITY)).toBe(false);
   });
 });
