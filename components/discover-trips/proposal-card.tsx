@@ -176,35 +176,37 @@ export function ProposalCard({
           da lui. Ora: la cifra, il gruppo dei conti (che sta stretto perche'
           parla di una cosa sola), l'azione. */}
       <div className="mt-auto flex flex-col gap-4 border-t border-border bg-accent px-6 pt-4 pb-6">
-        {/* Etichetta a sinistra e cifra a destra sulla stessa riga. L'etichetta
-            resta **prima** del totale nell'ordine di lettura: la tilde da sola
-            non basta, quasi nessuno la decodifica come "stima", e chi salta
-            direttamente al numero deve incontrare la qualifica per prima.
-            L'avvertenza per intero sta ora sopra la griglia, una volta sola.
+        {/* Tutto su un bordo solo, a sinistra. Prima l'etichetta stava spinta a
+            sinistra e la cifra a destra, con un vuoto in mezzo, e sotto il "a
+            persona" tornava a destra mentre le righe dei conti erano a sinistra:
+            due bordi di allineamento che si contendevano lo stesso blocco, e
+            niente che lo tenesse insieme — "incastrate male", parole
+            dell'utente. Un blocco, un bordo.
+
+            L'etichetta resta **prima** del totale nell'ordine di lettura: la
+            tilde da sola non basta, quasi nessuno la decodifica come "stima", e
+            chi salta al numero deve incontrare la qualifica per prima.
 
             `display-numerals` e non `font-display`: l'utente ha chiesto il
             2026-08-23 che le cifre dentro i titoli display restino nel
             carattere di testo, perché il "4" di Fraunces non piace. La cifra è
             "display" per peso (725) e corpo, non per famiglia.
 
-            "Totale" è un `sr-only`: a schermo lo dice la posizione accanto
-            all'etichetta, ma chi ascolta sentirebbe solo "circa mille euro"
-            senza sapere di cosa. */}
-        <div className="flex items-baseline justify-between gap-3">
+            "Totale" è un `sr-only`: a schermo lo dice l'etichetta sopra, ma chi
+            ascolta sentirebbe solo "circa mille euro" senza sapere di cosa. */}
+        <div>
           <p className="font-display text-[10px] font-[725] tracking-[0.16em] text-muted-foreground uppercase">
             Stima AI
           </p>
-          <div className="text-right">
-            <p className="display-numerals text-xl font-[725] text-primary">
-              <span className="sr-only">Totale </span>
-              {formatApprox(costs.total)}
-            </p>
+          <p className="display-numerals mt-1 text-2xl font-[725] text-primary">
+            <span className="sr-only">Totale </span>
+            {formatApprox(costs.total)}
             {perPerson !== null && (
-              <p className="text-xs text-muted-foreground">
+              <span className="ml-2 align-baseline text-xs font-normal text-muted-foreground">
                 {formatApprox(perPerson)} a persona
-              </p>
+              </span>
             )}
-          </div>
+          </p>
         </div>
 
         {/* I conti e il link stanno in un gruppo loro, distanziati di 6px: sono
@@ -243,16 +245,33 @@ export function ProposalCard({
           {/* Le tre voci su una riga sola: restano leggibili e smettono di
               essere protagoniste, ora che il totale ha la sua riga. Nessuna
               informazione persa rispetto alla tabella di prima, compreso il
-              "a persona" del viaggio A/R. */}
-          <p className="text-xs text-muted-foreground">
-            Viaggio A/R {formatApprox(costs.travelTotal)}
-            {/* Il "a persona" del viaggio solo con piu' di un viaggiatore: da soli
-                ripeterebbe la stessa cifra a due parole di distanza ("~85 € (~85 € a
-                persona)"), che e' rumore e fa dubitare di aver letto male. Stessa
-                condizione gia' in vigore per il totale a persona, qui sopra. */}
-            {travelerCount > 1 && ` (${formatApprox(travelPerPerson)} a persona)`} ·{" "}
-            Alloggio {formatApprox(costs.lodgingTotal)} · In loco{" "}
-            {formatApprox(costs.onSiteTotal)}
+              "a persona" del viaggio A/R.
+
+              Ogni voce e' un `inline-block` che non si spezza: in colonna
+              stretta il testo andava a capo **in mezzo a una voce** — "Alloggio"
+              su una riga e "~400 €" su quella dopo, separato dal proprio prezzo.
+              Va a capo fra una voce e l'altra, mai dentro. Il flex con `gap-x`
+              fa anche da separatore: i "·" scritti a mano sparivano a fine riga
+              lasciando uno spazio senza motivo.
+
+              Il "a persona" del viaggio solo con piu' di un viaggiatore: da solo
+              ripeterebbe la stessa cifra a due parole di distanza ("~85 € (~85 €
+              a persona)"), che e' rumore e fa dubitare di aver letto male. */}
+          <p className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+            <span className="whitespace-nowrap">
+              Viaggio A/R {formatApprox(costs.travelTotal)}
+              {travelerCount > 1 && ` (${formatApprox(travelPerPerson)} a persona)`}
+            </span>
+            {/* Il «·» sta **dentro** la voce che segue, non fra le due: come
+                figlio a sé del flex finirebbe a volte a fine riga, orfano. Cosi'
+                resta attaccato alla sua voce e, quando si va a capo, apre la
+                riga nuova — che e' come si legge un elenco in linea. */}
+            <span className="whitespace-nowrap">
+              <span aria-hidden>· </span>Alloggio {formatApprox(costs.lodgingTotal)}
+            </span>
+            <span className="whitespace-nowrap">
+              <span aria-hidden>· </span>In loco {formatApprox(costs.onSiteTotal)}
+            </span>
           </p>
 
           {/* Il link resta nella scheda perché è l'unica cosa dell'avvertenza
