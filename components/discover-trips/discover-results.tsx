@@ -95,19 +95,19 @@ export function DiscoverResults({
         </p>
       ) : (
         <>
-          {/* Una volta sola per l'intera griglia: dentro la scheda si ripeteva
-              fino a sei volte sullo stesso schermo. Vale per tutte le cifre
-              qui sotto, quindi sta prima che si comincino a leggere. */}
-          <p className="text-sm text-muted-foreground">
-            Stime indicative generate dall&apos;AI, non prezzi prenotabili.
-          </p>
+          {/* Due note su questo blocco.
 
-          {/* Il numero di proposte mostrate non è quello richiesto: i filtri lato
-           server ne scartano, quindi l'ultima riga può restare con una sola card.
-           In quel caso la card occupa entrambe le colonne ma tiene la larghezza di
-           una (metà della riga meno metà del gap di 1rem) e si centra, invece di
-           appoggiarsi a sinistra con il vuoto accanto. Sotto `sm` la griglia è a
-           una colonna e la regola non si applica. */}
+              Niente liberatoria sopra la griglia: è tornata dentro ogni scheda,
+              accanto alle cifre di cui parla. Ripeterla anche qui vorrebbe dire
+              sette copie sullo stesso schermo, cioè arredamento — il difetto
+              opposto a quello che averla portata quassù aveva corretto.
+
+              Il numero di proposte mostrate non è quello richiesto: i filtri lato
+              server ne scartano, quindi l'ultima riga può restare con una sola card.
+              In quel caso la card occupa entrambe le colonne ma tiene la larghezza di
+              una (metà della riga meno metà del gap di 1rem) e si centra, invece di
+              appoggiarsi a sinistra con il vuoto accanto. Sotto `sm` la griglia è a
+              una colonna e la regola non si applica. */}
           <div className="grid gap-4 sm:grid-cols-2 sm:[&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:w-[calc(50%-0.5rem)] sm:[&>*:last-child:nth-child(odd)]:justify-self-center">
             {proposals.map((proposal, index) => {
               const proposalDates = resolveProposalDates(proposal, dateMode, dateRange);

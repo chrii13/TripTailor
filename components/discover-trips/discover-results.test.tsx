@@ -61,42 +61,82 @@ afterEach(() => {
 });
 
 describe("DiscoverResults", () => {
-  it("mostra la liberatoria sulle stime una volta sola, non una per scheda", () => {
+  it("ripete la liberatoria in ogni scheda e non una volta in più sopra la griglia", () => {
+    // Esattamente una per scheda: chi scorre fino alla quarta proposta non ha
+    // più sotto gli occhi un'avvertenza scritta in cima alla pagina. Il numero
+    // dev'essere quello delle schede e non uno di più, perché la copia sopra la
+    // griglia è proprio quella che è stata tolta.
     renderResults([makeProposal("Lisbona"), makeProposal("Porto"), makeProposal("Faro")]);
 
-    expect(screen.getAllByText(/Stime indicative generate dall'AI/)).toHaveLength(1);
+    expect(screen.getAllByText(/non prezzi prenotabili/)).toHaveLength(3);
   });
 
   it("non mostra la liberatoria quando non c'è nessuna proposta", () => {
+    // Ora è una conseguenza dell'assenza di schede, non di una condizione
+    // scritta a parte: senza proposte non c'è nessuna cifra da qualificare.
     renderResults([]);
 
-    expect(screen.queryByText(/Stime indicative generate dall'AI/)).toBeNull();
+    expect(screen.queryByText(/non prezzi prenotabili/)).toBeNull();
   });
 
-  it("scrive nella scheda la quota di budget usata e quanto resta", () => {
-    // Costi arrotondati: 300 + 400 + 300 = 1000 su un budget di 1200 → 83%.
+  it("scrive nella scheda quanto costa sul budget e quanto resta, senza barra", () => {
+    // Costi arrotondati: 300 + 400 + 300 = 1000 su un budget di 1200.
     renderResults([makeProposal("Lisbona")]);
 
-    expect(screen.getByText("83% del budget")).toBeTruthy();
+    // Il punto delle migliaia è facoltativo e il € non si cerca affatto: in
+    // it-IT il separatore compare solo da cinque cifre in su (1200 resta
+    // "1200 €", 12000 diventa "12.000 €") e Intl attacca il simbolo con uno
+    // spazio unificatore, che uno spazio normale nel pattern non incontra.
+    expect(screen.getByText(/su 1\.?200/)).toBeTruthy();
     expect(screen.getByText(/ti restano/)).toBeTruthy();
+    // La percentuale se n'è andata insieme al binario che riempiva: restava
+    // solo come didascalia di una figura che non c'è più.
+    expect(screen.queryByText(/% del budget/)).toBeNull();
   });
 
-  it("senza un budget su cui fare una proporzione non disegna la barra", () => {
+  it("senza un budget su cui fare una proporzione non scrive la riga del budget", () => {
     renderResults([makeProposal("Lisbona")], 0);
 
-    expect(screen.queryByText(/% del budget/)).toBeNull();
+    expect(screen.queryByText(/ su /)).toBeNull();
+    // Nessun assert su "ti restano": quella riga e' gia' esclusa da
+    // `remaining > 0` (con budget 0 o NaN il resto non e' positivo), quindi
+    // cercarla qui non potrebbe fallire togliendo la guardia in prova. Un
+    // assert che non puo' fallire e' peggio di un assert mancante: sembra
+    // protezione e non lo e'.
   });
 
-  it("con un budget non numerico non scrive NaN a schermo", () => {
+  it("con un budget non numerico non scrive NaN nella riga del budget", () => {
     // Con budget 0 la divisione darebbe Infinity, mai NaN: cercare "NaN" lì è
     // un assert che non può fallire. Il NaN vero nasce solo da un budget NaN.
-    // L'assert è sulla pastiglia e non su tutto il documento: la striscia di
-    // riepilogo in cima formatta il budget per conto suo e scriverebbe "NaN €"
-    // comunque, ma è codice che questo ramo non tocca.
+    // L'assert è sulla riga del budget e non su tutto il documento: la striscia
+    // di riepilogo in cima formatta il budget per conto suo e scriverebbe
+    // "NaN €" comunque, ma è codice che questo ramo non tocca.
     renderResults([makeProposal("Lisbona")], Number.NaN);
 
-    expect(screen.queryByText(/NaN%/)).toBeNull();
-    expect(screen.queryByText(/% del budget/)).toBeNull();
+    expect(screen.queryByText(/su NaN/)).toBeNull();
+    // Nessun assert su "ti restano": quella riga e' gia' esclusa da
+    // `remaining > 0` (con budget 0 o NaN il resto non e' positivo), quindi
+    // cercarla qui non potrebbe fallire togliendo la guardia in prova. Un
+    // assert che non puo' fallire e' peggio di un assert mancante: sembra
+    // protezione e non lo e'.
+  });
+
+  it("qualifica la cifra come stima, e lo dice prima di mostrarla", () => {
+    // L'etichetta sta **sopra** il totale, non sotto: un maiuscoletto piccolo
+    // etichetta cio' che segue, e sotto avrebbe avuto due candidati (il totale
+    // e il "a persona"), qualificandoli entrambi a meta'. L'ordine e' la
+    // modifica, quindi e' l'ordine che va asserito: senza questo test
+    // rimettere l'etichetta fra le due cifre resterebbe verde.
+    renderResults([makeProposal("Lisbona")]);
+
+    const etichetta = screen.getByText(/^Stima AI$/);
+    const totale = screen.getByText((testo) => testo.trim() === "Totale").closest("p")!;
+    expect(etichetta).toBeTruthy();
+    expect(totale).toBeTruthy();
+    // compareDocumentPosition: FOLLOWING (4) vuol dire che il totale viene dopo.
+    expect(etichetta.compareDocumentPosition(totale)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
   });
 
   it("dice a chi ascolta che quella cifra in cima è il totale", () => {
