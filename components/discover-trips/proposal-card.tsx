@@ -133,11 +133,16 @@ export function ProposalCard({
         </p>
       </div>
 
-      {/* `gap-5` e non `gap-4`: con l'interlinea del paragrafo qui sotto, 16px
-          fra i blocchi risultavano **meno** dello spazio fra due righe dentro
-          il paragrafo, e il motivo e l'elenco si leggevano come una cosa sola.
-          Fra blocchi diversi lo stacco dev'essere maggiore che fra le righe di
-          uno stesso blocco, altrimenti la struttura sparisce. */}
+      {/* `gap-5` e non `gap-4`. Il confronto che conta e' fra **spazio bianco**,
+          non fra un gap e una line-height: la line-height include le mezze
+          interlinee dentro il box, quindi paragonarla a un gap e' mele con pere.
+          A conti fatti: fra due righe del paragrafo ci sono ~9px di bianco
+          (22,75 meno i 14 del carattere), mentre fra paragrafo ed elenco ce ne
+          sono ~29 (i 20 del gap piu' le mezze interlinee dei due blocchi). Con
+          `gap-4` erano ~25 contro 6, un rapporto che non bastava a staccarli, e
+          motivo ed elenco si leggevano come una cosa sola.
+          La regola vale fra blocchi, non dentro: l'elenco qui sotto sta a 6px
+          per voce ed e' giusto cosi', perche' quelle voci **sono** un blocco. */}
       <div className="flex flex-1 flex-col gap-5 px-6 pt-5 pb-5">
         {/* `leading-relaxed`: il motivo e' l'unico paragrafo vero della scheda e
             su una colonna stretta arriva a quattro righe. A 14px l'interlinea di
@@ -205,7 +210,13 @@ export function ProposalCard({
         {/* I conti e il link stanno in un gruppo loro, distanziati di 6px: sono
             tutti la stessa cosa — quanto costa, come si scompone, dove andare a
             controllarlo — e devono leggersi come un blocco, non come tre righe
-            indipendenti che galleggiano. */}
+            indipendenti che galleggiano.
+
+            Questo gruppo **non è mai vuoto**, e non per caso: delle tre righe,
+            quella dei costi non ha guardie. Le altre due sì (budget e link), e
+            se un domani si condizionasse anche la terza il gruppo potrebbe
+            restare senza figli, lasciando 16px di vuoto fra la cifra e il
+            bottone senza che niente lo segnali. */}
         <div className="space-y-1.5">
           {/* Senza questa guardia, con un budget a zero o non numerico la riga
               scriverebbe "su NaN euro". Il predicato dice esattamente questo e
@@ -244,10 +255,10 @@ export function ProposalCard({
             {formatApprox(costs.onSiteTotal)}
           </p>
 
-        {/* Il link resta nella scheda perché è l'unica cosa dell'avvertenza che
-            è specifica della meta: porta a una ricerca costruita su questa
-            destinazione e questa data. Il testo lungo, che era identico in
-            tutte e sei le schede, è salito sopra la griglia. */}
+          {/* Il link resta nella scheda perché è l'unica cosa dell'avvertenza
+              che è specifica della meta: porta a una ricerca costruita su questa
+              destinazione e questa data. Il testo lungo, che era identico in
+              tutte e sei le schede, è salito sopra la griglia. */}
           {realPriceSearchUrl && (
             <p className="text-xs text-muted-foreground">
               <a
