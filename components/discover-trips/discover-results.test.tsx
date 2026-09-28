@@ -61,19 +61,39 @@ afterEach(() => {
 });
 
 describe("DiscoverResults", () => {
-  it("ripete la liberatoria in ogni scheda e non una volta in più sopra la griglia", () => {
-    // Esattamente una per scheda: chi scorre fino alla quarta proposta non ha
-    // più sotto gli occhi un'avvertenza scritta in cima alla pagina. Il numero
-    // dev'essere quello delle schede e non uno di più, perché la copia sopra la
-    // griglia è proprio quella che è stata tolta.
-    renderResults([makeProposal("Lisbona"), makeProposal("Porto"), makeProposal("Faro")]);
+  it("dice la liberatoria una volta sola, e fuori dalle schede", () => {
+    // La regola si è ribaltata: prima erano tante copie quante le schede, ora
+    // ne esiste **una**, sopra la griglia. Due assert, perché sono due difetti
+    // diversi: il conteggio prende il ritorno della copia dentro le schede, e
+    // `closest` prende il caso in cui la copia unica finisse dentro la prima
+    // scheda invece che sopra la griglia — dove il conteggio resterebbe 1.
+    const { container } = renderResults([
+      makeProposal("Lisbona"),
+      makeProposal("Porto"),
+      makeProposal("Faro"),
+    ]);
 
-    expect(screen.getAllByText(/non prezzi prenotabili/)).toHaveLength(3);
+    expect(container.querySelectorAll('[data-slot="card"]')).toHaveLength(3);
+
+    const copie = screen.getAllByText((_, elemento) => {
+      if (!elemento) return false;
+      const testo = elemento.textContent ?? "";
+      // Solo l'elemento che porta il testo, non i suoi antenati, che lo
+      // contengono anche loro: `getAllByText` interroga tutto l'albero.
+      const figliUguali = Array.from(elemento.children).some((figlio) =>
+        (figlio.textContent ?? "").includes("non prezzi prenotabili"),
+      );
+      return testo.includes("non prezzi prenotabili") && !figliUguali;
+    });
+
+    expect(copie).toHaveLength(1);
+    expect(copie[0].closest('[data-slot="card"]')).toBeNull();
   });
 
   it("non mostra la liberatoria quando non c'è nessuna proposta", () => {
-    // Ora è una conseguenza dell'assenza di schede, non di una condizione
-    // scritta a parte: senza proposte non c'è nessuna cifra da qualificare.
+    // Il riquadro vive dentro il ramo delle proposte, non sopra di esso: senza
+    // cifre a schermo non c'è niente da qualificare, e un'avvertenza accanto a
+    // "nessuna proposta" parlerebbe di prezzi che non ci sono.
     renderResults([]);
 
     expect(screen.queryByText(/non prezzi prenotabili/)).toBeNull();
@@ -95,9 +115,13 @@ describe("DiscoverResults", () => {
   });
 
   it("senza un budget su cui fare una proporzione non scrive la riga del budget", () => {
-    renderResults([makeProposal("Lisbona")], 0);
+    const { container } = renderResults([makeProposal("Lisbona")], 0);
 
-    expect(screen.queryByText(/ su /)).toBeNull();
+    // Cercato dentro la scheda e non in tutto il documento: la liberatoria
+    // sopra la griglia contiene "su ogni proposta trovi un link", cioè un " su "
+    // che non ha niente a che vedere con la riga dei conti in prova.
+    const scheda = container.querySelector('[data-slot="card"]')!;
+    expect(/ su /.test(scheda.textContent ?? "")).toBe(false);
     // Nessun assert su "ti restano": quella riga e' gia' esclusa da
     // `remaining > 0` (con budget 0 o NaN il resto non e' positivo), quindi
     // cercarla qui non potrebbe fallire togliendo la guardia in prova. Un
@@ -122,11 +146,11 @@ describe("DiscoverResults", () => {
   });
 
   it("qualifica la cifra come stima, e lo dice prima di mostrarla", () => {
-    // L'etichetta sta **sopra** il totale, non sotto: un maiuscoletto piccolo
-    // etichetta cio' che segue, e sotto avrebbe avuto due candidati (il totale
-    // e il "a persona"), qualificandoli entrambi a meta'. L'ordine e' la
-    // modifica, quindi e' l'ordine che va asserito: senza questo test
-    // rimettere l'etichetta fra le due cifre resterebbe verde.
+    // Etichetta a sinistra e cifra a destra sulla stessa riga del piede, ma
+    // l'ordine di lettura resta quello: chi salta al numero deve incontrare la
+    // qualifica per prima, e chi ascolta la sente prima della cifra. L'ordine
+    // e' la cosa da difendere, quindi e' l'ordine che va asserito: senza questo
+    // test scambiare i due lati resterebbe verde.
     renderResults([makeProposal("Lisbona")]);
 
     const etichetta = screen.getByText(/^Stima AI$/);
@@ -139,9 +163,10 @@ describe("DiscoverResults", () => {
     );
   });
 
-  it("dice a chi ascolta che quella cifra in cima è il totale", () => {
-    // A schermo lo dice la posizione accanto al nome; senza questa parola chi
-    // usa uno screen reader sente "Lisbona, circa mille euro" e basta.
+  it("dice a chi ascolta che quella cifra è il totale", () => {
+    // A schermo lo dice la posizione, accanto a "Stima AI" e sopra la riga del
+    // budget; senza questa parola chi usa uno screen reader sente "circa mille
+    // euro" e basta.
     renderResults([makeProposal("Lisbona")]);
 
     expect(screen.getByText(/^Totale\b/)).toBeTruthy();
@@ -153,7 +178,10 @@ describe("DiscoverResults", () => {
     // residui a 200, e la somma dava 1200: quindici euro comparsi dal nulla.
     const { container } = renderResults([makeProposal("Lisbona")], 1185);
 
-    const spans = Array.from(container.querySelectorAll("span")).map((s) => s.textContent ?? "");
+    // Gli <span> **della scheda**: la liberatoria sopra la griglia ne ha uno
+    // che contiene "su ogni proposta" e verrebbe pescato per primo.
+    const scheda = container.querySelector('[data-slot="card"]')!;
+    const spans = Array.from(scheda.querySelectorAll("span")).map((s) => s.textContent ?? "");
     const speso = spans.find((t) => / su /.test(t));
     const resta = spans.find((t) => t.startsWith("ti restano"));
 
