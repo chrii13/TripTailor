@@ -98,7 +98,14 @@ export function ProposalCard({
     // `p-0 gap-0` perché la card non ha più un solo contenuto con padding
     // proprio ma tre fasce a filo dei bordi: la spaziatura la mette ciascuna.
     // `overflow-hidden` è quel che tiene la testata dentro gli angoli tondi.
-    <Card className="flex h-full flex-col gap-0 overflow-hidden border-border p-0 shadow-none">
+    // `rounded-lg` (10px) e non il `rounded-xl` (14px) con cui nasce la Card di
+    // shadcn: è la regola di CLAUDE.md, disattesa qui fino a oggi. Non si vedeva
+    // finché la card era bianca su Nebbia con un bordo da 1px; ora la fascia
+    // Bosco piena disegna i due angoli in alto, subito sotto un avviso a 8px, e
+    // l'incoerenza salta all'occhio.
+    // Nota: le altre quattro Card del progetto sono ancora a 14px — vanno
+    // allineate a parte, non di nascosto dentro questo lavoro.
+    <Card className="flex h-full flex-col gap-0 overflow-hidden rounded-lg border-border p-0 shadow-none">
       {/* Testata invertita. Le tre righe di icone di prima (paese, notti,
           finestra consigliata) si fondono qui: il paese fa da occhiello, notti
           e date stanno su una riga sola. Le icone non servono più — con tre

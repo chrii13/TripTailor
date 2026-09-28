@@ -88,6 +88,14 @@ describe("DiscoverResults", () => {
 
     expect(copie).toHaveLength(1);
     expect(copie[0].closest('[data-slot="card"]')).toBeNull();
+
+    // Il riquadro promette «su ogni proposta trovi un link per verificarli», e
+    // quel link è condizionato alla data di partenza. Oggi la promessa è vera,
+    // ma per una garanzia sparsa su tre file: il filtro sulla finestra
+    // suggerita in modalità flessibile, e la validazione del form in modalità
+    // esatte. Se uno dei due diventasse clemente, il riquadro mentirebbe in
+    // silenzio e nessuno se ne accorgerebbe. Qui la promessa si lega al fatto.
+    expect(screen.getAllByText(/Verifica i prezzi reali/)).toHaveLength(3);
   });
 
   it("non mostra la liberatoria quando non c'è nessuna proposta", () => {

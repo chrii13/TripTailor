@@ -109,7 +109,11 @@ export function DiscoverResults({
               solo l'inizio. Nelle schede restano l'etichetta "Stima AI" accanto
               alla cifra e il link ai prezzi reali, che è specifico della meta:
               per questo la riga qui lo annuncia. */}
-          <p className="flex gap-2.5 rounded-lg border border-border bg-accent px-4 py-3 text-sm text-foreground">
+          {/* `rounded-md` come i due riquadri qui sopra — riepilogo della ricerca
+              e avviso sulle date scadute — non `rounded-lg`: si impilano uno
+              sotto l'altro e tre raggi diversi si vedono. I 10px di CLAUDE.md
+              valgono per card e controlli, questi sono avvisi. */}
+          <p className="flex gap-2.5 rounded-md border border-border bg-accent px-4 py-3 text-sm text-foreground">
             <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
             <span>
               <strong className="font-semibold">
