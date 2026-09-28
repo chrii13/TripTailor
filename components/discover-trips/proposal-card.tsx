@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Info, MapPin, Moon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import type { TripProposal } from "@/lib/discover-trips-schema";
 import { roundProposalCosts } from "@/lib/round-proposal-costs";
 import { buildRealPriceSearchUrl } from "@/lib/real-price-search-link";
@@ -91,66 +91,49 @@ export function ProposalCard({
   const realPriceSearchUrl = departureDate
     ? buildRealPriceSearchUrl(departureCity, proposal.destination, departureDate, proposal.country)
     : null;
+  const nightsLabel =
+    nights === 0 ? "in giornata" : `${nights} ${nights === 1 ? "notte" : "notti"}`;
 
   return (
-    <Card className="flex h-full flex-col overflow-hidden border-border pb-0 shadow-none">
-      <CardContent className="flex flex-1 flex-col gap-4 pt-6 pb-6">
-        <div>
-          {/* Nome e prezzo sulla stessa riga: sono le due cose che si
-              confrontano fra sei schede, e finora il totale era sepolto in
-              fondo alla tabella dei costi. */}
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="font-display text-xl font-[725] tracking-[-0.01em] text-primary uppercase">
-              {proposal.destination}
-            </h2>
-            <div className="shrink-0 text-right">
-              {/* Un gradino sotto il nome (text-lg contro text-xl): la cifra
-                  resta forte ma non contende il comando all'intestazione.
-                  formatApprox dà solo cifre e simboli ("~1.250 €"): nessuna
-                  lettera da tenere in Fraunces, la classe va sull'elemento.
-                  "Totale" era un <dt> nella tabella di prima ed è caduto con
-                  essa: a schermo lo dice la posizione, ma chi ascolta sentiva
-                  "Lisbona, circa mille euro" senza sapere di cosa — e quando la
-                  barra non si disegna sparisce anche il "su X €" accanto. */}
-              {/* L'avvertenza per intero sta nel piede, ma il numero si legge
-                  qui, e chi salta al prezzo non arriva mai in fondo. La tilde da
-                  sola non basta: quasi nessuno la decodifica come 'stima'.
+    // `p-0 gap-0` perché la card non ha più un solo contenuto con padding
+    // proprio ma tre fasce a filo dei bordi: la spaziatura la mette ciascuna.
+    // `overflow-hidden` è quel che tiene la testata dentro gli angoli tondi.
+    // `rounded-lg` (10px) e non il `rounded-xl` (14px) con cui nasce la Card di
+    // shadcn: è la regola di CLAUDE.md, disattesa qui fino a oggi. Non si vedeva
+    // finché la card era bianca su Nebbia con un bordo da 1px; ora la fascia
+    // Bosco piena disegna i due angoli in alto, subito sotto un avviso a 8px, e
+    // l'incoerenza salta all'occhio.
+    // Nota: le altre quattro Card del progetto sono ancora a 14px — vanno
+    // allineate a parte, non di nascosto dentro questo lavoro.
+    <Card className="flex h-full flex-col gap-0 overflow-hidden rounded-lg border-border p-0 shadow-none">
+      {/* Testata invertita. Le tre righe di icone di prima (paese, notti,
+          finestra consigliata) si fondono qui: il paese fa da occhiello, notti
+          e date stanno su una riga sola. Le icone non servono più — con tre
+          etichette in fila su un fondo pieno facevano rumore, e ciascuna
+          ripeteva in figura una parola già scritta accanto.
 
-                  Sta **prima** della cifra e non sotto: un maiuscoletto piccolo
-                  etichetta cio' che segue, e sotto avrebbe avuto due candidati
-                  (il totale e il 'a persona'), qualificandoli entrambi a meta'. */}
-              <p className="font-display text-[10px] font-[725] tracking-[0.16em] text-muted-foreground uppercase">
-                Stima AI
-              </p>
-              <p className="display-numerals text-lg font-[725] text-primary">
-                <span className="sr-only">Totale </span>
-                {formatApprox(costs.total)}
-              </p>
-              {perPerson !== null && (
-                <p className="text-xs text-muted-foreground">
-                  {formatApprox(perPerson)} a persona
-                </p>
-              )}
-            </div>
-          </div>
-          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <MapPin className="size-3.5" />
-              {proposal.country}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Moon className="size-3.5" />
-              {nights === 0 ? "in giornata" : `${nights} ${nights === 1 ? "notte" : "notti"}`}
-            </span>
-            {suggestedWindow && (
-              <span className="flex items-center gap-1.5">
-                <CalendarDays className="size-3.5" />
-                Consigliato {suggestedWindow}
-              </span>
-            )}
-          </p>
-        </div>
+          Il totale non è più in questa fascia: in testata comanda il nome, che
+          è quel che si confronta fra sei schede, e la cifra è scesa nel piede
+          insieme a tutti gli altri conti. */}
+      <div className="bg-primary px-6 pt-5 pb-4 text-primary-foreground">
+        {/* `text-primary-foreground/60` è la convenzione già in uso nella
+            testata invertita di `itinerary-form/itinerary-result.tsx`. Misurato
+            su Bosco (#1a4d33): bianco pieno 9,75:1, al 60% 4,65:1 — sopra la
+            soglia 4,5:1 di WCAG 1.4.3 anche per il testo piccolo, quindi
+            l'opacità non va abbassata oltre. */}
+        <p className="text-xs font-semibold tracking-[0.18em] text-primary-foreground/60 uppercase">
+          {proposal.country}
+        </p>
+        <h2 className="mt-1.5 font-display text-2xl leading-tight font-[725] tracking-[-0.01em] uppercase">
+          {proposal.destination}
+        </h2>
+        <p className="mt-2 text-sm text-primary-foreground/60">
+          {nightsLabel}
+          {suggestedWindow && ` · Consigliato ${suggestedWindow}`}
+        </p>
+      </div>
 
+      <div className="flex flex-1 flex-col gap-4 px-6 pt-5 pb-5">
         <p className="text-sm text-muted-foreground">{proposal.whyItFits}</p>
 
         <ul className="space-y-1.5 text-sm text-primary">
@@ -161,85 +144,105 @@ export function ProposalCard({
             </li>
           ))}
         </ul>
+      </div>
 
-        {/* Fascia Nebbia che chiude la card, come la CTA di /crea e /scopri:
-            tutto quel che riguarda le cifre — quanto costa sul budget, come si
-            scompone, quanto vale la stima — sta insieme sotto il racconto della
-            meta, invece di essere sparso fra corpo e fondo. La barra che stava
-            qui sopra è sparita: leggeva come una barra di caricamento e diceva
-            in figura quello che la prima riga dice in parole. */}
-        {/* bg-accent e non bg-secondary: su /scopri il fondo della pagina E' gia'
-            Nebbia, misurato rgb(236,239,233) identico, quindi un piede Nebbia
-            faceva sparire meta' scheda nella pagina, tenuta solo da un bordo di
-            un pixel. Su /crea la stessa fascia funziona perche' li' il fondo e'
-            diverso: non copiare quella scelta qui senza guardare. */}
-        <div className="-mx-6 -mb-6 mt-auto space-y-3 border-t border-border bg-accent px-6 pt-4 pb-6">
-          {/* Senza questa guardia, con un budget a zero o non numerico la riga
-              scriverebbe "su NaN euro". Il predicato dice esattamente questo e
-              niente di piu': vedi budgetIsComparable. */}
-          {budgetConfrontabile && (
-            <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-              <span>
-                {formatApprox(costs.total)} su {euro.format(budget)}
-              </span>
-              {remaining > 0 && (
-                <>
-                  <span aria-hidden>·</span>
-                  <span>ti restano {formatApprox(remaining)}</span>
-                </>
-              )}
+      {/* Fascia Nebbia che chiude la card, come la CTA di /crea e /scopri:
+          tutto quel che riguarda le cifre — quanto costa, quanto costa sul
+          budget, come si scompone, quanto vale la stima — sta insieme sotto il
+          racconto della meta. */}
+      {/* bg-accent e non bg-secondary: su /scopri il fondo della pagina E' gia'
+          Nebbia, misurato rgb(236,239,233) identico, quindi un piede Nebbia
+          faceva sparire meta' scheda nella pagina, tenuta solo da un bordo di
+          un pixel. Su /crea la stessa fascia funziona perche' li' il fondo e'
+          diverso: non copiare quella scelta qui senza guardare. */}
+      <div className="mt-auto space-y-3 border-t border-border bg-accent px-6 pt-4 pb-6">
+        {/* Etichetta a sinistra e cifra a destra sulla stessa riga. L'etichetta
+            resta **prima** del totale nell'ordine di lettura: la tilde da sola
+            non basta, quasi nessuno la decodifica come "stima", e chi salta
+            direttamente al numero deve incontrare la qualifica per prima.
+            L'avvertenza per intero sta ora sopra la griglia, una volta sola.
+
+            `display-numerals` e non `font-display`: l'utente ha chiesto il
+            2026-08-23 che le cifre dentro i titoli display restino nel
+            carattere di testo, perché il "4" di Fraunces non piace. La cifra è
+            "display" per peso (725) e corpo, non per famiglia.
+
+            "Totale" è un `sr-only`: a schermo lo dice la posizione accanto
+            all'etichetta, ma chi ascolta sentirebbe solo "circa mille euro"
+            senza sapere di cosa. */}
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="font-display text-[10px] font-[725] tracking-[0.16em] text-muted-foreground uppercase">
+            Stima AI
+          </p>
+          <div className="text-right">
+            <p className="display-numerals text-xl font-[725] text-primary">
+              <span className="sr-only">Totale </span>
+              {formatApprox(costs.total)}
             </p>
-          )}
-
-          {/* Le tre voci su una riga sola: restano leggibili e smettono di
-              essere protagoniste, ora che il totale sta in cima. Nessuna
-              informazione persa rispetto alla tabella di prima, compreso il
-              "a persona" del viaggio A/R. */}
-          <p className="text-xs text-muted-foreground">
-            Viaggio A/R {formatApprox(costs.travelTotal)}
-            {/* Il "a persona" del viaggio solo con piu' di un viaggiatore: da soli
-                ripeterebbe la stessa cifra a due parole di distanza ("~85 € (~85 € a
-                persona)"), che e' rumore e fa dubitare di aver letto male. Stessa
-                condizione gia' in vigore per il totale a persona, qui sopra. */}
-            {travelerCount > 1 && ` (${formatApprox(travelPerPerson)} a persona)`} ·{" "}
-            Alloggio {formatApprox(costs.lodgingTotal)} · In loco{" "}
-            {formatApprox(costs.onSiteTotal)}
-          </p>
-
-          {/* La liberatoria era salita una volta sola sopra la griglia, e da lì
-              chi scorre fino alla quarta scheda non la vede più: legge "~1.350 €"
-              come un prezzo. Torna nella scheda — dove stanno le cifre di cui
-              parla — e in cambio sparisce da sopra la griglia, così resta detta
-              una volta per ogni schermata di lettura e non sette volte insieme.
-              Il link è sempre stato qui, perché è specifico della meta. */}
-          <p className="flex gap-2 pt-2 text-xs text-muted-foreground">
-            <Info aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-            <span>
-              Stime generate dall&apos;AI, non prezzi prenotabili: nessun prezzo reale è stato consultato, e quelli veri cambiano con la data e la disponibilità.
-              {realPriceSearchUrl && (
-                <>
-                  {" "}
-                  <a
-                    href={realPriceSearchUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline underline-offset-2 hover:text-primary"
-                  >
-                    Verifica i prezzi reali
-                  </a>
-                </>
-              )}
-            </span>
-          </p>
-
-          <Button asChild variant="outline" className="w-full gap-2 border-primary shadow-none">
-            <Link href={href}>
-              Crea l&apos;itinerario
-              <ArrowRight className="size-4" />
-            </Link>
-          </Button>
+            {perPerson !== null && (
+              <p className="text-xs text-muted-foreground">
+                {formatApprox(perPerson)} a persona
+              </p>
+            )}
+          </div>
         </div>
-      </CardContent>
+
+        {/* Senza questa guardia, con un budget a zero o non numerico la riga
+            scriverebbe "su NaN euro". Il predicato dice esattamente questo e
+            niente di piu': vedi budgetIsComparable. */}
+        {budgetConfrontabile && (
+          <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+            <span>
+              {formatApprox(costs.total)} su {euro.format(budget)}
+            </span>
+            {remaining > 0 && (
+              <>
+                <span aria-hidden>·</span>
+                <span>ti restano {formatApprox(remaining)}</span>
+              </>
+            )}
+          </p>
+        )}
+
+        {/* Le tre voci su una riga sola: restano leggibili e smettono di
+            essere protagoniste, ora che il totale ha la sua riga. Nessuna
+            informazione persa rispetto alla tabella di prima, compreso il
+            "a persona" del viaggio A/R. */}
+        <p className="text-xs text-muted-foreground">
+          Viaggio A/R {formatApprox(costs.travelTotal)}
+          {/* Il "a persona" del viaggio solo con piu' di un viaggiatore: da soli
+              ripeterebbe la stessa cifra a due parole di distanza ("~85 € (~85 € a
+              persona)"), che e' rumore e fa dubitare di aver letto male. Stessa
+              condizione gia' in vigore per il totale a persona, qui sopra. */}
+          {travelerCount > 1 && ` (${formatApprox(travelPerPerson)} a persona)`} ·{" "}
+          Alloggio {formatApprox(costs.lodgingTotal)} · In loco{" "}
+          {formatApprox(costs.onSiteTotal)}
+        </p>
+
+        {/* Il link resta nella scheda perché è l'unica cosa dell'avvertenza che
+            è specifica della meta: porta a una ricerca costruita su questa
+            destinazione e questa data. Il testo lungo, che era identico in
+            tutte e sei le schede, è salito sopra la griglia. */}
+        {realPriceSearchUrl && (
+          <p className="pt-1 text-xs text-muted-foreground">
+            <a
+              href={realPriceSearchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-primary"
+            >
+              Verifica i prezzi reali
+            </a>
+          </p>
+        )}
+
+        <Button asChild variant="outline" className="w-full gap-2 border-primary shadow-none">
+          <Link href={href}>
+            Crea l&apos;itinerario
+            <ArrowRight className="size-4" />
+          </Link>
+        </Button>
+      </div>
     </Card>
   );
 }

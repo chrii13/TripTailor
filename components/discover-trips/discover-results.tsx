@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Info } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { buildCreaHref } from "@/lib/crea-query-params";
@@ -95,14 +96,35 @@ export function DiscoverResults({
         </p>
       ) : (
         <>
-          {/* Due note su questo blocco.
+          {/* La liberatoria sta qui, una volta sola, e non più in ogni scheda:
+              identica sotto sei proposte occupava più spazio dei numeri di cui
+              parla, e una cosa ripetuta sette volte si legge come arredamento —
+              cioè zero volte. Sopra la griglia la incontra chi arriva ai
+              risultati, prima di qualunque cifra.
 
-              Niente liberatoria sopra la griglia: è tornata dentro ogni scheda,
-              accanto alle cifre di cui parla. Ripeterla anche qui vorrebbe dire
-              sette copie sullo stesso schermo, cioè arredamento — il difetto
-              opposto a quello che averla portata quassù aveva corretto.
+              Non è un grigetto: fondo `bg-accent` e `text-foreground` (8,77:1
+              misurato) invece del `text-muted-foreground` di prima (4,65:1 su
+              quel fondo), perché una cosa detta una volta sola deve essere
+              letta. La prima frase in grassetto è quella che basta a chi legge
+              solo l'inizio. Nelle schede restano l'etichetta "Stima AI" accanto
+              alla cifra e il link ai prezzi reali, che è specifico della meta:
+              per questo la riga qui lo annuncia. */}
+          {/* `rounded-md` come i due riquadri qui sopra — riepilogo della ricerca
+              e avviso sulle date scadute — non `rounded-lg`: si impilano uno
+              sotto l'altro e tre raggi diversi si vedono. I 10px di CLAUDE.md
+              valgono per card e controlli, questi sono avvisi. */}
+          <p className="flex gap-2.5 rounded-md border border-border bg-accent px-4 py-3 text-sm text-foreground">
+            <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
+            <span>
+              <strong className="font-semibold">
+                Stime generate dall&apos;AI, non prezzi prenotabili.
+              </strong>{" "}
+              Nessun prezzo reale è stato consultato, e quelli veri cambiano con la data e la
+              disponibilità: su ogni proposta trovi un link per verificarli.
+            </span>
+          </p>
 
-              Il numero di proposte mostrate non è quello richiesto: i filtri lato
+          {/* Il numero di proposte mostrate non è quello richiesto: i filtri lato
               server ne scartano, quindi l'ultima riga può restare con una sola card.
               In quel caso la card occupa entrambe le colonne ma tiene la larghezza di
               una (metà della riga meno metà del gap di 1rem) e si centra, invece di
