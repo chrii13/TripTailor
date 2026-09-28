@@ -212,10 +212,10 @@ export function ProposalCard({
               parla — e in cambio sparisce da sopra la griglia, così resta detta
               una volta per ogni schermata di lettura e non sette volte insieme.
               Il link è sempre stato qui, perché è specifico della meta. */}
-          <p className="flex gap-2 pt-1 text-xs text-muted-foreground">
+          <p className="flex gap-2 pt-2 text-xs text-muted-foreground">
             <Info aria-hidden className="mt-0.5 size-3.5 shrink-0" />
             <span>
-              Cifre stimate dall&apos;AI: possono discostarsi dai prezzi reali, che cambiano con la data e la disponibilità.
+              Stime generate dall&apos;AI, non prezzi prenotabili: nessun prezzo reale è stato consultato, e quelli veri cambiano con la data e la disponibilità.
               {realPriceSearchUrl && (
                 <>
                   {" "}
