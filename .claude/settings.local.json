@@ -10,7 +10,10 @@
       "Bash(npx --yes create-next-app@latest --help)",
       "Bash(npx --yes create-next-app@latest app-itinerari-tmp --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --disable-git --use-npm --yes)",
       "Bash(cd \"/c/Users/chris/Desktop/App Itinerari\" && ls -la ../_scaffold-backup/.claude && echo \"---settings.local.json content in stray .claude---\" && cat .claude/settings.local.json)",
-      "Read(//c/Users/chris/Desktop/_scaffold-backup/.claude/**)"
+      "Read(//c/Users/chris/Desktop/_scaffold-backup/.claude/**)",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__new_page",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__resize_page",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_screenshot"
     ]
   }
 }
