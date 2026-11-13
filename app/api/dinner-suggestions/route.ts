@@ -153,6 +153,14 @@ export async function POST(request: Request) {
   const startTime = Date.now();
   const deadline = computeDeadline(startTime, USABLE_BUDGET_MS);
 
+  // Come nelle altre due route POST: un corpo text/plain parte da qualunque pagina di
+  // terzi senza preflight, e arriverebbe a spendere quota Overpass, LocationIQ e Gemini.
+  const contentType = request.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) {
+    console.error(`Consigli cena: Content-Type non valido (${contentType ?? "assente"})`);
+    return NextResponse.json({ error: "invalid_response" }, { status: 400 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();

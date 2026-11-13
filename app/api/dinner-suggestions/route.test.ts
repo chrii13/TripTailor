@@ -180,6 +180,23 @@ describe("POST /api/dinner-suggestions", () => {
     expect(generateContent).not.toHaveBeenCalled();
   });
 
+  it("rifiuta un Content-Type non JSON con 400 anche se il corpo è valido", async () => {
+    // Il corpo è quello buono di proposito: un POST text/plain parte da qualunque pagina
+    // di terzi senza preflight, e senza questo controllo arriverebbe fino al modello.
+    const response = await POST(
+      new Request("http://localhost/api/dinner-suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(corpoValido),
+      })
+    );
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toBe("invalid_response");
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(generateContent).not.toHaveBeenCalled();
+  });
+
   it("rifiuta un corpo JSON malformato con 400", async () => {
     const response = await POST(
       new Request("http://localhost/api/dinner-suggestions", {
