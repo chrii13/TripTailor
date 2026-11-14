@@ -115,6 +115,7 @@ const CHIAVI_ORIGINALI = {
   gemini: process.env.GEMINI_API_KEY,
   backup: process.env.GEMINI_API_KEY_BACKUP,
   locationiq: process.env.LOCATIONIQ_API_KEY,
+  overpass: process.env.OVERPASS_API_KEY,
 };
 
 const corpoValido = {
@@ -155,6 +156,8 @@ beforeEach(() => {
   process.env.GEMINI_API_KEY = "chiave-di-prova";
   delete process.env.GEMINI_API_KEY_BACKUP;
   process.env.LOCATIONIQ_API_KEY = "chiave-locationiq";
+  // Senza la parola che i mock cercano nell'indirizzo: a farsi riconoscere dev'essere l'host.
+  process.env.OVERPASS_API_KEY = "chiave-dei-locali";
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.spyOn(console, "log").mockImplementation(() => {});
 });
@@ -166,6 +169,7 @@ afterEach(() => {
     ["GEMINI_API_KEY", CHIAVI_ORIGINALI.gemini],
     ["GEMINI_API_KEY_BACKUP", CHIAVI_ORIGINALI.backup],
     ["LOCATIONIQ_API_KEY", CHIAVI_ORIGINALI.locationiq],
+    ["OVERPASS_API_KEY", CHIAVI_ORIGINALI.overpass],
   ] as const) {
     if (valore === undefined) delete process.env[chiave];
     else process.env[chiave] = valore;

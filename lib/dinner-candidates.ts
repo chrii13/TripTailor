@@ -16,15 +16,18 @@ export const MAX_CANDIDATES = 12;
  */
 export const SEARCH_RADIUS_METERS = 600;
 
-const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
+// Dal 2026-11-14 si interroga overpass.ch con una chiave (`OVERPASS_API_KEY`, piano gratuito:
+// 10.000 interrogazioni al mese, uso commerciale escluso). L'istanza pubblica overpass-api.de
+// risponde 406 a ogni nostra richiesta dal 2026-11-13: i gestori l'hanno messa sotto
+// restrizioni e hanno bandito le piattaforme di deploy rapido. Cambiare User-Agent per
+// aggirare il blocco è vietato dalle loro regole: non tornare lì mascherandosi.
+// La chiave sta nel percorso, quindi l'indirizzo intero non va mai scritto in un log.
+const overpassUrl = (chiave: string) => `https://api.overpass.ch/v1/${chiave}/interpreter`;
 
-// Overpass rifiuta con **406 Not Acceptable** le richieste che arrivano con lo
-// User-Agent di default di Node (undici): misurato il 2026-08-25 su ogni singola
-// interrogazione, cioè con la funzionalità completamente morta in produzione mentre
-// l'intera suite era verde. La stessa identica richiesta fatta con `curl` passava, perché
-// curl un suo User-Agent ce l'ha: è la differenza che ha portato alla diagnosi. Con questa
-// intestazione la stessa query risponde 200 con 178 locali. Non toglierla e non lasciarla
-// vuota: è l'unica cosa che separa questa funzionalità dal non funzionare affatto.
+// Sull'istanza pubblica lo User-Agent di default di Node (undici) costava un **406** su ogni
+// interrogazione: misurato il 2026-08-25, con la funzionalità morta in produzione e la suite
+// tutta verde. overpass.ch non l'ha ancora preteso, ma presentarsi resta la regola di ogni
+// servizio OpenStreetMap: non toglierlo e non lasciarlo vuoto.
 const USER_AGENT = "TripTailor/1.0 (https://trip-tailor-ten.vercel.app)";
 
 /** Un locale come arriva da OSM: senza distanza, perché non c'è un solo punto da cui misurarla. */
@@ -124,8 +127,9 @@ export function selectNearbyCandidates(
 }
 
 /**
- * Overpass pubblico ha tempi di risposta molto variabili e i fallimenti sono frequenti:
- * misurate risposte fra 0,8s e 27s, più `429` che arrivano dopo 12-14 secondi di attesa. Il
+ * Sull'istanza pubblica di allora (overpass-api.de, fino al 2026-11-13) i tempi di risposta
+ * erano molto variabili e i fallimenti frequenti: misurate risposte fra 0,8s e 27s, più `429`
+ * che arrivavano dopo 12-14 secondi di attesa. Su overpass.ch non è stato rimisurato. Il
  * timeout e la rinuncia silenziosa sono la protezione: una giornata senza consiglio è
  * accettabile, mezzo minuto di attesa per un errore no. Il tetto vero lo decide il chiamante
  * (`OVERPASS_TIMEOUT_MS` nella route), che deve stare nel proprio budget.
@@ -133,8 +137,15 @@ export function selectNearbyCandidates(
 async function interroga(filtro: string, timeoutMs: number): Promise<OverpassPlace[]> {
   const query = `[out:json][timeout:25];(node["amenity"="restaurant"]${filtro};way["amenity"="restaurant"]${filtro};);out center tags;`;
 
+  // trim: uno spazio o un a capo incollato per errore nella variabile romperebbe l'indirizzo.
+  const chiave = process.env.OVERPASS_API_KEY?.trim();
+  if (!chiave) {
+    console.error("Consigli cena: nessuna chiave Overpass configurata (OVERPASS_API_KEY)");
+    return [];
+  }
+
   try {
-    const response = await fetch(OVERPASS_URL, {
+    const response = await fetch(overpassUrl(chiave), {
       method: "POST",
       body: new URLSearchParams({ data: query }),
       headers: { "User-Agent": USER_AGENT },
@@ -148,7 +159,11 @@ async function interroga(filtro: string, timeoutMs: number): Promise<OverpassPla
 
     return parseOverpassPlaces(await response.json());
   } catch (error) {
-    console.error("Consigli cena: interrogazione Overpass fallita", error);
+    // Solo il messaggio, e ripulito: l'errore intero può portarsi dietro l'indirizzo con la chiave.
+    const messaggio = (error instanceof Error ? `${error.name}: ${error.message}` : String(error))
+      .split(chiave)
+      .join("<chiave>");
+    console.error(`Consigli cena: interrogazione Overpass fallita (${messaggio})`);
     return [];
   }
 }
