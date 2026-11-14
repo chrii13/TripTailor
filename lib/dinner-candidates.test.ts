@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   MAX_CANDIDATES,
   SEARCH_RADIUS_METERS,
@@ -121,8 +121,14 @@ describe("selectNearbyCandidates", () => {
 });
 
 describe("interrogazioni Overpass", () => {
+  beforeEach(() => {
+    vi.stubEnv("OVERPASS_API_KEY", "chiave-di-prova");
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   function mockFetch() {
@@ -164,5 +170,38 @@ describe("interrogazioni Overpass", () => {
     await expect(
       fetchPlacesInBoundingBox({ sud: 41, ovest: -9, nord: 42, est: -8 }, 5_000)
     ).resolves.toEqual([]);
+  });
+
+  // Dal 2026-11-13 l'istanza pubblica overpass-api.de risponde 406 a ogni nostra richiesta
+  // (restrizioni dei gestori): si interroga overpass.ch, che vuole la chiave nel percorso.
+  it("interroga overpass.ch con la chiave nel percorso", async () => {
+    const fetchMock = mockFetch();
+    await fetchPlacesInBoundingBox({ sud: 41, ovest: -9, nord: 42, est: -8 }, 5_000);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://api.overpass.ch/v1/chiave-di-prova/interpreter");
+  });
+
+  it("senza chiave non parte nessuna richiesta e l'elenco è vuoto", async () => {
+    vi.stubEnv("OVERPASS_API_KEY", "");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchMock = mockFetch();
+    await expect(
+      fetchPlacesInBoundingBox({ sud: 41, ovest: -9, nord: 42, est: -8 }, 5_000)
+    ).resolves.toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // La chiave sta nell'indirizzo, e un errore di rete può riportare l'indirizzo per intero.
+  it("non scrive la chiave nei log quando la richiesta fallisce", async () => {
+    const errore = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(
+        new Error("fetch failed: https://api.overpass.ch/v1/chiave-di-prova/interpreter")
+      )
+    );
+    await fetchPlacesInBoundingBox({ sud: 41, ovest: -9, nord: 42, est: -8 }, 5_000);
+    expect(errore).toHaveBeenCalled();
+    expect(JSON.stringify(errore.mock.calls)).not.toContain("chiave-di-prova");
+    expect(errore.mock.calls.flat().some((v) => v instanceof Error)).toBe(false);
   });
 });
