@@ -126,4 +126,26 @@ describe("generateItineraryRequestSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  // Gli orari finiscono dentro il prompt: cinque caratteri qualsiasi non sono un orario.
+  it.each(["ciao!", "25:00", "12:60", "9:30", "12-30", " 12:30", "12:30\n", "24:00"])(
+    "rifiuta un orario che non è HH:MM (%s)",
+    (orario) => {
+      expect(
+        generateItineraryRequestSchema.safeParse({ ...baseValidBody, arrivalTime: orario }).success
+      ).toBe(false);
+      expect(
+        generateItineraryRequestSchema.safeParse({ ...baseValidBody, departureTime: orario }).success
+      ).toBe(false);
+    }
+  );
+
+  it("accetta gli orari vuoti, che è ciò che il form manda quando non sono compilati", () => {
+    const result = generateItineraryRequestSchema.safeParse({
+      ...baseValidBody,
+      arrivalTime: "",
+      departureTime: "",
+    });
+    expect(result.success).toBe(true);
+  });
 });

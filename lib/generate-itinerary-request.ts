@@ -37,6 +37,13 @@ const dateRangeSchema = z
       )
   );
 
+// L'orario finisce interpolato nel prompt: si accetta solo ciò che un <input type="time">
+// sa produrre, cioè "HH:MM" oppure la stringa vuota del campo lasciato in bianco.
+const orarioSchema = z
+  .string()
+  .regex(/^(([01]\d|2[0-3]):[0-5]\d)?$/)
+  .optional();
+
 export const generateItineraryRequestSchema = z.object({
   destination: z.string().trim().min(1).max(MAX_DESTINATION_LENGTH),
   dateRange: dateRangeSchema,
@@ -44,8 +51,8 @@ export const generateItineraryRequestSchema = z.object({
   budget: z.number().min(0).max(1_000_000),
   styleNotes: z.string().max(MAX_STYLE_NOTES_LENGTH).optional(),
   mustSee: z.string().max(MAX_MUST_SEE_LENGTH).optional(),
-  arrivalTime: z.string().max(5).optional(),
-  departureTime: z.string().max(5).optional(),
+  arrivalTime: orarioSchema,
+  departureTime: orarioSchema,
 });
 
 export type GenerateItineraryRequest = z.infer<typeof generateItineraryRequestSchema>;
