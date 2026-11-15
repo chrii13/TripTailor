@@ -161,6 +161,183 @@ describe("geocodeDestination: quando le coordinate sono affidabili", () => {
   });
 });
 
+// Misurato il 2026-11-15 su 44 zone turistiche: LocationIQ risolve i nomi di zona senza
+// confine amministrativo sull'omonimo o su una strada, e meteo e cena finivano nel posto
+// sbagliato senza alcun errore.
+describe("geocodeDestination: le zone turistiche", () => {
+  const chiaveOriginale = process.env.LOCATIONIQ_API_KEY;
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    if (chiaveOriginale === undefined) delete process.env.LOCATIONIQ_API_KEY;
+    else process.env.LOCATIONIQ_API_KEY = chiaveOriginale;
+  });
+
+  async function domandaInviata(destinazione: string) {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+    vi.stubGlobal("fetch", fetchMock);
+    process.env.LOCATIONIQ_API_KEY = "chiave-finta";
+    await geocodeDestination(destinazione);
+    return new URL(String(fetchMock.mock.calls[0][0])).searchParams.get("q");
+  }
+
+  async function geocodifica(risultato: Record<string, unknown>) {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => [risultato] }));
+    process.env.LOCATIONIQ_API_KEY = "chiave-finta";
+    return geocodeDestination("una destinazione");
+  }
+
+  it.each([
+    ["Salento, Italia", "Lecce, Italia"],
+    ["Salento", "Lecce, Italia"],
+    ["  SALENTO ,  italia ", "Lecce, Italia"],
+    ["Maremma, Italia", "Grosseto, Italia"],
+    ["Riviera Romagnola, Italia", "Rimini, Italia"],
+    ["Versilia, Italia", "Viareggio, Italia"],
+    ["Costa Smeralda, Italia", "Porto Cervo, Italia"],
+    ["Costiera Amalfitana, Italia", "Amalfi, Italia"],
+    ["Cotswolds, Regno Unito", "Cirencester, Regno Unito"],
+    ["Cicladi, Grecia", "Grecia"],
+    ["Patagonia, Argentina", "Argentina"],
+    // Le scritture che aggiravano la tabella: paese in inglese, regione in mezzo, accento,
+    // spazio doppio, virgola in coda.
+    ["Salento, Italy", "Lecce, Italia"],
+    ["Salento, Puglia, Italia", "Lecce, Italia"],
+    ["Cotswolds, Inghilterra", "Cirencester, Regno Unito"],
+    ["Cìcladi, Grecia", "Grecia"],
+    ["Costiera  Amalfitana", "Amalfi, Italia"],
+    ["Salento, Italia, ", "Lecce, Italia"],
+  ])("«%s» si cerca come «%s»", async (destinazione, attesa) => {
+    expect(await domandaInviata(destinazione)).toBe(attesa);
+  });
+
+  it("Salento in Colombia è una città vera e si cerca col suo nome", async () => {
+    expect(await domandaInviata("Salento, Colombia")).toBe("Salento, Colombia");
+  });
+
+  it.each(["Lecce, Italia", "constructor", "__proto__"])(
+    "«%s» non è in tabella e si cerca com'è scritta",
+    async (destinazione) => {
+      expect(await domandaInviata(destinazione)).toBe(destinazione);
+    }
+  );
+
+  // Misurato lo stesso giorno: per «Lecce, Italia», «Siena, Italia», «Rimini, Italia» il primo
+  // risultato è la PROVINCIA, e la città viene seconda. Il baricentro della provincia di Lecce
+  // sta in campagna, a 23 km dalla città.
+  describe("il capoluogo che arriva dopo la sua provincia", () => {
+    const provincia = {
+      lat: "40.1522",
+      lon: "18.2260",
+      class: "boundary",
+      display_name: "Lecce, Puglia, Italia",
+      boundingbox: ["39.78", "40.52", "17.76", "18.53"],
+      address: { county: "Lecce", state: "Puglia", country_code: "it" },
+    };
+    const citta = {
+      lat: "40.3570",
+      lon: "18.1718",
+      class: "boundary",
+      display_name: "Lecce, Puglia, 73100, Italia",
+      boundingbox: ["40.31", "40.51", "18.03", "18.31"],
+      address: { city: "Lecce", county: "Lecce", state: "Puglia", country_code: "it" },
+    };
+
+    async function geocodificaElenco(risultati: Record<string, unknown>[]) {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => risultati }));
+      process.env.LOCATIONIQ_API_KEY = "chiave-finta";
+      return geocodeDestination("una destinazione");
+    }
+
+    it("vince la città omonima dentro la provincia", async () => {
+      expect(await geocodificaElenco([provincia, citta])).toEqual({ lat: 40.357, lon: 18.1718, countryCode: "IT" });
+    });
+
+    // Il caso che cambia davvero l'esito: il riquadro della provincia di Grosseto (~9.600 km²)
+    // sta sopra la soglia dei luoghi, quindi senza la città resterebbe senza coordinate.
+    it("Grosseto: una provincia troppo grande per avere coordinate le prende dalla sua città", async () => {
+      const grande = { ...provincia, boundingbox: ["42.2376", "43.1891", "10.7063", "11.8202"] };
+      const dentro = { ...citta, lat: "42.7597", lon: "11.1137" };
+      expect(await geocodificaElenco([grande])).toEqual({ lat: null, lon: null, countryCode: "IT" });
+      expect(await geocodificaElenco([grande, dentro])).toEqual({ lat: 42.7597, lon: 11.1137, countryCode: "IT" });
+    });
+
+    // «Molise, Italia»: la regione viene prima, e il secondo risultato è il comune di Molise,
+    // un paese di dieci km². Solo una «city» può fare da capoluogo.
+    it("un paesino omonimo non sostituisce la regione", async () => {
+      const paesino = { ...citta, address: { village: "Lecce", county: "Lecce", country_code: "it" } };
+      expect(await geocodificaElenco([provincia, paesino])).toEqual({ lat: 40.1522, lon: 18.226, countryCode: "IT" });
+    });
+
+    // Gibuti misura 42.700 km², sotto il tetto d'area: a tenerlo fuori è l'indirizzo senza
+    // «state» né «county», che è la firma di un paese.
+    it("Gibuti: un paese piccolo non diventa la sua capitale omonima", async () => {
+      const paese = {
+        lat: "11.81",
+        lon: "42.6",
+        display_name: "Djibouti",
+        boundingbox: ["10.9", "12.7", "41.7", "43.7"],
+        address: { country: "Djibouti", country_code: "dj" },
+      };
+      const capitale = { lat: "11.5937", lon: "43.1473", display_name: "Djibouti, Djibouti", address: { city: "Djibouti", country_code: "dj" } };
+      expect(await geocodificaElenco([paese, capitale])).toEqual({ lat: null, lon: null, countryCode: "DJ" });
+    });
+
+    it("oltre il tetto d'area uno stato non diventa la sua città omonima", async () => {
+      const stato = { ...provincia, boundingbox: ["38.0", "41.0", "16.0", "19.0"] };
+      expect(await geocodificaElenco([stato, citta])).toEqual({ lat: null, lon: null, countryCode: "IT" });
+    });
+
+    it("una città con un altro nome non la sostituisce", async () => {
+      const out = await geocodificaElenco([provincia, { ...citta, display_name: "Gallipoli, Lecce, Puglia, Italia" }]);
+      expect(out).toEqual({ lat: 40.1522, lon: 18.226, countryCode: "IT" });
+    });
+
+    it("un'omonima fuori dal riquadro non la sostituisce: è un altro posto", async () => {
+      const out = await geocodificaElenco([provincia, { ...citta, lat: "45.5", lon: "9.2" }]);
+      expect(out).toEqual({ lat: 40.1522, lon: 18.226, countryCode: "IT" });
+    });
+
+    it("un paese non diventa la sua capitale omonima: resta senza coordinate", async () => {
+      const paese = {
+        lat: "8.55",
+        lon: "-80.1",
+        display_name: "Panamá",
+        boundingbox: ["5.5", "9.9", "-83.1", "-77.1"],
+        address: { country: "Panamá", country_code: "pa" },
+      };
+      const capitale = {
+        lat: "8.97",
+        lon: "-79.53",
+        display_name: "Panamá, Provincia de Panamá, Panamá",
+        address: { city: "Panamá", country_code: "pa" },
+      };
+      expect(await geocodificaElenco([paese, capitale])).toEqual({ lat: null, lon: null, countryCode: "PA" });
+    });
+
+    it("chiede tre risultati, altrimenti la città non arriva mai", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+      vi.stubGlobal("fetch", fetchMock);
+      process.env.LOCATIONIQ_API_KEY = "chiave-finta";
+      await geocodeDestination("Lecce, Italia");
+      expect(new URL(String(fetchMock.mock.calls[0][0])).searchParams.get("limit")).toBe("3");
+    });
+  });
+
+  // «Cotswolds» tornava come una via di Hatfield, «Costa Smeralda» come l'aeroporto di Olbia:
+  // l'indirizzo di una strada nomina una città, quindi senza questo filtro passano.
+  it.each(["highway", "aeroway"])("un risultato di classe %s non dà coordinate", async (classe) => {
+    const out = await geocodifica({
+      lat: "51.75",
+      lon: "-0.23",
+      class: classe,
+      boundingbox: ["51.74", "51.76", "-0.24", "-0.22"],
+      address: { town: "Hatfield", country_code: "gb" },
+    });
+    expect(out).toEqual({ lat: null, lon: null, countryCode: "GB" });
+  });
+});
+
 describe("geocodePlaceNear", () => {
   const chiaveOriginale = process.env.LOCATIONIQ_API_KEY;
 
